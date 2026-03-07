@@ -10,7 +10,6 @@ HISTORY_FILE = "all_chats.json"
 
 # Helper Functions
 def load_all_chats():
-    """Loads all chat history from the JSON file."""
     if os.path.exists(HISTORY_FILE):
         with open(HISTORY_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -18,13 +17,11 @@ def load_all_chats():
 
 
 def save_all_chats(all_chats):
-    """Saves the current state of all chats to the JSON file."""
     with open(HISTORY_FILE, "w", encoding="utf-8") as f:
         json.dump(all_chats, f, ensure_ascii=False, indent=4)
 
 
 def get_pdf_text(pdf_docs):
-    """Extracts text content from uploaded PDF files."""
     text = ""
     for pdf in pdf_docs:
         pdf_reader = PdfReader(pdf)
@@ -39,11 +36,14 @@ all_chats = load_all_chats()
 
 if "current_chat_id" not in st.session_state:
     st.session_state.current_chat_id = None
+if "teaching_style" not in st.session_state:
+    st.session_state.teaching_style = "Professional Tutor"
 
 # SIDEBAR
 with st.sidebar:
-    st.title("Learning Assistant")
+    st.title("📚 Learning Assistant")
 
+    # 1. New Chat Button
     if st.button("➕ Start New Chat", use_container_width=True):
         new_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         st.session_state.current_chat_id = new_id
@@ -53,48 +53,71 @@ with st.sidebar:
 
     st.divider()
 
-    if st.session_state.current_chat_id:
-        st.subheader("Upload Study Notes")
-        uploaded_pdfs = st.file_uploader("Select PDF files", accept_multiple_files=True, type="pdf")
-        if st.button("Process Notes", use_container_width=True):
-            if uploaded_pdfs:
-                with st.spinner("Processing..."):
-                    extracted_text = get_pdf_text(uploaded_pdfs)
-                    all_chats[st.session_state.current_chat_id]["pdf_context"] = extracted_text
-                    save_all_chats(all_chats)
-                    st.success("Notes added successfully!")
-            else:
-                st.warning("No file selected.")
 
-    st.divider()
     st.subheader("Recent Conversations")
     chat_ids = list(all_chats.keys())
     for chat_id in reversed(chat_ids):
-        col1, col2 = st.columns([0.8, 0.2])
-        with col1:
+        col_title, col_del = st.columns([0.8, 0.2])
+        with col_title:
             if st.button(all_chats[chat_id]["title"], key=f"select_{chat_id}", use_container_width=True):
                 st.session_state.current_chat_id = chat_id
                 st.rerun()
-        with col2:
-            if st.button("🗑️", key=f"delete_{chat_id}", help="Delete chat"):
+        with col_del:
+
+            if st.button("🗑️", key=f"del_{chat_id}", help="Delete this chat"):
                 del all_chats[chat_id]
                 save_all_chats(all_chats)
                 if st.session_state.current_chat_id == chat_id:
                     st.session_state.current_chat_id = None
                 st.rerun()
 
+    if all_chats:
+        st.divider()
+        if st.button("🚫 Clear All History", use_container_width=True, type="primary"):
+            all_chats = {}
+            save_all_chats(all_chats)
+            st.session_state.current_chat_id = None
+            st.rerun()
+
 # MAIN SCREEN
 if st.session_state.current_chat_id:
     current_chat = all_chats[st.session_state.current_chat_id]
-    st.title(f" {current_chat['title']}")
+    st.title(f"📍 {current_chat['title']}")
 
-    if current_chat.get("pdf_context"):
-        st.info(" This chat contains specific study notes. I will answer based on the provided content.")
-
+    # Render Chat History
     for msg in current_chat["messages"]:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
+    # --- ACTION BAR (Improved Layout) ---
+    st.write("---")
+
+    upload_col, style_col = st.columns([0.65, 0.35])
+
+    with upload_col:
+
+        uploaded_pdfs = st.file_uploader(
+            "📁 Drag & drop study notes here",
+            accept_multiple_files=True,
+            type="pdf",
+            key="pdf_uploader"
+        )
+        if uploaded_pdfs:
+            with st.spinner("Processing notes..."):
+                current_chat["pdf_context"] = get_pdf_text(uploaded_pdfs)
+                save_all_chats(all_chats)
+                st.toast("Notes processed!", icon="✅")
+
+    with style_col:
+        st.markdown("### 🎭 Tutor Style")
+        st.session_state.teaching_style = st.selectbox(
+            "Style Selector",
+            ["Professional Tutor", "Funny YouTuber", "Deep Scientist", "Simplified (for kids)"],
+            label_visibility="collapsed"
+        )
+        st.caption(f"Current mode: {st.session_state.teaching_style}")
+
+    # CHAT INPUT
     if prompt := st.chat_input("Ask your learning assistant something..."):
         current_chat["messages"].append({"role": "user", "content": prompt})
         with st.chat_message("user"):
@@ -103,42 +126,39 @@ if st.session_state.current_chat_id:
         with st.chat_message("assistant"):
             pdf_info = current_chat.get("pdf_context", "")
 
-            # --- SYSTEM PROMPT CONFIGURATION ---
-            # Added a specific rule to ban HTML tags like <br>
+            style_instructions = {
+                "Professional Tutor": "Be formal, structured, and use academic language.",
+                "Funny YouTuber": "Use humor, energetic slang, and metaphors like a popular creator.",
+                "Deep Scientist": "Provide high-level technical analysis and detailed breakdowns.",
+                "Simplified (for kids)": "Use very simple words, fun metaphors, and a teacher-for-kids tone."
+            }
+
             system_instruction = (
-                "You are a professional learning assistant and tutor. "
-                "IMPORTANT: Always use LaTeX for all mathematical symbols and expressions. "
-                "Wrap inline math in single dollar signs like $x$. "
-                "Wrap block equations in double dollar signs like $$E=mc^2$$. "
-                "DO NOT use escaped parentheses like \\( \\) or brackets like \\[ \\]. "
-                "DO NOT use HTML tags like <br> in your response. "
-                "Ensure your response is structured, clear, and easy for a student to understand."
+                f"You are an AI {st.session_state.teaching_style}. {style_instructions[st.session_state.teaching_style]} "
+                "IMPORTANT: Always use LaTeX for math. Wrap inline math in $ and block math in $$. "
+                "DO NOT use <br> tags. Keep responses structured and clear."
             )
 
             if pdf_info:
-                system_instruction += f"\n\nBase your answers on the following document content provided by the user:\n{pdf_info}"
+                system_instruction += f"\n\nContext from PDF:\n{pdf_info}"
 
-            # API Call using gpt-oss:120b-cloud
-            # This 120B parameter model is excellent for complex reasoning.
+            # 120B Cloud model power
             response = ollama.chat(model='gpt-oss:120b-cloud', messages=[
                 {'role': 'system', 'content': system_instruction},
                 *current_chat["messages"]
             ])
 
-            # --- CLEANING LAYER (Post-Processing) ---
-            # We force-replace problematic formatting to ensure Streamlit renders correctly.
             raw_answer = response['message']['content']
+            # Cleaning layer for LaTeX and HTML
+            answer = raw_answer.replace('\\(', '$').replace('\\)', '$').replace('\\[', '$$').replace('\\]',
+                                                                                                     '$$').replace(
+                '<br>', ' ')
 
-            clean_answer = raw_answer.replace('\\(', '$').replace('\\)', '$') \
-                .replace('\\[', '$$').replace('\\]', '$$') \
-                .replace('<br>', ' ')
-
-            st.markdown(clean_answer)
-            current_chat["messages"].append({"role": "assistant", "content": clean_answer})
+            st.markdown(answer)
+            current_chat["messages"].append({"role": "assistant", "content": answer})
 
             if current_chat["title"] == "New Chat":
                 current_chat["title"] = prompt[:25] + "..."
-
             save_all_chats(all_chats)
 else:
-    st.markdown("### Welcome! \nStart a **New Chat** from the sidebar or continue your previous conversations.")
+    st.markdown("### Welcome! \nStart a **New Chat** to begin your learning journey.")
