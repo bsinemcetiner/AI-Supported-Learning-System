@@ -1,17 +1,33 @@
 import base64
-from PyPDF2 import PdfReader
+import fitz
+from PIL import Image
+import io
+
 
 def get_pdf_text(pdf_docs):
-    """Extracts text content from uploaded PDF files."""
     text = ""
     for pdf in pdf_docs:
-        pdf_reader = PdfReader(pdf)
-        for page in pdf_reader.pages:
-            text += page.extract_text()
-    return text
+        pdf_bytes = pdf.getvalue()
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        for page in doc:
+            page_text = page.get_text("text") or ""
+            text += page_text + "\n"
+    return text.strip()
+
 
 def process_image(image_file):
-    """Converts an uploaded image to a base64 string for the AI model."""
     if image_file is not None:
-        return base64.b64encode(image_file.getvalue()).decode('utf-8')
+        image = Image.open(image_file)
+
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+
+        max_size = (1024, 1024)
+        image.thumbnail(max_size)
+
+        buffer = io.BytesIO()
+        image.save(buffer, format="JPEG", quality=85)
+
+        return base64.b64encode(buffer.getvalue()).decode("utf-8")
+
     return None

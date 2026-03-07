@@ -18,6 +18,10 @@ def save_all_chats(all_chats):
 def create_new_chat(all_chats):
     new_id = datetime.now().strftime("%Y%m%d_%H%M%S")
     st.session_state.current_chat_id = new_id
-    all_chats[new_id] = {"title": "New Chat", "messages": [], "pdf_context": ""}
+    all_chats[new_id] = {
+        "title": "New Chat",
+        "messages": [],
+        "pdf_context": ""
+    }
     save_all_chats(all_chats)
     return new_id
