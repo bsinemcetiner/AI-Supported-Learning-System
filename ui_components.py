@@ -2,6 +2,7 @@ import streamlit as st
 from chat_manager import save_all_chats, create_new_chat
 from file_processor import get_pdf_text, process_image
 from ai_engine import stream_ai_response
+from rag_manager import RAGManager
 
 
 def render_sidebar(all_chats):
@@ -28,73 +29,28 @@ def render_sidebar(all_chats):
             row_col1, row_col2 = st.columns([0.82, 0.18])
 
             with row_col1:
-                if st.button(
-                    short_title,
-                    key=f"sel_{chat_id}",
-                    use_container_width=True
-                ):
+                if st.button(short_title, key=f"sel_{chat_id}", use_container_width=True):
                     st.session_state.current_chat_id = chat_id
                     st.rerun()
 
             with row_col2:
                 with st.popover("⋮", use_container_width=True):
-                    st.markdown(f"**{title}**")
-
-                    if st.button("✏️ Rename", key=f"rename_btn_{chat_id}", use_container_width=True):
-                        st.session_state.editing_chat_id = chat_id
-                        st.session_state.editing_chat_title = title
-                        st.rerun()
-
-                    if st.button("🗑️ Delete", key=f"delete_btn_{chat_id}", use_container_width=True):
+                    if st.button("🗑️ Delete", key=f"del_{chat_id}", use_container_width=True):
                         del all_chats[chat_id]
                         save_all_chats(all_chats)
-
                         if st.session_state.current_chat_id == chat_id:
                             st.session_state.current_chat_id = None
-
-                        if st.session_state.editing_chat_id == chat_id:
-                            st.session_state.editing_chat_id = None
-                            st.session_state.editing_chat_title = ""
-
                         st.rerun()
 
-            if st.session_state.editing_chat_id == chat_id:
-                new_title = st.text_input(
-                    "Rename chat",
-                    value=st.session_state.editing_chat_title,
-                    key=f"rename_input_{chat_id}"
-                )
-
-                save_col, cancel_col = st.columns(2)
-
-                with save_col:
-                    if st.button("Save", key=f"save_{chat_id}", use_container_width=True):
-                        cleaned = new_title.strip()
-                        if cleaned:
-                            all_chats[chat_id]["title"] = cleaned
-                            save_all_chats(all_chats)
-
-                        st.session_state.editing_chat_id = None
-                        st.session_state.editing_chat_title = ""
-                        st.rerun()
-
-                with cancel_col:
-                    if st.button("Cancel", key=f"cancel_{chat_id}", use_container_width=True):
-                        st.session_state.editing_chat_id = None
-                        st.session_state.editing_chat_title = ""
-                        st.rerun()
 
 def render_chat_screen(all_chats):
     current_chat = all_chats[st.session_state.current_chat_id]
 
     top_bar_col1, top_bar_col2 = st.columns([0.2, 0.8])
-
     with top_bar_col1:
-        if st.button("← Back to Home", use_container_width=True):
+        if st.button("← Back", use_container_width=True):
             st.session_state.current_chat_id = None
-            st.session_state.last_image_data = None
             st.rerun()
-
     with top_bar_col2:
         st.title(f"📍 {current_chat['title']}")
 
@@ -106,82 +62,69 @@ def render_chat_screen(all_chats):
     up_col, st_col = st.columns([0.65, 0.35])
 
     with up_col:
+        if "processed_files" not in st.session_state:
+            st.session_state.processed_files = set()
+
         uploaded_files = st.file_uploader(
-            "📁 Upload Study Notes (PDF) or Photos (JPG/PNG)",
+            "📁 Upload Study Notes (PDF) or Photos",
             accept_multiple_files=True,
             type=["pdf", "jpg", "png", "jpeg"],
-            key="chat_file_uploader"
+            key="chat_uploader"
         )
 
         if uploaded_files:
-            with st.spinner("Analyzing files..."):
-                pdf_files = [
-                    f for f in uploaded_files
-                    if f.type == "application/pdf"
-                ]
-                img_files = [
-                    f for f in uploaded_files
-                    if f.type in ["image/jpeg", "image/png"]
-                ]
+            rag = RAGManager()
 
-                if pdf_files:
-                    current_chat["pdf_context"] = get_pdf_text(pdf_files)
+            pdf_files = [f for f in uploaded_files if f.type == "application/pdf"]
 
-                if img_files:
-                    st.session_state.last_image_data = process_image(img_files[-1])
-                    st.image(
-                        img_files[-1],
-                        caption="Target Image for Analysis",
-                        width=250
-                    )
+            for pdf_file in pdf_files:
+                if pdf_file.name not in st.session_state.processed_files:
+                    with st.spinner(f"Processing {pdf_file.name}..."):
+                        raw_text = get_pdf_text([pdf_file])
 
-                save_all_chats(all_chats)
-                st.toast("Ready for questions!", icon="🚀")
+                        rag.add_document(raw_text, source_name=pdf_file.name)
+
+                        st.session_state.processed_files.add(pdf_file.name)
+                        st.toast(f"✅ {pdf_file.name} veritabanına eklendi!")
+
+            img_files = [f for f in uploaded_files if f.type in ["image/jpeg", "image/png"]]
+            if img_files:
+                st.session_state.last_image_data = process_image(img_files[-1])
+                st.image(img_files[-1], width=250, caption="Analiz edilecek görsel")
+
+            save_all_chats(all_chats)
 
     with st_col:
-        st.markdown("### 🎭 Tutor Style")
         st.session_state.teaching_style = st.selectbox(
-            "Style",
-            [
-                "Professional Tutor",
-                "Funny YouTuber",
-                "Deep Scientist",
-                "Simplified (for kids)"
-            ],
-            label_visibility="collapsed",
-            key="chat_style_select"
+            "Style", ["Professional Tutor", "Funny YouTuber", "Simplified"],
+            label_visibility="collapsed"
         )
 
-    prompt = st.chat_input("Ask about your notes or the uploaded image...")
-
+    prompt = st.chat_input("Sorunuzu yazın...")
     if prompt:
         current_chat["messages"].append({"role": "user", "content": prompt})
-
         with st.chat_message("user"):
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
             response_placeholder = st.empty()
-            final_response = ""
-
-            for partial_response in stream_ai_response(
-                current_chat["messages"],
-                current_chat.get("pdf_context", ""),
-                st.session_state.teaching_style,
-                image_data=st.session_state.last_image_data
+            full_resp = ""
+            for chunk in stream_ai_response(
+                    current_chat["messages"],
+                    None,
+                    st.session_state.teaching_style,
+                    st.session_state.last_image_data
             ):
-                final_response = partial_response
-                response_placeholder.markdown(final_response + "▌")
+                full_resp = chunk
+                response_placeholder.markdown(full_resp + "▌")
+            response_placeholder.markdown(full_resp)
 
-            response_placeholder.markdown(final_response)
-
-        current_chat["messages"].append(
-            {"role": "assistant", "content": final_response}
-        )
+        current_chat["messages"].append({"role": "assistant", "content": full_resp})
 
         if current_chat["title"] == "New Chat":
-            current_chat["title"] = prompt[:25] + "..."
-
+            current_chat["title"] = prompt.strip()[:25] + "..."
+            save_all_chats(all_chats)
+            st.rerun()
         save_all_chats(all_chats)
 
 
@@ -286,17 +229,22 @@ def render_starter_dashboard(all_chats):
 
         if starter_files:
             with st.spinner("Analyzing files..."):
-                pdf_files = [
-                    f for f in starter_files
-                    if f.type == "application/pdf"
-                ]
-                img_files = [
-                    f for f in starter_files
-                    if f.type in ["image/jpeg", "image/png"]
-                ]
+                rag = RAGManager()
+
+                pdf_files = [f for f in starter_files if f.type == "application/pdf"]
+                img_files = [f for f in starter_files if f.type in ["image/jpeg", "image/png"]]
 
                 if pdf_files:
-                    current_chat["pdf_context"] = get_pdf_text(pdf_files)
+                    if "processed_files" not in st.session_state:
+                        st.session_state.processed_files = set()
+
+                    for pdf_file in pdf_files:
+                        if pdf_file.name not in st.session_state.processed_files:
+                            raw_text = get_pdf_text([pdf_file])
+                            rag.add_document(raw_text, source_name=pdf_file.name)
+                            st.session_state.processed_files.add(pdf_file.name)
+
+                    current_chat["pdf_context"] = "Vektör veritabanına işlendi."
 
                 if img_files:
                     st.session_state.last_image_data = process_image(img_files[-1])
