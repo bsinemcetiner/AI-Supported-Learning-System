@@ -1,47 +1,103 @@
 import streamlit as st
+from course_manager import (
+    create_course,
+    add_material_to_course,
+    get_teacher_courses,
+    get_course_display_options,
+    get_course_materials_text
+)
 from chat_manager import save_all_chats, create_new_chat
 from file_processor import get_pdf_text, process_image
 from ai_engine import stream_ai_response
 from rag_manager import RAGManager
 from tts_engine import generate_audio
-
+from auth_manager import signup_user, login_user
 
 GLOBAL_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Fraunces:ital,wght@0,300;0,500;1,300;1,500&display=swap');
 
-*, html, body, [class*="css"] {
+/* ───────────────── BASE ───────────────── */
+
+html, body, .stApp {
     font-family: 'Plus Jakarta Sans', sans-serif;
+    box-sizing: border-box;
+    background: #FAF8F5;
+    color: #1C1917 !important;
+}
+
+*, *::before, *::after {
     box-sizing: border-box;
 }
 
-/* ── App background ── */
-.stApp {
-    background: #FAF8F5;
-}
-
-/* ── Hide Streamlit chrome ── */
+/* Streamlit default chrome */
 #MainMenu, footer, header { visibility: hidden; }
 .stDeployButton { display: none; }
 [data-testid="stToolbar"] { display: none; }
 
-/* ══════════════════════════════════
-   SIDEBAR
-══════════════════════════════════ */
+/* Global readable text */
+body, p, span, label, div, li, strong, em, small {
+    color: #1C1917;
+}
+
+/* Markdown/text output */
+[data-testid="stMarkdownContainer"],
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] span,
+[data-testid="stMarkdownContainer"] div,
+[data-testid="stMarkdownContainer"] li,
+[data-testid="stMarkdownContainer"] strong,
+[data-testid="stMarkdownContainer"] em {
+    color: #1C1917 !important;
+}
+
+/* IMPORTANT: Do not override icon fonts */
+.material-symbols-rounded,
+.material-symbols-outlined,
+.material-icons,
+.material-icons-round,
+.material-icons-outlined,
+[class*="material-symbols"],
+[class*="material-icons"] {
+    font-family: inherit;
+}
+
+/* Fix icon font text issue for Streamlit internal icons */
+i.material-icons,
+span.material-symbols-rounded,
+span.material-symbols-outlined,
+span.material-icons,
+span[data-testid="stIconMaterial"] {
+    font-family: "Material Symbols Rounded", "Material Symbols Outlined", "Material Icons" !important;
+    font-style: normal !important;
+    font-weight: normal !important;
+    line-height: 1 !important;
+    letter-spacing: normal !important;
+    text-transform: none !important;
+    white-space: nowrap !important;
+    word-wrap: normal !important;
+    direction: ltr !important;
+}
+
+/* ───────────────── SIDEBAR ───────────────── */
+
 [data-testid="stSidebar"] {
     background: #FFFFFF;
     border-right: 1.5px solid #EDE9E3;
     padding-top: 0 !important;
 }
 
-/* Sidebar brand */
+[data-testid="stSidebar"] * {
+    color: inherit;
+}
+
 .sidebar-brand {
     padding: 28px 20px 20px 20px;
     border-bottom: 1px solid #EDE9E3;
     margin-bottom: 16px;
 }
 
-/* All sidebar buttons */
+/* Sidebar buttons */
 [data-testid="stSidebar"] .stButton > button {
     background: transparent;
     border: none;
@@ -52,9 +108,10 @@ GLOBAL_CSS = """
     padding: 8px 12px;
     border-radius: 10px;
     transition: all 0.15s ease;
-    box-shadow: none !important;
     width: 100%;
+    box-shadow: none !important;
 }
+
 [data-testid="stSidebar"] .stButton > button:hover {
     background: #F5F1EC;
     color: #1C1917;
@@ -62,7 +119,7 @@ GLOBAL_CSS = """
     box-shadow: none !important;
 }
 
-/* New Chat button — first button in sidebar */
+/* Sidebar first button */
 [data-testid="stSidebar"] .stButton:first-of-type > button {
     background: #FF8C69 !important;
     color: #FFFFFF !important;
@@ -74,48 +131,52 @@ GLOBAL_CSS = """
     letter-spacing: 0.01em;
     margin-bottom: 8px;
 }
+
 [data-testid="stSidebar"] .stButton:first-of-type > button:hover {
     background: #FF7A55 !important;
     box-shadow: 0 6px 22px rgba(255, 120, 80, 0.42) !important;
-    transform: translateY(-1px) !important;
 }
 
-/* ══════════════════════════════════
-   TYPOGRAPHY
-══════════════════════════════════ */
-h1 {
+/* ───────────────── TYPOGRAPHY ───────────────── */
+
+h1, h2, h3 {
     font-family: 'Fraunces', serif !important;
     font-weight: 500 !important;
     color: #1C1917 !important;
     letter-spacing: -0.025em;
-    line-height: 1.1 !important;
 }
 
-/* ══════════════════════════════════
-   BUTTONS (main area)
-══════════════════════════════════ */
+.section-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: #78716C !important;
+    display: block;
+    margin-bottom: 10px;
+}
+
+/* ───────────────── BUTTONS ───────────────── */
+
 .stButton > button {
     background: #FFFFFF;
     border: 1.5px solid #E5E0D8;
-    color: #44403C;
+    color: #44403C !important;
     border-radius: 12px;
-    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 13.5px;
     font-weight: 600;
     padding: 11px 20px;
     transition: all 0.18s ease;
     box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
+
 .stButton > button:hover {
     background: #FFF6F2;
     border-color: #FFC4B0;
+    color: #1C1917 !important;
     box-shadow: 0 4px 16px rgba(255, 120, 80, 0.14);
-    transform: translateY(-2px);
-    color: #1C1917;
 }
-.stButton > button:active { transform: translateY(0); }
 
-/* Primary button */
 .stButton > button[kind="primary"] {
     background: linear-gradient(135deg, #FF8C69 0%, #FF6B9D 100%) !important;
     color: #FFFFFF !important;
@@ -125,16 +186,57 @@ h1 {
     padding: 14px 28px !important;
     border-radius: 14px !important;
     box-shadow: 0 6px 22px rgba(255, 100, 130, 0.38) !important;
-    letter-spacing: 0.01em;
-}
-.stButton > button[kind="primary"]:hover {
-    box-shadow: 0 10px 30px rgba(255, 100, 130, 0.5) !important;
-    transform: translateY(-2px) !important;
 }
 
-/* ══════════════════════════════════
-   INPUTS
-══════════════════════════════════ */
+.stButton > button[kind="primary"]:hover {
+    color: #FFFFFF !important;
+    box-shadow: 0 10px 30px rgba(255, 100, 130, 0.5) !important;
+}
+
+/* ───────────────── INPUTS ───────────────── */
+
+label,
+.stTextInput label,
+.stSelectbox label,
+.stFileUploader label {
+    color: #44403C !important;
+    font-weight: 600 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.stTextInput input,
+.stTextArea textarea {
+    background: #FFFFFF !important;
+    border: 1.5px solid #E5E0D8 !important;
+    border-radius: 12px !important;
+    font-size: 14px !important;
+    color: #1C1917 !important;
+    padding: 13px 18px !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04) !important;
+}
+
+.stTextInput input::placeholder,
+.stTextArea textarea::placeholder {
+    color: #A8A29E !important;
+    opacity: 1 !important;
+}
+
+/* Selectbox main area */
+[data-testid="stSelectbox"] > div > div {
+    background: #FFFFFF !important;
+    border: 1.5px solid #E5E0D8 !important;
+    border-radius: 12px !important;
+    color: #1C1917 !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04) !important;
+}
+
+/* Selectbox displayed text */
+[data-testid="stSelectbox"] * {
+    color: #1C1917 !important;
+}
+
+/* File uploader */
 [data-testid="stFileUploader"] {
     background: #FFFFFF;
     border: 2px dashed #DDD8D0;
@@ -142,85 +244,109 @@ h1 {
     padding: 10px;
     transition: all 0.2s ease;
 }
+
 [data-testid="stFileUploader"]:hover {
     border-color: #FF8C69;
     background: #FFF9F7;
 }
 
-[data-testid="stSelectbox"] > div > div {
-    background: #FFFFFF;
-    border: 1.5px solid #E5E0D8;
-    border-radius: 12px;
-    font-size: 13.5px;
-    font-weight: 500;
-    color: #44403C;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+/* Uploaded file text */
+[data-testid="stFileUploader"] * {
+    color: #1C1917 !important;
 }
 
-.stTextInput > div > div > input {
-    background: #FFFFFF;
-    border: 1.5px solid #E5E0D8;
-    border-radius: 12px;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 14px;
-    font-weight: 400;
-    color: #1C1917;
-    padding: 13px 18px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-    transition: all 0.18s ease;
+/* Browse files button text */
+[data-testid="stFileUploader"] button,
+[data-testid="stFileUploader"] button * {
+    color: #FFFFFF !important;
 }
-.stTextInput > div > div > input:focus {
-    border-color: #FF8C69;
-    box-shadow: 0 0 0 3px rgba(255, 140, 105, 0.12);
-}
-.stTextInput > div > div > input::placeholder {
-    color: #C5BDB4;
-    font-weight: 400;
-}
+
+/* ───────────────── CHAT ───────────────── */
 
 [data-testid="stChatInput"] {
     border: 1.5px solid #E5E0D8 !important;
     border-radius: 16px !important;
     background: #FFFFFF !important;
     box-shadow: 0 2px 12px rgba(0,0,0,0.06) !important;
-    font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
-/* ══════════════════════════════════
-   CHAT MESSAGES
-══════════════════════════════════ */
+[data-testid="stChatInput"] * {
+    color: #1C1917 !important;
+}
+
 [data-testid="stChatMessage"] {
     background: #FFFFFF;
     border: 1px solid #EDE9E3;
     border-radius: 16px;
-    padding: 6px 10px;
+    padding: 8px 12px;
     margin-bottom: 10px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.045);
 }
 
-/* ══════════════════════════════════
-   MISC
-══════════════════════════════════ */
-hr {
-    border: none;
-    border-top: 1px solid #EDE9E3;
-    margin: 20px 0;
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] * {
+    color: #1C1917 !important;
 }
 
-.stSpinner > div { border-top-color: #FF8C69 !important; }
+[data-testid="stChatMessageContent"] * {
+    color: #1C1917 !important;
+}
 
+/* ───────────────── TABS ───────────────── */
+
+button[role="tab"] {
+    color: #44403C !important;
+    font-weight: 600 !important;
+}
+
+button[role="tab"][aria-selected="true"] {
+    color: #1C1917 !important;
+}
+
+/* ───────────────── EXPANDER ───────────────── */
+
+details {
+    background: #FFFFFF !important;
+    border: 1px solid #EDE9E3 !important;
+    border-radius: 14px !important;
+    padding: 4px 8px !important;
+}
+
+summary, summary * {
+    color: #1C1917 !important;
+}
+
+/* Hide raw material icon text if Streamlit injects label text */
+summary span:has(> span[data-testid="stIconMaterial"]) {
+    display: inline-flex;
+    align-items: center;
+}
+
+/* ───────────────── ALERTS / STATUS ───────────────── */
+
+[data-testid="stAlertContainer"] * {
+    color: #1C1917 !important;
+}
+
+.stSpinner > div {
+    border-top-color: #FF8C69 !important;
+}
+
+/* Toast */
 [data-testid="stToast"] {
     background: #1C1917;
-    color: #FAF8F5;
+    color: #FAF8F5 !important;
     border-radius: 12px;
     font-size: 13px;
     font-weight: 600;
     box-shadow: 0 4px 20px rgba(0,0,0,0.18);
 }
 
-/* ══════════════════════════════════
-   DASHBOARD CUSTOM COMPONENTS
-══════════════════════════════════ */
+[data-testid="stToast"] * {
+    color: #FAF8F5 !important;
+}
+
+/* ───────────────── CUSTOM COMPONENTS ───────────────── */
+
 .hero-badge {
     display: inline-flex;
     align-items: center;
@@ -231,12 +357,13 @@ hr {
     padding: 6px 16px;
     margin-bottom: 24px;
 }
+
 .hero-badge span {
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: #D9521A;
+    color: #D9521A !important;
 }
 
 .how-card {
@@ -253,30 +380,27 @@ hr {
     align-items: center;
     gap: 14px;
     padding: 9px 0;
-    color: #57534E;
+    color: #57534E !important;
     font-size: 14px;
     font-weight: 500;
 }
+
 .step-row:not(:last-child) {
     border-bottom: 1px solid #F5F1EC;
 }
-.step-num {
-    width: 30px; height: 30px;
-    background: linear-gradient(135deg, #FFD4C2 0%, #FFBAD0 100%);
-    color: #9A3412;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700; flex-shrink: 0;
-}
 
-.section-label {
-    font-size: 10.5px;
+.step-num {
+    width: 30px;
+    height: 30px;
+    background: linear-gradient(135deg, #FFD4C2 0%, #FFBAD0 100%);
+    color: #9A3412 !important;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
     font-weight: 700;
-    letter-spacing: 0.11em;
-    text-transform: uppercase;
-    color: #A8A29E;
-    display: block;
-    margin-bottom: 10px;
+    flex-shrink: 0;
 }
 
 .quick-grid-btn > button {
@@ -288,29 +412,96 @@ hr {
     color: #44403C !important;
     padding: 15px 18px !important;
     text-align: left !important;
-    transition: all 0.18s ease !important;
     box-shadow: 0 1px 6px rgba(0,0,0,0.05) !important;
     height: 58px !important;
 }
+
 .quick-grid-btn > button:hover {
     background: linear-gradient(135deg, #FFF0EB 0%, #FFF0F6 100%) !important;
     border-color: #FFC4B0 !important;
-    box-shadow: 0 6px 20px rgba(255, 120, 80, 0.16) !important;
-    transform: translateY(-3px) !important;
     color: #1C1917 !important;
+    box-shadow: 0 6px 20px rgba(255, 120, 80, 0.16) !important;
 }
 
 .feedback-ok {
-    font-size: 13px; color: #16A34A;
-    font-weight: 600; padding: 6px 0;
-    display: flex; align-items: center; gap: 6px;
+    font-size: 13px;
+    color: #16A34A !important;
+    font-weight: 600;
+    padding: 6px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 </style>
 """
-
-
 def inject_css():
     st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
+
+
+def get_current_username():
+    return st.session_state.current_user["username"]
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# AUTH SCREEN
+# ══════════════════════════════════════════════════════════════════════════════
+def render_auth_screen():
+    inject_css()
+
+    st.markdown(
+        """
+        <div style="max-width:700px; margin:50px auto 20px auto; text-align:center;">
+            <div class="hero-badge" style="display:inline-flex;">
+                <span>✦ Welcome</span>
+            </div>
+            <h1 style="font-size:52px; margin-bottom:12px;">Learning Assistant</h1>
+            <p style="color:#78716C; font-size:16px;">
+                Sign in to continue learning, or create a new account as a student or teacher.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    tab1, tab2 = st.tabs(["Login", "Sign Up"])
+
+    with tab1:
+        st.markdown("### Login")
+        login_username = st.text_input("Username", key="login_username")
+        login_password = st.text_input("Password", type="password", key="login_password")
+
+        if st.button("Login", type="primary", use_container_width=True):
+            ok, msg, user_data = login_user(login_username.strip(), login_password)
+            if ok:
+                st.session_state.logged_in = True
+                st.session_state.current_user = user_data
+                st.session_state.current_chat_id = None
+                st.success(msg)
+                st.rerun()
+            else:
+                st.error(msg)
+
+    with tab2:
+        st.markdown("### Sign Up")
+        full_name = st.text_input("Full Name", key="signup_full_name")
+        signup_username = st.text_input("Username", key="signup_username")
+        signup_password = st.text_input("Password", type="password", key="signup_password")
+        signup_role = st.selectbox("Role", ["student", "teacher"], key="signup_role")
+
+        if st.button("Create Account", type="primary", use_container_width=True):
+            if not full_name.strip() or not signup_username.strip() or not signup_password.strip():
+                st.warning("Please fill in all fields.")
+            else:
+                ok, msg = signup_user(
+                    full_name=full_name.strip(),
+                    username=signup_username.strip(),
+                    password=signup_password,
+                    role=signup_role
+                )
+                if ok:
+                    st.success(msg)
+                else:
+                    st.error(msg)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -318,6 +509,12 @@ def inject_css():
 # ══════════════════════════════════════════════════════════════════════════════
 def render_sidebar(all_chats):
     inject_css()
+
+    current_user = st.session_state.current_user
+    username = current_user["username"]
+    full_name = current_user["full_name"]
+    role = current_user["role"]
+
     if "editing_chat_id" not in st.session_state:
         st.session_state.editing_chat_id = None
     if "editing_chat_title" not in st.session_state:
@@ -325,11 +522,16 @@ def render_sidebar(all_chats):
 
     with st.sidebar:
         st.markdown(
-            """
+            f"""
             <div class="sidebar-brand">
                 <div style="font-family:'Fraunces',serif; font-size:20px; color:#1C1917;
                     font-weight:500; letter-spacing:-0.01em; line-height:1.2;">
                     🎓 Learning<br><em style="color:#FF8C69;">Assistant</em>
+                </div>
+                <div style="margin-top:14px; font-size:13px; color:#57534E;">
+                    <strong>{full_name}</strong><br>
+                    @{username}<br>
+                    <span style="color:#FF8C69; font-weight:600;">{role.title()}</span>
                 </div>
             </div>
             """,
@@ -337,8 +539,17 @@ def render_sidebar(all_chats):
         )
 
         if st.button("＋  New Chat", use_container_width=True):
-            create_new_chat(all_chats)
+            create_new_chat(username, all_chats)
             st.session_state.last_image_data = None
+            st.rerun()
+
+        if st.button("↩ Logout", use_container_width=True):
+            st.session_state.logged_in = False
+            st.session_state.current_user = None
+            st.session_state.current_chat_id = None
+            st.session_state.last_image_data = None
+            st.session_state.processed_files = set()
+            st.session_state.pending_starter_message = False
             st.rerun()
 
         st.markdown(
@@ -349,6 +560,7 @@ def render_sidebar(all_chats):
         for chat_id in reversed(list(all_chats.keys())):
             title = all_chats[chat_id]["title"]
             short_title = title if len(title) <= 26 else title[:26] + "…"
+
             r1, r2 = st.columns([0.83, 0.17])
             with r1:
                 if st.button(short_title, key=f"sel_{chat_id}", use_container_width=True):
@@ -358,7 +570,7 @@ def render_sidebar(all_chats):
                 with st.popover("⋯", use_container_width=True):
                     if st.button("🗑 Delete", key=f"del_{chat_id}", use_container_width=True):
                         del all_chats[chat_id]
-                        save_all_chats(all_chats)
+                        save_all_chats(username, all_chats)
                         if st.session_state.current_chat_id == chat_id:
                             st.session_state.current_chat_id = None
                         st.rerun()
@@ -368,8 +580,21 @@ def render_sidebar(all_chats):
 # CHAT SCREEN
 # ══════════════════════════════════════════════════════════════════════════════
 def render_chat_screen(all_chats):
+
     inject_css()
+    username = get_current_username()
+
+    if st.session_state.current_chat_id not in all_chats:
+        st.session_state.current_chat_id = None
+        st.rerun()
+        return
+
     current_chat = all_chats[st.session_state.current_chat_id]
+    if current_chat.get("course_id"):
+        st.caption(f"Selected course: {current_chat.get('course_id')}")
+    course_id = current_chat.get("course_id")
+    if course_id:
+        current_chat["pdf_context"] = get_course_materials_text(course_id)
 
     c1, c2 = st.columns([0.12, 0.88])
     with c1:
@@ -387,7 +612,6 @@ def render_chat_screen(all_chats):
     for i, msg in enumerate(current_chat["messages"]):
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
-            # Sadece assistant mesajlarına Dinle butonu ekle
             if msg["role"] == "assistant":
                 msg_key = f"audio_{i}"
                 if st.button("🔊  Dinle", key=f"tts_hist_{i}"):
@@ -409,49 +633,100 @@ def render_chat_screen(all_chats):
     with up_col:
         if "processed_files" not in st.session_state:
             st.session_state.processed_files = set()
+
         uploaded_files = st.file_uploader(
-            "Upload PDF or image", accept_multiple_files=True,
-            type=["pdf", "jpg", "png", "jpeg"], key="chat_uploader"
+            "Upload PDF or image",
+            accept_multiple_files=True,
+            type=["pdf", "jpg", "png", "jpeg"],
+            key="chat_uploader"
         )
+
         if uploaded_files:
             rag = RAGManager()
+
             for pdf_file in [f for f in uploaded_files if f.type == "application/pdf"]:
-                if pdf_file.name not in st.session_state.processed_files:
-                    with st.spinner(f"Processing {pdf_file.name}…"):
-                        rag.add_document(get_pdf_text([pdf_file]), source_name=pdf_file.name)
-                        st.session_state.processed_files.add(pdf_file.name)
-                        st.toast(f"✓ {pdf_file.name} added")
+                unique_pdf_key = f"{username}_{st.session_state.current_chat_id}_{pdf_file.name}"
+
+                with st.spinner(f"Processing {pdf_file.name}…"):
+                    pdf_text = get_pdf_text([pdf_file])
+
+                    if unique_pdf_key not in st.session_state.processed_files:
+                        rag.add_document(pdf_text, source_name=pdf_file.name)
+                        st.session_state.processed_files.add(unique_pdf_key)
+
+                    existing_context = current_chat.get("pdf_context", "")
+                    new_block = f"\n\n--- {pdf_file.name} ---\n{pdf_text}"
+
+                    if new_block not in existing_context:
+                        current_chat["pdf_context"] = existing_context + new_block
+
+                    st.toast(f"✓ {pdf_file.name} added")
+
             img_files = [f for f in uploaded_files if f.type in ["image/jpeg", "image/png"]]
             if img_files:
                 st.session_state.last_image_data = process_image(img_files[-1])
                 st.image(img_files[-1], width=220, caption="Ready for analysis")
-            save_all_chats(all_chats)
+
+            save_all_chats(username, all_chats)
 
     with st_col:
         st.markdown("<span class='section-label'>Tutor Style</span>", unsafe_allow_html=True)
         st.session_state.teaching_style = st.selectbox(
-            "Style", ["Professional Tutor", "Funny YouTuber", "Simplified"],
-            label_visibility="collapsed"
+            "Style",
+            ["Professional Tutor", "Funny YouTuber", "Simplified"],
+            label_visibility="collapsed",
+            key="chat_style_select"
         )
+
+    # Starter dashboard'dan gelen ilk mesajı otomatik cevapla
+    if st.session_state.get("pending_starter_message", False):
+        last_msg = current_chat["messages"][-1] if current_chat["messages"] else None
+
+        if last_msg and last_msg["role"] == "user":
+            with st.chat_message("assistant"):
+                ph = st.empty()
+                full_resp = ""
+
+                for chunk in stream_ai_response(
+                        current_chat["messages"],
+                        current_chat.get("pdf_context", ""),
+                        st.session_state.teaching_style,
+                        st.session_state.last_image_data
+                ):
+                    full_resp = chunk
+                    ph.markdown(full_resp + "▌")
+
+                ph.markdown(full_resp)
+
+            current_chat["messages"].append({"role": "assistant", "content": full_resp})
+            save_all_chats(username, all_chats)
+
+        st.session_state.pending_starter_message = False
+        st.rerun()
+        return
 
     prompt = st.chat_input("Ask anything…")
     if prompt:
         current_chat["messages"].append({"role": "user", "content": prompt})
+
         with st.chat_message("user"):
             st.markdown(prompt)
+
         with st.chat_message("assistant"):
             ph = st.empty()
             full_resp = ""
+
             for chunk in stream_ai_response(
-                current_chat["messages"], None,
+                current_chat["messages"],
+                current_chat.get("pdf_context", ""),
                 st.session_state.teaching_style,
                 st.session_state.last_image_data
             ):
                 full_resp = chunk
                 ph.markdown(full_resp + "▌")
+
             ph.markdown(full_resp)
 
-            # ── 🔊 Dinle butonu ──
             if full_resp:
                 msg_key = f"audio_{len(current_chat['messages'])}"
                 if st.button("🔊  Dinle", key=f"tts_{len(current_chat['messages'])}"):
@@ -467,26 +742,113 @@ def render_chat_screen(all_chats):
 
                 if msg_key in st.session_state:
                     st.audio(st.session_state[msg_key], format="audio/mp3")
+
         current_chat["messages"].append({"role": "assistant", "content": full_resp})
+
         if current_chat["title"] == "New Chat":
             current_chat["title"] = prompt.strip()[:25] + "…"
-            save_all_chats(all_chats)
+            save_all_chats(username, all_chats)
             st.rerun()
-        save_all_chats(all_chats)
 
+        save_all_chats(username, all_chats)
+def render_teacher_dashboard():
+    inject_css()
+    username = get_current_username()
+
+    st.markdown(
+        """
+        <div style="text-align:center; padding:40px 0 24px 0;">
+            <div class="hero-badge" style="display:inline-flex;">
+                <span>✦ Teacher Panel</span>
+            </div>
+            <h1 style="
+                font-family:'Fraunces',serif;
+                font-size:48px; font-weight:500;
+                color:#1C1917; letter-spacing:-0.03em;
+                line-height:1.08; margin:0 0 20px 0;">
+                Manage your courses<br>
+                <em style="color:#FF8C69; font-style:italic;">and materials</em>
+            </h1>
+            <p style="
+                font-size:16px; color:#78716C;
+                max-width:560px; margin:0 auto;
+                line-height:1.65;">
+                Create courses, upload PDF materials, and let students learn from your content.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.markdown("### Create New Course")
+    course_name = st.text_input("Course name", placeholder="e.g. Calculus 1")
+
+    if st.button("Create Course", type="primary", use_container_width=True):
+        if not course_name.strip():
+            st.warning("Please enter a course name.")
+        else:
+            ok, result = create_course(course_name.strip(), username)
+            if ok:
+                st.success(f"Course created: {course_name}")
+                st.rerun()
+            else:
+                st.error(result)
+
+    st.divider()
+
+    st.markdown("### Your Courses")
+    teacher_courses = get_teacher_courses(username)
+
+    if not teacher_courses:
+        st.info("You have not created any courses yet.")
+        return
+
+    for course_id, course_data in teacher_courses.items():
+        with st.expander(f"{course_data['course_name']}"):
+            st.write(f"**Teacher:** {course_data['teacher_username']}")
+            st.write(f"**Materials:** {len(course_data.get('materials', []))}")
+
+            uploaded_files = st.file_uploader(
+                f"Upload PDFs for {course_data['course_name']}",
+                type=["pdf"],
+                accept_multiple_files=True,
+                key=f"teacher_upload_{course_id}"
+            )
+
+            if uploaded_files:
+                rag = RAGManager()
+                for pdf_file in uploaded_files:
+                    with st.spinner(f"Processing {pdf_file.name}..."):
+                        raw_text = get_pdf_text([pdf_file])
+                        rag.add_document(raw_text, source_name=pdf_file.name)
+                        ok, msg = add_material_to_course(
+                            course_id=course_id,
+                            filename=pdf_file.name,
+                            text_content=raw_text
+                        )
+                        if ok:
+                            st.success(f"{pdf_file.name} added.")
+                        else:
+                            st.error(msg)
+
+            materials = course_data.get("materials", [])
+            if materials:
+                st.markdown("**Uploaded Materials**")
+                for material in materials:
+                    st.markdown(f"- {material['original_filename']}")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # STARTER DASHBOARD
 # ══════════════════════════════════════════════════════════════════════════════
 def render_starter_dashboard(all_chats):
     inject_css()
+    username = get_current_username()
 
     if "starter_text_input_value" not in st.session_state:
         st.session_state.starter_text_input_value = ""
     if "starter_feedback" not in st.session_state:
         st.session_state.starter_feedback = ""
 
-    # ── Hero ──────────────────────────────────────────────────────────────────
     st.markdown(
         """
         <div style="text-align:center; padding:60px 0 44px 0;">
@@ -514,7 +876,6 @@ def render_starter_dashboard(all_chats):
         unsafe_allow_html=True
     )
 
-    # ── How it works ──────────────────────────────────────────────────────────
     st.markdown(
         """
         <div class="how-card">
@@ -540,15 +901,16 @@ def render_starter_dashboard(all_chats):
         unsafe_allow_html=True
     )
 
-    # ── Upload + Style ────────────────────────────────────────────────────────
     col_up, col_style = st.columns([0.62, 0.38], gap="medium")
 
     with col_up:
         st.markdown("<span class='section-label'>Upload your notes</span>", unsafe_allow_html=True)
         starter_files = st.file_uploader(
-            "Upload", accept_multiple_files=True,
+            "Upload",
+            accept_multiple_files=True,
             type=["pdf", "jpg", "png", "jpeg"],
-            key="starter_file_uploader", label_visibility="collapsed"
+            key="starter_file_uploader",
+            label_visibility="collapsed"
         )
 
     with col_style:
@@ -556,12 +918,26 @@ def render_starter_dashboard(all_chats):
         st.session_state.teaching_style = st.selectbox(
             "Style",
             ["Professional Tutor", "Funny YouTuber", "Deep Scientist", "Simplified (for kids)"],
-            label_visibility="collapsed", key="starter_style_select"
+            label_visibility="collapsed",
+            key="starter_style_select"
         )
-
     st.write("")
+    st.markdown("<span class='section-label'>Select course</span>", unsafe_allow_html=True)
 
-    # ── Quick prompts ─────────────────────────────────────────────────────────
+    course_options = get_course_display_options()
+
+    if course_options:
+        selected_label = st.selectbox(
+            "Course",
+            options=list(course_options.keys()),
+            label_visibility="collapsed",
+            key="student_course_select"
+        )
+        st.session_state.selected_course_id = course_options[selected_label]
+    else:
+        st.session_state.selected_course_id = None
+        st.warning("No courses have been added by teachers yet.")
+    st.write("")
     st.markdown("<span class='section-label'>Quick start</span>", unsafe_allow_html=True)
 
     q1, q2 = st.columns(2, gap="small")
@@ -571,28 +947,28 @@ def render_starter_dashboard(all_chats):
         st.markdown("<div class='quick-grid-btn'>", unsafe_allow_html=True)
         if st.button("📄  Summarize document", use_container_width=True):
             st.session_state.starter_text_input_value = "Can you summarize this document for me?"
-            st.session_state.starter_feedback = "✓ Prompt ready — scroll down and hit Start!"
+            st.session_state.starter_feedback = "Prompt ready — scroll down and hit Start!"
         st.markdown("</div>", unsafe_allow_html=True)
 
     with q2:
         st.markdown("<div class='quick-grid-btn'>", unsafe_allow_html=True)
         if st.button("🖼️  Explain this image", use_container_width=True):
             st.session_state.starter_text_input_value = "Can you explain this image step by step?"
-            st.session_state.starter_feedback = "✓ Prompt ready — scroll down and hit Start!"
+            st.session_state.starter_feedback = "Prompt ready — scroll down and hit Start!"
         st.markdown("</div>", unsafe_allow_html=True)
 
     with q3:
         st.markdown("<div class='quick-grid-btn'>", unsafe_allow_html=True)
         if st.button("🧠  Create quiz questions", use_container_width=True):
             st.session_state.starter_text_input_value = "Can you create study questions from these notes?"
-            st.session_state.starter_feedback = "✓ Prompt ready — scroll down and hit Start!"
+            st.session_state.starter_feedback = "Prompt ready — scroll down and hit Start!"
         st.markdown("</div>", unsafe_allow_html=True)
 
     with q4:
         st.markdown("<div class='quick-grid-btn'>", unsafe_allow_html=True)
         if st.button("✦  Teach it simply", use_container_width=True):
             st.session_state.starter_text_input_value = "Can you explain this topic in a very simple way?"
-            st.session_state.starter_feedback = "✓ Prompt ready — scroll down and hit Start!"
+            st.session_state.starter_feedback = "Prompt ready — scroll down and hit Start!"
         st.markdown("</div>", unsafe_allow_html=True)
 
     if st.session_state.starter_feedback:
@@ -602,22 +978,32 @@ def render_starter_dashboard(all_chats):
         )
 
     st.write("")
-
-    # ── Question input ────────────────────────────────────────────────────────
     st.markdown("<span class='section-label'>Your question</span>", unsafe_allow_html=True)
+
     starter_input = st.text_input(
         "Question",
-        placeholder="e.g.  Explain this topic like I'm 15 years old…",
+        placeholder="e.g. Explain this topic like I'm 15 years old…",
         key="starter_text_input_value",
         label_visibility="collapsed"
     )
 
     st.write("")
 
-    # ── CTA button ───────────────────────────────────────────────────────────
     if st.button("🚀  Start Learning", use_container_width=True, type="primary"):
-        new_chat_id = create_new_chat(all_chats)
+        if not starter_input.strip() and not starter_files:
+            st.warning("Please add a question or upload a file first.")
+            return
+
+        new_chat_id = create_new_chat(username, all_chats)
         current_chat = all_chats[new_chat_id]
+        selected_course_id = st.session_state.get("selected_course_id")
+
+        if selected_course_id:
+            current_chat["course_id"] = selected_course_id
+            current_chat["pdf_context"] = get_course_materials_text(selected_course_id)
+        else:
+            current_chat["course_id"] = None
+            current_chat["pdf_context"] = ""
 
         if starter_files:
             with st.spinner("Analysing your files…"):
@@ -628,20 +1014,33 @@ def render_starter_dashboard(all_chats):
                 if pdf_files:
                     if "processed_files" not in st.session_state:
                         st.session_state.processed_files = set()
+
+                    all_pdf_text = []
+
                     for pdf_file in pdf_files:
-                        if pdf_file.name not in st.session_state.processed_files:
-                            raw_text = get_pdf_text([pdf_file])
+                        unique_pdf_key = f"{username}_{new_chat_id}_{pdf_file.name}"
+                        raw_text = get_pdf_text([pdf_file])
+
+                        if unique_pdf_key not in st.session_state.processed_files:
                             rag.add_document(raw_text, source_name=pdf_file.name)
-                            st.session_state.processed_files.add(pdf_file.name)
-                    current_chat["pdf_context"] = "Processed into vector store."
+                            st.session_state.processed_files.add(unique_pdf_key)
+
+                        all_pdf_text.append(f"\n\n--- {pdf_file.name} ---\n{raw_text}")
+
+                    current_chat["pdf_context"] = "".join(all_pdf_text)
 
                 if img_files:
                     st.session_state.last_image_data = process_image(img_files[-1])
 
         if starter_input.strip():
-            current_chat["messages"].append({"role": "user", "content": starter_input.strip()})
+            current_chat["messages"].append({
+                "role": "user",
+                "content": starter_input.strip()
+            })
             current_chat["title"] = starter_input.strip()[:25] + "…"
-            save_all_chats(all_chats)
+            st.session_state.pending_starter_message = True
+
+        save_all_chats(username, all_chats)
 
         st.session_state.current_chat_id = new_chat_id
         st.session_state.starter_feedback = ""

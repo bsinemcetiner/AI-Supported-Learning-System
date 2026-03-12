@@ -1,0 +1,88 @@
+{
+    "yaseminnnn::se115": {
+        "course_id": "yaseminnnn::se115",
+        "course_name": "SE115",
+        "teacher_username": "yaseminnnn",
+        "materials": []
+    },
+    "yaseminnnn::se116": {
+        "course_id": "yaseminnnn::se116",
+        "course_name": "SE116",
+        "teacher_username": "yaseminnnn",
+        "materials": []
+    },
+    "yaseminnnn::linear": {
+        "course_id": "yaseminnnn::linear",
+        "course_name": "Linear",
+        "teacher_username": "yaseminnnn",
+        "materials": [
+            {
+                "original_filename": "22-23_MATH250_Lecture2(1)-2.pdf",
+                "stored_path": "course_materials/yaseminnnn__linear_1.txt"
+            },
+            {
+                "original_filename": "22-23_MATH250_Lecture2(1).pdf",
+                "stored_path": "course_materials/yaseminnnn__linear_2.txt"
+            },
+            {
+                "original_filename": "22-23_MATH250_Lecture9-10_new-2.pdf",
+                "stored_path": "course_materials/yaseminnnn__linear_3.txt"
+            },
+            {
+                "original_filename": "22-23_MATH250_Lecture9-10_new-3.pdf",
+                "stored_path": "course_materials/yaseminnnn__linear_4.txt"
+            },
+            {
+                "original_filename": "22-23_MATH250_Lecture9-10_new-4.pdf",
+                "stored_path": "course_materials/yaseminnnn__linear_5.txt"
+            },
+            {
+                "original_filename": "22-23_MATH250_Lecture9-10_new-5.pdf",
+                "stored_path": "course_materials/yaseminnnn__linear_6.txt"
+            },
+            {
+                "original_filename": "22-23_MATH250_Lecture9-10_new-6.pdf",
+                "stored_path": "course_materials/yaseminnnn__linear_7.txt"
+            },
+            {
+                "original_filename": "22-23_MATH250_Lecture9-10_new-7.pdf",
+                "stored_path": "course_materials/yaseminnnn__linear_8.txt"
+            },
+            {
+                "original_filename": "22-23_MATH250_Lecture9-10_new-8.pdf",
+                "stored_path": "course_materials/yaseminnnn__linear_9.txt"
+            },
+            {
+                "original_filename": "22-23_MATH250_Lecture9-10_new-9.pdf",
+                "stored_path": "course_materials/yaseminnnn__linear_10.txt"
+            },
+            {
+                "original_filename": "22-23_MATH250_Lecture9-10_new-10.pdf",
+                "stored_path": "course_materials/yaseminnnn__linear_11.txt"
+            },
+            {
+                "original_filename": "22-23_MATH250_Lecture9-10_new-11.pdf",
+                "stored_path": "course_materials/yaseminnnn__linear_12.txt"
+            },
+            {
+                "original_filename": "22-23_MATH250_Lecture9-10_new-12.pdf",
+                "stored_path": "course_materials/yaseminnnn__linear_13.txt"
+            },
+            {
+                "original_filename": "22-23_MATH250_Lecture9-10_new-13.pdf",
+                "stored_path": "course_materials/yaseminnnn__linear_14.txt"
+            }
+        ]
+    },
+    "yaseminnnn::music and computers": {
+        "course_id": "yaseminnnn::music and computers",
+        "course_name": "Music and Computers",
+        "teacher_username": "yaseminnnn",
+        "materials": [
+            {
+                "original_filename": "Week 2.pdf",
+                "stored_path": "course_materials/yaseminnnn__music and computers_1.txt"
+            }
+        ]
+    }
+}
