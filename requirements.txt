@@ -1,0 +1,4 @@
+streamlit
+pypdf
+elevenlabs
+python-dotenv
