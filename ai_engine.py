@@ -1,11 +1,23 @@
 import ollama
 from rag_manager import RAGManager
 
+
+def _trim_text(text: str, max_chars: int = 18000) -> str:
+    if not text:
+        return ""
+    text = text.strip()
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars] + "\n\n[Context truncated for length.]"
+
+
 def stream_ai_response(messages, pdf_context, teaching_style, image_data=None):
     rag = RAGManager()
     last_user_message = messages[-1]["content"]
+
     retrieved_context = rag.query_context(last_user_message)
     visual_description = ""
+
     if image_data:
         try:
             vision_response = ollama.chat(
@@ -19,7 +31,7 @@ def stream_ai_response(messages, pdf_context, teaching_style, image_data=None):
                 ]
             )
             visual_description = (
-                f"\n\n[Information from uploaded image]:\n"
+                "\n\n[Information from uploaded image]:\n"
                 f"{vision_response['message']['content']}"
             )
         except Exception:
@@ -35,29 +47,47 @@ def stream_ai_response(messages, pdf_context, teaching_style, image_data=None):
         "Simplified (for kids)": "Use simple words and metaphors."
     }
 
-    system_instruction = (
-        f"You are an AI {teaching_style}. {style_instructions.get(teaching_style, '')} "
-        "IMPORTANT: Always write in clear, natural, grammatically correct language that matches the user's language. "
-        "1. For general greetings, compliments, or small talk (like 'hello', 'how are you', 'thank you'), answer naturally and politely without looking at the context. "
-        "2. For specific questions about topics, facts, or lessons, answer based ONLY on the following context retrieved from the course materials. "
-        "If the answer to a specific question is not in the context, politely say you don't know based on the provided notes.\n\n"
-        f"--- CONTEXT START ---\n{retrieved_context}\n--- CONTEXT END ---\n\n"
-        f"{visual_description}"
-        "Preserve technical meaning, but fix broken wording, malformed suffixes, corrupted words, encoding issues, and unnatural phrasing. "
-        "You may still be humorous, energetic, or playful when the selected teaching style requires it, but keep the wording correct and readable. "
-        "Do not produce misspellings, distorted words, mixed-up suffixes, or corrupted expressions just to sound funny. "
-        "If the source text is noisy, broken, or extracted imperfectly from a file, rewrite it into clean and readable language before answering. "
-        "Always use LaTeX for math ($ or $$). DO NOT use <br> tags."
-    )
+    cleaned_pdf_context = _trim_text(pdf_context, 18000)
+    cleaned_retrieved_context = _trim_text(retrieved_context, 6000)
 
-    full_context = ""
-    if pdf_context:
-        full_context += f"\n\nContext from PDF:\n{pdf_context}"
+    context_blocks = []
+
+    if cleaned_pdf_context:
+        context_blocks.append(
+            f"[PRIMARY COURSE / PDF CONTEXT]\n{cleaned_pdf_context}"
+        )
+
+    if cleaned_retrieved_context:
+        context_blocks.append(
+            f"[RETRIEVED RELEVANT EXCERPTS]\n{cleaned_retrieved_context}"
+        )
+
     if visual_description:
-        full_context += visual_description
+        context_blocks.append(visual_description)
 
-    if full_context:
-        system_instruction += f"\n\nUse this context to answer:\n{full_context}"
+    combined_context = "\n\n---\n\n".join(context_blocks).strip()
+
+    system_instruction = f"""
+You are an AI learning assistant with the style "{teaching_style}".
+{style_instructions.get(teaching_style, "")}
+
+IMPORTANT BEHAVIOR RULES:
+1. Always reply in the user's language.
+2. For greetings, thanks, or casual small talk, reply naturally without forcing document context.
+3. For lesson/topic questions:
+   - First use the CURRENT PDF / course context if it exists.
+   - Then use retrieved relevant excerpts as supporting evidence.
+   - If the answer is clearly present in the provided PDF/course context, answer confidently from it.
+   - If the answer is not present, say that it is not explicitly found in the provided notes.
+4. Do NOT ignore the PDF context just because retrieval is weak or incomplete.
+5. Clean broken extraction text when needed, but preserve the meaning.
+6. Use LaTeX for math ($ or $$).
+7. Do NOT use <br> tags.
+8. Keep the answer clear, natural, and readable.
+
+CONTEXT AVAILABLE TO YOU:
+{combined_context if combined_context else "No document context provided."}
+""".strip()
 
     stream = ollama.chat(
         model="gpt-oss:120b-cloud",

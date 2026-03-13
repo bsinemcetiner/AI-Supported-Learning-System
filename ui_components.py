@@ -12,6 +12,11 @@ from ai_engine import stream_ai_response
 from rag_manager import RAGManager
 from tts_engine import generate_audio
 from auth_manager import signup_user, login_user
+st.set_page_config(
+    page_title="Learning Assistant",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 GLOBAL_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Fraunces:ital,wght@0,300;0,500;1,300;1,500&display=swap');
@@ -35,7 +40,7 @@ html, body, .stApp {
 [data-testid="stToolbar"] { display: none; }
 
 /* Global readable text */
-body, p, span, label, strong, em, small {
+body, p, label, strong, em, small {
     color: #1C1917;
 }
 
@@ -552,6 +557,45 @@ summary span:has(> span[data-testid="stIconMaterial"]) {
 [data-testid="stSidebar"] .stTextInput input:focus {
     border-color: #FF8C69 !important;
     box-shadow: 0 0 0 1px #FF8C69 !important;
+}
+
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"],
+section.main,
+.main .block-container {
+    background: #FAF8F5 !important;
+}
+
+/* Code blocks */
+pre, code, kbd, samp {
+    background: #F8F6F2 !important;
+    color: #1C1917 !important;
+}
+
+pre {
+    border: 1px solid #E5E0D8 !important;
+    border-radius: 16px !important;
+    padding: 16px !important;
+    overflow-x: auto !important;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.04) !important;
+}
+
+code {
+    background: #F3EFE8 !important;
+    color: #1C1917 !important;
+    border-radius: 8px !important;
+    padding: 2px 6px !important;
+}
+
+[data-testid="stCodeBlock"] {
+    background: #F8F6F2 !important;
+    border: 1px solid #E5E0D8 !important;
+    border-radius: 16px !important;
+}
+
+[data-testid="stCodeBlock"] * {
+    background: transparent !important;
+    color: #1C1917 !important;
 }
 
 </style>
