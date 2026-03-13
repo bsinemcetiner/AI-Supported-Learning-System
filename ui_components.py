@@ -598,6 +598,95 @@ code {
     color: #1C1917 !important;
 }
 
+/* ───────────────── REMAINING DARK UI FIXES ───────────────── */
+
+/* Bottom fixed area */
+[data-testid="stBottomBlockContainer"],
+[data-testid="stBottomBlockContainer"] > div,
+[data-testid="stBottomBlockContainer"] > div > div,
+[data-testid="stAppViewBlockContainer"],
+[data-testid="stAppViewBlockContainer"] > div {
+    background: #FAF8F5 !important;
+}
+
+/* Chat input wrapper çevresi */
+[data-testid="stChatInputContainer"],
+[data-testid="stChatInputContainer"] > div,
+[data-testid="stChatInputContainer"] > div > div {
+    background: #FAF8F5 !important;
+}
+
+/* Asıl input kutusu sende zaten güzel, yine de garantiye alalım */
+[data-testid="stChatInput"] {
+    background: #FFFFFF !important;
+    border: 1.5px solid #E5E0D8 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06) !important;
+}
+
+[data-testid="stChatInput"] textarea,
+[data-testid="stChatInput"] input,
+[data-testid="stChatInput"] * {
+    color: #1C1917 !important;
+}
+
+/* Sidebar üç nokta butonu */
+[data-testid="stPopoverButton"] > button,
+[data-testid="stBaseButton-secondary"],
+button[kind="secondary"] {
+    background: #FFFFFF !important;
+    color: #44403C !important;
+    border: 1px solid #E5E0D8 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05) !important;
+}
+
+[data-testid="stPopoverButton"] > button:hover,
+[data-testid="stBaseButton-secondary"]:hover,
+button[kind="secondary"]:hover {
+    background: #FFF6F2 !important;
+    color: #1C1917 !important;
+    border-color: #FFC4B0 !important;
+}
+
+/* Popover açılan menü */
+div[data-baseweb="popover"],
+div[data-baseweb="popover"] > div {
+    background: #FFFFFF !important;
+    color: #1C1917 !important;
+    border: 1px solid #E5E0D8 !important;
+    border-radius: 14px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10) !important;
+}
+
+/* ───────────────── FINAL CHAT INPUT INNER FIX ───────────────── */
+
+[data-testid="stChatInput"] textarea {
+    background: #FFFFFF !important;
+    color: #1C1917 !important;
+}
+
+[data-testid="stChatInput"] > div {
+    background: #FFFFFF !important;
+}
+
+[data-testid="stChatInput"] > div > div {
+    background: #FFFFFF !important;
+}
+
+[data-testid="stChatInput"] div[data-testid="stChatInputTextArea"] {
+    background: #FFFFFF !important;
+}
+
+[data-testid="stChatInput"] div[data-testid="stChatInputTextArea"] > div {
+    background: #FFFFFF !important;
+}
+
+[data-testid="stChatInput"] textarea::placeholder {
+    color: #A8A29E !important;
+    opacity: 1 !important;
+}
+
 </style>
 """
 def inject_css():
