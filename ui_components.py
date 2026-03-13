@@ -537,6 +537,23 @@ summary span:has(> span[data-testid="stIconMaterial"]) {
     align-items: center;
     gap: 6px;
 }
+/* ───────────────── SIDEBAR SEARCH ───────────────── */
+
+[data-testid="stSidebar"] .stTextInput input {
+    background: #FFFFFF !important;
+    border: 1.5px solid #E5E0D8 !important;
+    border-radius: 12px !important;
+    font-size: 13.5px !important;
+    color: #1C1917 !important;
+    padding: 10px 14px !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04) !important;
+}
+
+[data-testid="stSidebar"] .stTextInput input:focus {
+    border-color: #FF8C69 !important;
+    box-shadow: 0 0 0 1px #FF8C69 !important;
+}
+
 </style>
 """
 def inject_css():
@@ -574,7 +591,7 @@ def render_auth_screen():
         if "login_role_selected" not in st.session_state:
             st.session_state.login_role_selected = None
 
-        # ADIM 1: Rol seçim ekranı
+
         if st.session_state.login_role_selected is None:
             st.markdown(
                 """
@@ -625,7 +642,7 @@ def render_auth_screen():
                     st.session_state.login_role_selected = "teacher"
                     st.rerun()
 
-        # ADIM 2: Giriş formu
+
         else:
             role = st.session_state.login_role_selected
             emoji = "🎓" if role == "student" else "🏫"
@@ -772,6 +789,9 @@ def render_sidebar(all_chats):
     if "editing_chat_title" not in st.session_state:
         st.session_state.editing_chat_title = ""
 
+    if "chat_search_query" not in st.session_state:
+        st.session_state.chat_search_query = ""
+
     with st.sidebar:
         st.markdown(
             f"""
@@ -793,6 +813,7 @@ def render_sidebar(all_chats):
         if st.button("＋  New Chat", use_container_width=True):
             create_new_chat(username, all_chats)
             st.session_state.last_image_data = None
+            st.session_state.chat_search_query = ""
             st.rerun()
 
         if st.button("↩ Logout", use_container_width=True):
@@ -802,6 +823,7 @@ def render_sidebar(all_chats):
             st.session_state.last_image_data = None
             st.session_state.processed_files = set()
             st.session_state.pending_starter_message = False
+            st.session_state.chat_search_query = ""
             st.rerun()
 
         st.markdown(
@@ -809,8 +831,39 @@ def render_sidebar(all_chats):
             unsafe_allow_html=True
         )
 
-        for chat_id in reversed(list(all_chats.keys())):
-            title = all_chats[chat_id]["title"]
+        search_query = st.text_input(
+            "Search chats",
+            placeholder="Search chats...",
+            key="chat_search_query",
+            label_visibility="collapsed"
+        )
+
+        query = search_query.strip().lower()
+
+        filtered_chat_items = []
+        for chat_id, chat_data in all_chats.items():
+            title = chat_data.get("title", "Untitled Chat")
+            if not query or query in title.lower():
+                filtered_chat_items.append((chat_id, title))
+
+        filtered_chat_items = list(reversed(filtered_chat_items))
+
+        if not filtered_chat_items:
+            st.markdown(
+                """
+                <div style="
+                    padding: 10px 12px;
+                    color: #78716C;
+                    font-size: 13px;
+                    line-height: 1.5;
+                ">
+                    No chats found.
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        for chat_id, title in filtered_chat_items:
             short_title = title if len(title) <= 26 else title[:26] + "…"
 
             r1, r2 = st.columns([0.83, 0.17])
@@ -823,10 +876,11 @@ def render_sidebar(all_chats):
                     if st.button("🗑 Delete", key=f"del_{chat_id}", use_container_width=True):
                         del all_chats[chat_id]
                         save_all_chats(username, all_chats)
+
                         if st.session_state.current_chat_id == chat_id:
                             st.session_state.current_chat_id = None
-                        st.rerun()
 
+                        st.rerun()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # CHAT SCREEN

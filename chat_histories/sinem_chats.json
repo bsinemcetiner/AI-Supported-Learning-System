@@ -1,0 +1,40 @@
+{
+    "20260313_181151": {
+        "title": "analog ve digital farkı n…",
+        "messages": [
+            {
+                "role": "user",
+                "content": "analog ve digital farkı nedir"
+            },
+            {
+                "role": "assistant",
+                "content": "**Analog ve Dijital Sistemlerin Karşılaştırması**\n\n| Özellik | Analog Sistem | Dijital Sistem |\n|--------|---------------|----------------|\n| **Temsil Şekli** | Sürekli elektrik sinyalleri; dalga formu zaman içinde kesintisiz değişir. | Ayrık (discrete) sayısal örnekler; ses dalgası bir dizi sayıya dönüştürülür. |\n| **Örnekleme** | Gerekmeyen, doğrudan süreklilik korunur. | Belirli aralıklarla (örnekleme frekansı $f_s$) ölçülür ve her ölçüm bir “örnek” (sample) olarak saklanır. |\n| **Depolama ve İşleme** | Fiziksel ortamlarda (ör. manyetik bant, vinil) saklanır; işleme genellikle analog devrelerle yapılır. | Sayısal bellek (ör. sabit disk, SSD) ve dijital işlemcilerle saklanır, işlenir ve kopyalanır. |\n| **Gürültü ve Bozulma** | Parazit, yaşlanma ve sıcaklık değişikliklerine karşı hassas; sinyal bozulması kaçınılmazdır. | Sayısal veriler, belirli bir kodlama (ör. iki’s complement PCM) ile saklandığında, aynı bit dizisi her zaman aynı değeri verir; bozulma riski çok düşüktür. |\n| **Maliyet ve Güç Tüketimi** | Büyük, pahalı ve yüksek güç gerektiren devreler; bakımı zor. | Küçük, düşük maliyetli ve düşük güç tüketimli devreler; entegrasyon kolaydır. |\n| **Kopyalama ve Düzenleme** | Kopya alındıkça kalite kaybı yaşanır; düzenleme sınırlıdır. | Kopyalama ve düzenleme sırasında kalite kaybı yoktur; aynı dosya üzerinde sonsuz kez çalışılabilir. |\n| **Örnek Uygulamalar** | Vinil plaklar, manyetik kasetler, analog miksaj konsolları, gitar amplifikatörleri. | CD’ler, WAV/MP3 dosyaları, akış hizmetleri, bilgisayar tabanlı müzik prodüksiyon yazılımları. |\n\n### Temel Kavramlar\n\n1. **Analog Ses**: Ses dalgasının elektriksel eşdeğeri kesintisiz bir fonksiyon olarak temsil edilir; dalga formunun her anındaki değer tam olarak ölçülür.\n2. **Dijital Ses**: Ses dalgası bir **örnekleme** süreciyle belirli zaman aralıklarında ölçülür ve her ölçüm bir **nicemleme (quantization)** seviyesine yuvarlanarak ikili (binary) bir kod (genellikle PCM – Pulse Code Modulation) olarak saklanır.\n3. **Sinc Fonksiyonu ve Yeniden İnşa**: Teorik olarak örneklenmiş bir sinyal, sınırsız sayıda sinc fonksiyonunun toplamı ile yeniden analog forma dönüştürülebilir. Pratikte bu işlem bir **düşük geçiren filtre (anti‑imaging filter)** ile yapılır.\n\n### Sonuç\n\nAnalog sistemler doğrudan sürekli bir fiziksel olguyu temsil ederken, dijital sistemler bu olguyu sayısal değerlere çevirerek depolama, işleme ve çoğaltma açısından büyük avantajlar sağlar. Ancak, analog sistemler bazen daha “gerçek” ve “doğal” bir ses karakteri sunabilirken, dijital sistemler yüksek doğruluk, esneklik ve maliyet etkinliği sunar. Bu nedenlerle modern ses teknolojileri genellikle iki yaklaşımın bir kombinasyonunu—örneğin, analog giriş‑çıkış aşamaları ile dijital işleme—kullanır."
+            },
+            {
+                "role": "user",
+                "content": "the sampling theorem nedir"
+            },
+            {
+                "role": "assistant",
+                "content": "Maalesef, sağlanan ders notları içinde “sampling theorem” (örnekleme teoremi) tanımı yer almamaktadır. Bu bağlamda size kesin bir açıklama sunamıyorum. Başka bir konuda yardımcı olabilir miyim?"
+            }
+        ],
+        "pdf_context": "",
+        "course_id": "yaseminnnn::music and computers"
+    },
+    "20260313_182006": {
+        "title": "the sampling theorem anla…",
+        "messages": [
+            {
+                "role": "user",
+                "content": "the sampling theorem anlat"
+            },
+            {
+                "role": "assistant",
+                "content": "**Örnekleme Teoremi (Sampling Theorem)**  \n\n---\n\n### 1. Tanım  \n\nÖrnekleme teoremi, bir sürekli‑zaman sinyalinin tam olarak yeniden oluşturulabilmesi için gerekli olan minimum örnekleme frekansını belirtir. Teorem, **Harry Nyquist** ve **Claude Shannon** tarafından 1948‑1949 yıllarında kanıtlanmıştır ve şu şekilde ifade edilir:\n\n> Bir sinyal, **maksimum frekans bileşeni $S$** olan bir bant sınırlı (band‑limited) sinyalse, bu sinyal **en az $2S$ örnek/saniye** frekansında (yani Nyquist frekansında) örneklenirse, orijinal sinyal kayıpsız olarak yeniden elde edilebilir.\n\nMatematiksel olarak,\n\\[\nF_s \\ge 2S,\n\\]\nburada $F_s$ örnekleme frekansı (Hz) ve $S$ sinyalin en yüksek frekans bileşenidir.\n\n---\n\n### 2. Nyquist Frekansı  \n\n- **Nyquist frekansı** $F_N$ = $\\dfrac{F_s}{2}$, yani örnekleme frekansının yarısıdır.  \n- Eğer sinyalde $F_N$’yi aşan bir frekans bulunursa, **aliasing** (katmanma) adı verilen bir bozulma ortaya çıkar.\n\n---\n\n### 3. Aliasing (Katmanma)\n\nAliasing, yüksek frekanslı bir bileşenin örnekleme sırasında yanlış bir düşük frekanslı bileşen olarak yeniden oluşturulmasıdır. Bu durum, örnekleme frekansının $\\dfrac{F_s}{2}$ limitinin üstündeki sinyaller için gerçekleşir. Aliasing frekansı şu formülle bulunur:\n\n\\[\nF_{\\text{alias}} = \\min_{k \\in \\mathbb{Z}} \\bigl| kF_s - F \\bigr|,\n\\]\n\nburada $F$ orijinal sinyalin frekansı, $k$ ise tam sayı (pozitif veya negatif) değerdir; $k$ seçimi, sonuçtaki değeri en küçültecek şekilde yapılır.\n\n**Örnek:**  \n- Temel frekansı $F_0 = 1000\\;\\text{Hz}$ olan bir pseudo‑dikdörtgen dalga, 4 tek katlı harmonik (1000 Hz, 3000 Hz, 5000 Hz, 7000 Hz) içerir.  \n- Örnekleme frekansı $F_s = 6250\\;\\text{Hz}$ olduğunda, Nyquist frekansı $F_N = 3125\\;\\text{Hz}$’tir.  \n- 1000 Hz ve 3000 Hz bileşenleri Nyquist sınırının altında olduğu için aynı kalır.  \n- 5000 Hz ve 7000 Hz bileşenleri Nyquist’tan yüksek olduğundan aliasing meydana gelir:\n  \\[\n  \\begin{aligned}\n  F_{\\text{alias}}(5000) &= |1\\cdot6250 - 5000| = 1250\\;\\text{Hz},\\\\\n  F_{\\text{alias}}(7000) &= |1\\cdot6250 - 7000| = 750\\;\\text{Hz}.\n  \\end{aligned}\n  \\]\n  Böylece yeniden oluşturulan sinyalde 1250 Hz ve 750 Hz frekansları ortaya çıkar.\n\n---\n\n### 4. Pratik Örnekleme Frekansları  \n\n- **İnsan işitme aralığı** (≈ 20 Hz – 20 kHz) için, en yüksek frekans $S \\approx 20\\;\\text{kHz}$ olduğundan,\n  \\[\n  F_s > 2 \\times 20\\;\\text{kHz} = 40\\;\\text{kHz}\n  \\]\n  gerekir.  \n- Yaygın ses işleme sistemleri **44.1 kHz** (CD kalitesi) ve **48 kHz** (profesyonel ses cihazları) örnekleme frekanslarını kullanır.\n\n---\n\n### 5. Özet ve Sonuç  \n\n1. **Örnekleme teoremi**: Bir band‑sınırlı sinyal, örnekleme frekansı $F_s$ en az iki katı $S$ (maksimum frekans) olduğunda kayıpsız olarak yeniden üretilebilir.  \n2. **Nyquist frekansı** $F_N = \\dfrac{F_s}{2}$, bu değerin üstündeki frekanslar aliasing’e uğrar.  \n3. **Aliasing**: $F_{\\text{alias}} = \\min_{k\\in\\mathbb{Z}}|kF_s - F|$ ile hesaplanır; sinyaldeki yüksek frekans bileşenleri düşük frekanslı “taklit” bileşenlerine dönüşür.  \n4. **Uygulama**: İnsan işitme aralığını kapsayan ses sistemleri için en az 40 kHz örnekleme gerekir; yaygın olarak 44.1 kHz veya 48 kHz tercih edilir.\n\nBu prensipler, dijital ses, video ve veri iletişim sistemlerinin tasarımında temel bir rol oynar; doğru örnekleme frekansının seçilmesi, bilgi kaybını önlemek ve sistem performansını maksimize etmek için kritiktir."
+            }
+        ],
+        "pdf_context": "",
+        "course_id": "yaseminnnn::music and computers"
+    }
+}
