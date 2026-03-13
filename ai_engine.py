@@ -1,6 +1,26 @@
+import re
 import ollama
 from rag_manager import RAGManager
 
+def _normalize_latex(text: str) -> str:
+    if not text:
+        return ""
+
+    text = text.replace("<br>", " ")
+
+    text = re.sub(r"\\\[(.*?)\\\]", r"\n$$\1$$\n", text, flags=re.DOTALL)
+
+    text = re.sub(r"\\\((.*?)\\\)", r"$\1$", text, flags=re.DOTALL)
+    text = re.sub(
+        r"(?<!\$)(\\begin\{(?:bmatrix|pmatrix|matrix|vmatrix|Bmatrix)\}.*?\\end\{(?:bmatrix|pmatrix|matrix|vmatrix|Bmatrix)\})(?!\$)",
+        r"\n$$\1$$\n",
+        text,
+        flags=re.DOTALL
+    )
+
+    text = re.sub(r"\n{3,}", "\n\n", text)
+
+    return text.strip()
 
 def _trim_text(text: str, max_chars: int = 18000) -> str:
     if not text:
@@ -74,16 +94,25 @@ You are an AI learning assistant with the style "{teaching_style}".
 IMPORTANT BEHAVIOR RULES:
 1. Always reply in the user's language.
 2. For greetings, thanks, or casual small talk, reply naturally without forcing document context.
-3. For lesson/topic questions:
-   - First use the CURRENT PDF / course context if it exists.
-   - Then use retrieved relevant excerpts as supporting evidence.
-   - If the answer is clearly present in the provided PDF/course context, answer confidently from it.
-   - If the answer is not present, say that it is not explicitly found in the provided notes.
-4. Do NOT ignore the PDF context just because retrieval is weak or incomplete.
-5. Clean broken extraction text when needed, but preserve the meaning.
-6. Use LaTeX for math ($ or $$).
-7. Do NOT use <br> tags.
-8. Keep the answer clear, natural, and readable.
+3. For lesson/topic questions, first check the uploaded PDF/course context and retrieved excerpts.
+4. If the answer is clearly present in the provided PDF/course context, answer from that context confidently.
+5. If the answer is NOT clearly present in the provided PDF/course context:
+   - clearly say that you could not find a clear or explicit explanation in the uploaded notes/PDF,
+   - then still help the user by giving a correct general explanation based on your own knowledge,
+   - clearly separate what comes from the notes and what is general knowledge.
+6. Do NOT pretend the PDF contains something if it does not.
+7. Do NOT stop with only "it is not in the notes"; always try to provide a helpful general explanation unless the user specifically wants answers based only on the PDF.
+8. If the notes are partial, noisy, or badly extracted, use your best judgment carefully and mention uncertainty when needed.
+9. Clean broken extraction text when needed, but preserve the meaning.
+10. Use LaTeX for math ($ or $$).
+11. Do NOT use <br> tags.
+12. Keep the answer clear, natural, and readable.
+
+RESPONSE STYLE PREFERENCE:
+- If the topic is found in the notes, you may explain it normally without rigid section titles.
+- If the topic is NOT found in the notes, begin with a brief sentence like:
+  "I could not find a clear explanation of this in the uploaded PDF/notes, but generally..."
+  Then continue with a useful explanation.
 
 CONTEXT AVAILABLE TO YOU:
 {combined_context if combined_context else "No document context provided."}
@@ -99,13 +128,6 @@ CONTEXT AVAILABLE TO YOU:
 
     for chunk in stream:
         piece = chunk["message"]["content"]
-        piece = (
-            piece
-            .replace("\\(", "$")
-            .replace("\\)", "$")
-            .replace("\\[", "$$")
-            .replace("\\]", "$$")
-            .replace("<br>", " ")
-        )
         full_answer += piece
-        yield full_answer
+        yield _normalize_latex(full_answer)
+
