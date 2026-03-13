@@ -12,7 +12,6 @@ from ai_engine import stream_ai_response
 from rag_manager import RAGManager
 from tts_engine import generate_audio
 from auth_manager import signup_user, login_user
-
 GLOBAL_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Fraunces:ital,wght@0,300;0,500;1,300;1,500&display=swap');
@@ -36,7 +35,7 @@ html, body, .stApp {
 [data-testid="stToolbar"] { display: none; }
 
 /* Global readable text */
-body, p, span, label, div, li, strong, em, small {
+body, p, span, label, strong, em, small {
     color: #1C1917;
 }
 
@@ -222,8 +221,10 @@ label,
     opacity: 1 !important;
 }
 
-/* Selectbox main area */
-[data-testid="stSelectbox"] > div > div {
+/* ───────────────── SELECTBOX FIX ───────────────── */
+
+[data-testid="stSelectbox"] > div > div,
+[data-baseweb="select"] > div {
     background: #FFFFFF !important;
     border: 1.5px solid #E5E0D8 !important;
     border-radius: 12px !important;
@@ -231,34 +232,138 @@ label,
     box-shadow: 0 1px 4px rgba(0,0,0,0.04) !important;
 }
 
-/* Selectbox displayed text */
-[data-testid="stSelectbox"] * {
+[data-testid="stSelectbox"] * ,
+[data-baseweb="select"] *,
+[data-baseweb="select"] span,
+[data-baseweb="select"] div {
     color: #1C1917 !important;
 }
 
-/* File uploader */
+/* Opened dropdown / portal */
+div[data-baseweb="popover"],
+div[data-baseweb="popover"] > div,
+div[data-baseweb="menu"],
+div[data-baseweb="menu"] > div,
+[data-baseweb="popover"] {
+    background: #FFFFFF !important;
+    color: #1C1917 !important;
+    border-radius: 12px !important;
+}
+
+/* Dropdown panel */
+div[data-baseweb="menu"],
+div[data-baseweb="menu"] ul,
+div[data-baseweb="popover"] ul,
+div[role="listbox"],
+ul[role="listbox"] {
+    background: #FFFFFF !important;
+    border: 1.5px solid #E5E0D8 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10) !important;
+    padding: 6px !important;
+}
+
+/* Options */
+div[data-baseweb="menu"] li,
+div[data-baseweb="menu"] ul li,
+div[data-baseweb="menu"] [role="option"],
+div[data-baseweb="menu"] [role="listitem"],
+div[role="option"],
+ul[role="listbox"] li {
+    background: #FFFFFF !important;
+    color: #1C1917 !important;
+    border-radius: 8px !important;
+    opacity: 1 !important;
+}
+
+/* Option text */
+div[data-baseweb="menu"] li *,
+div[data-baseweb="menu"] ul li *,
+div[data-baseweb="menu"] [role="option"] *,
+div[data-baseweb="menu"] [role="listitem"] *,
+div[role="option"] *,
+ul[role="listbox"] li *,
+div[data-baseweb="popover"] *,
+div[role="listbox"] * {
+    color: #1C1917 !important;
+    opacity: 1 !important;
+}
+
+/* Hover / selected */
+div[data-baseweb="menu"] li:hover,
+div[data-baseweb="menu"] ul li:hover,
+div[data-baseweb="menu"] [role="option"]:hover,
+div[data-baseweb="menu"] [aria-selected="true"],
+div[role="option"]:hover,
+div[role="option"][aria-selected="true"],
+ul[role="listbox"] li:hover,
+ul[role="listbox"] li[aria-selected="true"] {
+    background: #FFF6F2 !important;
+    color: #1C1917 !important;
+}
+
+div[data-baseweb="menu"] li:hover *,
+div[data-baseweb="menu"] ul li:hover *,
+div[data-baseweb="menu"] [role="option"]:hover *,
+div[data-baseweb="menu"] [aria-selected="true"] *,
+div[role="option"]:hover *,
+div[role="option"][aria-selected="true"] *,
+ul[role="listbox"] li:hover *,
+ul[role="listbox"] li[aria-selected="true"] * {
+    color: #1C1917 !important;
+    opacity: 1 !important;
+}
+
+/* ───────────────── FILE UPLOADER FIX ───────────────── */
+
 [data-testid="stFileUploader"] {
-    background: #FFFFFF;
-    border: 2px dashed #DDD8D0;
-    border-radius: 16px;
-    padding: 10px;
-    transition: all 0.2s ease;
+    background: #FFFFFF !important;
+    border: 2px dashed #DDD8D0 !important;
+    border-radius: 16px !important;
+    padding: 10px !important;
+    transition: all 0.2s ease !important;
 }
 
 [data-testid="stFileUploader"]:hover {
-    border-color: #FF8C69;
-    background: #FFF9F7;
+    border-color: #FF8C69 !important;
+    background: #FFF9F7 !important;
 }
 
-/* Uploaded file text */
-[data-testid="stFileUploader"] * {
+/* Uploader inner dark container fix */
+[data-testid="stFileUploader"] section,
+[data-testid="stFileUploader"] div,
+[data-testid="stFileUploader"] small,
+[data-testid="stFileUploader"] span,
+[data-testid="stFileUploader"] label,
+[data-testid="stFileUploader"] p {
     color: #1C1917 !important;
+    background: transparent !important;
 }
 
-/* Browse files button text */
-[data-testid="stFileUploader"] button,
+/* Drag area specifically */
+[data-testid="stFileUploaderDropzone"] {
+    background: #FFFFFF !important;
+    border: 2px dashed #DDD8D0 !important;
+    border-radius: 16px !important;
+}
+
+[data-testid="stFileUploaderDropzone"] * {
+    color: #1C1917 !important;
+    background: transparent !important;
+}
+
+/* Browse files button */
+[data-testid="stFileUploader"] button {
+    background: linear-gradient(135deg, #FF8C69 0%, #FF6B9D 100%) !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 12px !important;
+    font-weight: 700 !important;
+}
+
 [data-testid="stFileUploader"] button * {
     color: #FFFFFF !important;
+    background: transparent !important;
 }
 
 /* ───────────────── CHAT ───────────────── */
