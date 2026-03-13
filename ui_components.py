@@ -466,27 +466,174 @@ def render_auth_screen():
     tab1, tab2 = st.tabs(["Login", "Sign Up"])
 
     with tab1:
-        st.markdown("### Login")
-        login_username = st.text_input("Username", key="login_username")
-        login_password = st.text_input("Password", type="password", key="login_password")
+        if "login_role_selected" not in st.session_state:
+            st.session_state.login_role_selected = None
 
-        if st.button("Login", type="primary", use_container_width=True):
-            ok, msg, user_data = login_user(login_username.strip(), login_password)
-            if ok:
-                st.session_state.logged_in = True
-                st.session_state.current_user = user_data
-                st.session_state.current_chat_id = None
-                st.success(msg)
+        # ADIM 1: Rol seçim ekranı
+        if st.session_state.login_role_selected is None:
+            st.markdown(
+                """
+                <div style="text-align:center; padding:32px 0 24px 0;">
+                    <p style="font-size:18px; font-weight:600; color:#1C1917; margin-bottom:8px;">
+                        Who are you?
+                    </p>
+                    <p style="font-size:14px; color:#78716C;">
+                        Select your role to continue
+                    </p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            st.markdown("""
+            <style>
+            div[data-testid="column"]:nth-of-type(1) .stButton>button {
+                height:120px!important; border-radius:20px!important;
+                font-size:16px!important; font-weight:700!important;
+                border:2px solid #E5E0D8!important;
+            }
+            div[data-testid="column"]:nth-of-type(1) .stButton>button:hover {
+                background:linear-gradient(135deg,#FFF0EB,#FFF0F6)!important;
+                border:2px solid #FF8C69!important;
+                box-shadow:0 6px 24px rgba(255,120,80,.22)!important;
+            }
+            div[data-testid="column"]:nth-of-type(2) .stButton>button {
+                height:120px!important; border-radius:20px!important;
+                font-size:16px!important; font-weight:700!important;
+                border:2px solid #E5E0D8!important;
+            }
+            div[data-testid="column"]:nth-of-type(2) .stButton>button:hover {
+                background:linear-gradient(135deg,#EEF2FF,#F5F0FF)!important;
+                border:2px solid #818CF8!important;
+                box-shadow:0 6px 24px rgba(120,100,220,.22)!important;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+
+            r1, r2 = st.columns(2, gap="medium")
+            with r1:
+                if st.button("🎓 Student\n\nLearn & explore", use_container_width=True, key="pick_student"):
+                    st.session_state.login_role_selected = "student"
+                    st.rerun()
+            with r2:
+                if st.button("🏫 Teacher\n\nCreate & teach", use_container_width=True, key="pick_teacher"):
+                    st.session_state.login_role_selected = "teacher"
+                    st.rerun()
+
+        # ADIM 2: Giriş formu
+        else:
+            role = st.session_state.login_role_selected
+            emoji = "🎓" if role == "student" else "🏫"
+            color = "#FF8C69" if role == "student" else "#818CF8"
+            label = "Student" if role == "student" else "Teacher"
+
+            st.markdown(
+                f"<div style=\"display:flex;align-items:center;gap:10px;margin-bottom:20px;\">"
+                f"<span style=\"font-size:28px;\">{emoji}</span>"
+                f"<div><div style=\"font-size:18px;font-weight:700;color:#1C1917;\">Login as {label}</div>"
+                f"<div style=\"font-size:12px;color:{color};font-weight:600;\">Select a different role below</div></div>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+
+            login_username = st.text_input("Username", key="login_username")
+            login_password = st.text_input("Password", type="password", key="login_password")
+
+            if st.button("Login", type="primary", use_container_width=True):
+                ok, msg, user_data = login_user(login_username.strip(), login_password)
+                if ok:
+                    actual_role = user_data.get("role", "student")
+                    if actual_role != role:
+                        role_tr = {"student": "Ogrenci", "teacher": "Ogretmen"}
+                        st.error(
+                            f"Bu hesap bir {role_tr[actual_role]} hesabidir. "
+                            f"Lutfen dogru rol ile giris yapin."
+                        )
+                    else:
+                        st.session_state.logged_in = True
+                        st.session_state.current_user = user_data
+                        st.session_state.current_chat_id = None
+                        st.success(msg)
+                        st.rerun()
+                else:
+                    st.error(msg)
+
+            st.markdown("<div style=\"margin-top:12px;\"></div>", unsafe_allow_html=True)
+            if st.button("← Change role", use_container_width=False, key="change_role_btn"):
+                st.session_state.login_role_selected = None
                 st.rerun()
-            else:
-                st.error(msg)
 
     with tab2:
         st.markdown("### Sign Up")
+
+        # Role seçimi — session_state ile tutulur
+        if "signup_role_selected" not in st.session_state:
+            st.session_state.signup_role_selected = "student"
+
+        st.markdown(
+            "<span class='section-label' style='margin-bottom:8px;display:block;'>I am a...</span>",
+            unsafe_allow_html=True
+        )
+
+        role_col1, role_col2 = st.columns(2, gap="small")
+
+        student_selected = st.session_state.signup_role_selected == "student"
+        teacher_selected = st.session_state.signup_role_selected == "teacher"
+
+        student_style = """
+            background: linear-gradient(135deg,#FFF0EB 0%,#FFF0F6 100%) !important;
+            border: 2px solid #FF8C69 !important;
+            color: #1C1917 !important;
+            box-shadow: 0 4px 18px rgba(255,120,80,0.18) !important;
+        """ if student_selected else ""
+
+        teacher_style = """
+            background: linear-gradient(135deg,#EEF2FF 0%,#F5F0FF 100%) !important;
+            border: 2px solid #818CF8 !important;
+            color: #1C1917 !important;
+            box-shadow: 0 4px 18px rgba(120,100,220,0.18) !important;
+        """ if teacher_selected else ""
+
+        st.markdown(f"""
+        <style>
+        div[data-testid="column"]:nth-of-type(1) .stButton > button {{
+            height: 90px !important;
+            border-radius: 16px !important;
+            font-size: 15px !important;
+            font-weight: 700 !important;
+            {student_style}
+        }}
+        div[data-testid="column"]:nth-of-type(2) .stButton > button {{
+            height: 90px !important;
+            border-radius: 16px !important;
+            font-size: 15px !important;
+            font-weight: 700 !important;
+            {teacher_style}
+        }}
+        </style>
+        """, unsafe_allow_html=True)
+
+        with role_col1:
+            if st.button("🎓  Student\nLearn & explore", use_container_width=True, key="role_btn_student"):
+                st.session_state.signup_role_selected = "student"
+                st.rerun()
+
+        with role_col2:
+            if st.button("🏫  Teacher\nCreate & teach", use_container_width=True, key="role_btn_teacher"):
+                st.session_state.signup_role_selected = "teacher"
+                st.rerun()
+
+        selected_role_label = "Student" if student_selected else "Teacher"
+        selected_color = "#D9521A" if student_selected else "#4F46E5"
+        st.markdown(
+            f"<div style='font-size:12px; color:{selected_color}; font-weight:600; "
+            f"margin-bottom:14px; margin-top:4px;'>✓ Continuing as {selected_role_label}</div>",
+            unsafe_allow_html=True
+        )
+
         full_name = st.text_input("Full Name", key="signup_full_name")
         signup_username = st.text_input("Username", key="signup_username")
         signup_password = st.text_input("Password", type="password", key="signup_password")
-        signup_role = st.selectbox("Role", ["student", "teacher"], key="signup_role")
 
         if st.button("Create Account", type="primary", use_container_width=True):
             if not full_name.strip() or not signup_username.strip() or not signup_password.strip():
@@ -496,10 +643,10 @@ def render_auth_screen():
                     full_name=full_name.strip(),
                     username=signup_username.strip(),
                     password=signup_password,
-                    role=signup_role
+                    role=st.session_state.signup_role_selected
                 )
                 if ok:
-                    st.success(msg)
+                    st.success(f"✓ Account created as {selected_role_label}! You can now log in.")
                 else:
                     st.error(msg)
 
