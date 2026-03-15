@@ -9,7 +9,6 @@ from ui_components import (
     render_auth_screen,
     render_teacher_dashboard
 )
-
 load_dotenv()
 
 st.set_page_config(

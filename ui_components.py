@@ -1230,7 +1230,6 @@ def render_chat_screen(all_chats: dict):
             except Exception as e:
                 reply = f"An error occurred: {e}"
                 st.markdown(reply)
-
         current_chat["messages"].append({"role": "assistant", "content": reply})
         if current_chat["title"] == "New Chat":
             current_chat["title"] = user_input[:40]
