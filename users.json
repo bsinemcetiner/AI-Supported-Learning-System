@@ -16,5 +16,23 @@
         "username": "sinem",
         "password": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
         "role": "student"
+    },
+    "emiraydrmz": {
+        "full_name": "emiray durmaz",
+        "username": "emiraydrmz",
+        "password": "1b9121159ba733bef1b1824fa4deb76ce48f547c0062f43d2695a183cdc13093",
+        "role": "teacher"
+    },
+    "MDemir": {
+        "full_name": "meltem demir",
+        "username": "MDemir",
+        "password": "1b9121159ba733bef1b1824fa4deb76ce48f547c0062f43d2695a183cdc13093",
+        "role": "teacher"
+    },
+    "BDurmaz": {
+        "full_name": "Birgül Durmaz",
+        "username": "BDurmaz",
+        "password": "1b9121159ba733bef1b1824fa4deb76ce48f547c0062f43d2695a183cdc13093",
+        "role": "student"
     }
 }
