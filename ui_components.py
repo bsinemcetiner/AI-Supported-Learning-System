@@ -69,13 +69,11 @@ body, p, span, div, li, label, input, textarea, button {
     background: var(--bg) !important;
 }
 
-/* Genel container */
 .main .block-container {
     max-width: 860px;
     padding: 2.5rem 2rem 4rem !important;
 }
 
-/* Başlıklar */
 h1 {
     font-family: 'Fraunces', serif !important;
     font-size: 2rem !important;
@@ -90,7 +88,6 @@ h2, h3 {
     font-weight: 600 !important;
 }
 
-/* Sidebar */
 [data-testid="stSidebar"] {
     background: var(--card) !important;
     border-right: 1.5px solid var(--line) !important;
@@ -100,7 +97,6 @@ h2, h3 {
     padding: 1.5rem 1rem !important;
 }
 
-/* Genel butonlar */
 .stButton > button {
     background: var(--orange) !important;
     color: #ffffff !important;
@@ -124,7 +120,6 @@ h2, h3 {
     transform: translateY(0) !important;
 }
 
-/* Sidebar butonları */
 [data-testid="stSidebar"] .stButton > button {
     background: var(--bg2) !important;
     color: var(--text-mid) !important;
@@ -140,7 +135,6 @@ h2, h3 {
     box-shadow: none !important;
 }
 
-/* Input wrapper siyahlıklarını kaldır */
 .stTextInput,
 .stTextArea,
 .stSelectbox {
@@ -148,7 +142,6 @@ h2, h3 {
     box-shadow: none !important;
 }
 
-/* Text input / textarea dış katman */
 .stTextInput > div,
 .stTextArea > div {
     background: transparent !important;
@@ -170,7 +163,6 @@ h2, h3 {
     box-shadow: 0 0 0 3px var(--orange-gl) !important;
 }
 
-/* Input içi */
 .stTextInput > div > div > input,
 .stTextArea > div > div > textarea {
     background: transparent !important;
@@ -196,13 +188,11 @@ h2, h3 {
     opacity: 1 !important;
 }
 
-/* Sidebar search input ekstra siyah köşeleri kaldır */
 [data-testid="stSidebar"] .stTextInput,
 [data-testid="stSidebar"] .stTextInput * {
     box-shadow: none !important;
 }
 
-/* Selectbox */
 .stSelectbox > div,
 .stSelectbox > div > div {
     background: transparent !important;
@@ -210,7 +200,6 @@ h2, h3 {
     border: none !important;
 }
 
-/* Ana select kutusu */
 .stSelectbox div[data-baseweb="select"] {
     background: #FFFFFF !important;
     border: 1.5px solid #E8DDD0 !important;
@@ -246,7 +235,6 @@ h2, h3 {
     color: #9C8B78 !important;
 }
 
-/* Selectbox dropdown popover */
 div[data-baseweb="popover"] {
     background: transparent !important;
 }
@@ -259,7 +247,6 @@ div[data-baseweb="popover"] > div {
     overflow: hidden !important;
 }
 
-/* Dropdown içi tüm katmanlar */
 div[data-baseweb="popover"] ul,
 div[data-baseweb="popover"] ol,
 div[data-baseweb="popover"] li,
@@ -273,7 +260,6 @@ div[data-baseweb="popover"] p {
     color: #1A1208 !important;
 }
 
-/* Hover ve selected durumları */
 div[data-baseweb="popover"] [role="option"]:hover,
 div[data-baseweb="popover"] li:hover,
 div[data-baseweb="popover"] li:hover > div {
@@ -287,7 +273,6 @@ div[data-baseweb="popover"] [aria-selected="true"] > div {
     color: #1A1208 !important;
 }
 
-/* Genel fallback */
 ul[role="listbox"],
 li[role="option"],
 div[role="option"] {
@@ -295,7 +280,6 @@ div[role="option"] {
     color: #1A1208 !important;
 }
 
-/* Tabs */
 .stTabs [data-baseweb="tab-list"] {
     background: var(--card) !important;
     border-radius: var(--r-md) !important;
@@ -330,7 +314,6 @@ button[role="tab"][aria-selected="true"] {
     color: #ffffff !important;
 }
 
-/* Alerts */
 .stAlert {
     border-radius: var(--r-md) !important;
 }
@@ -363,7 +346,6 @@ div.stError {
     border-radius: var(--r-md) !important;
 }
 
-/* Expander */
 .streamlit-expanderHeader {
     background: var(--bg2) !important;
     border: 1.5px solid var(--line) !important;
@@ -384,7 +366,6 @@ details {
     border-radius: var(--r-md) !important;
 }
 
-/* File uploader */
 [data-testid="stFileUploadDropzone"],
 [data-testid="stFileUploader"] {
     background: var(--card) !important;
@@ -399,7 +380,6 @@ details {
     background: var(--orange-lt) !important;
 }
 
-/* Chat message */
 [data-testid="stChatMessage"] {
     background: var(--card) !important;
     border: 1.5px solid var(--line) !important;
@@ -414,7 +394,6 @@ details {
     border-color: var(--orange-md) !important;
 }
 
-/* Chat input container */
 [data-testid="stChatInputContainer"] {
     background: transparent !important;
 }
@@ -423,7 +402,6 @@ details {
     background: transparent !important;
 }
 
-/* Chat input asıl alan */
 [data-testid="stChatInput"] {
     border-radius: 22px !important;
     border: 1.5px solid #E8DDD0 !important;
@@ -444,7 +422,6 @@ details {
     border-radius: 22px !important;
 }
 
-/* Chat textarea/input */
 [data-testid="stChatInput"] textarea,
 [data-testid="stChatInput"] input,
 [data-testid="stChatInput"] p {
@@ -459,7 +436,6 @@ details {
     opacity: 1 !important;
 }
 
-/* Send button */
 [data-testid="stChatInput"] button {
     background: transparent !important;
     border: none !important;
@@ -471,7 +447,6 @@ details {
     color: #9C8B78 !important;
 }
 
-/* Labels */
 .stTextInput label,
 .stTextArea label,
 .stSelectbox label,
@@ -485,7 +460,6 @@ label {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
 }
 
-/* Markdown */
 .stMarkdown p,
 [data-testid="stMarkdownContainer"] p,
 [data-testid="stMarkdownContainer"] * {
@@ -493,7 +467,6 @@ label {
     line-height: 1.65 !important;
 }
 
-/* Keyboard / arrow gibi gereksiz görsel yazıları bastır */
 kbd {
     background: transparent !important;
     color: var(--text-soft) !important;
@@ -501,7 +474,6 @@ kbd {
     box-shadow: none !important;
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar {
     width: 5px;
 }
@@ -518,12 +490,11 @@ kbd {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--orange);
 }
-/* Misc */
+
 #MainMenu, footer {
     visibility: hidden;
 }
 
-/* Header ve toolbar kesinlikle görünür kalsın */
 header {
     visibility: visible !important;
     display: block !important;
@@ -542,7 +513,6 @@ header {
     opacity: 1 !important;
 }
 
-/* Sidebar açma/kapatma kontrolü */
 button[kind="header"],
 [data-testid="collapsedControl"] {
     display: flex !important;
@@ -551,7 +521,6 @@ button[kind="header"],
     z-index: 999999 !important;
 }
 
-/* İkon görünür olsun */
 button[kind="header"] svg,
 [data-testid="collapsedControl"] svg {
     color: #1A1208 !important;
@@ -576,33 +545,16 @@ hr {
     background: var(--orange);
     margin-bottom: 1rem;
 }
-
-hr {
-    border-color: var(--line) !important;
-    opacity: 1 !important;
-}
-
-[data-testid="stHorizontalBlock"] {
-    gap: 0.75rem !important;
-}
-
-.title-accent {
-    display: inline-block;
-    width: 36px;
-    height: 3px;
-    border-radius: 99px;
-    background: var(--orange);
-    margin-bottom: 1rem;
-}
 </style>
 """
+
+
 def _generate_ai_reply(
     messages: list,
     context: str,
     teaching_style: str,
     mode: str = "direct",
 ) -> str:
-    """Non-streaming: tam cevabı döner (starter prompt için)."""
     return ai_engine.generate_ai_response(
         messages=messages,
         context=context,
@@ -617,11 +569,6 @@ def _stream_ai_reply(
     teaching_style: str,
     mode: str = "direct",
 ):
-    """
-    Streaming generator — st.write_stream ile kullanılır.
-    ai_engine.stream_ai_response birikimli metin döndürür;
-    burada delta hesaplanarak yield edilir.
-    """
     last_text = ""
     for cumulative in ai_engine.stream_ai_response(
         messages=messages,
@@ -637,10 +584,18 @@ def _stream_ai_reply(
 
 def _read_pdf_text(uploaded_file) -> str:
     try:
+        uploaded_file.seek(0)
         reader = PdfReader(uploaded_file)
-        return "\n".join(
-            p.extract_text() for p in reader.pages if p.extract_text()
-        ).strip()
+        texts = []
+        for page in reader.pages:
+            try:
+                page_text = page.extract_text()
+                if page_text:
+                    texts.append(page_text)
+            except Exception:
+                continue
+        full_text = "\n".join(texts).strip()
+        return full_text
     except Exception as e:
         st.error(f"PDF okunamadı: {e}")
         return ""
@@ -649,8 +604,15 @@ def _read_pdf_text(uploaded_file) -> str:
 def _logout():
     for key in ["logged_in", "current_user", "current_chat_id",
                 "selected_course_id", "pending_starter_message", "starter_prompt"]:
-        st.session_state[key] = None if key in ("current_user", "current_chat_id",
-                                                  "selected_course_id") else False if key == "logged_in" else ""
+        st.session_state[key] = (
+            None if key in ("current_user", "current_chat_id", "selected_course_id")
+            else False if key == "logged_in"
+            else ""
+        )
+    # Upload state temizle
+    for key in list(st.session_state.keys()):
+        if key.startswith("upload_"):
+            del st.session_state[key]
     st.rerun()
 
 
@@ -705,7 +667,6 @@ def render_auth_screen():
 
     st.markdown("""
     <style>
-    /* ── Font override — Streamlit-safe ── */
     html, body, .stApp, [class*="css"],
     .stTextInput input, .stTextArea textarea,
     .stButton > button, label, p, span, div {
@@ -715,14 +676,12 @@ def render_auth_screen():
         font-family: 'Fraunces', serif !important;
     }
 
-    /* ── Auth page layout ── */
     section.main .block-container {
         max-width: 480px !important;
         padding: 0 1.5rem 4rem !important;
         margin: 0 auto !important;
     }
 
-    /* ── Hero ── */
     .auth-hero {
         text-align: center;
         padding: 44px 0 28px;
@@ -744,7 +703,6 @@ def render_auth_screen():
         max-width: 340px; margin: 0 auto; line-height: 1.65;
     }
 
-    /* ── Tab — minimal underline ── */
     .stTabs [data-baseweb="tab-list"] {
         background: transparent !important;
         border: none !important;
@@ -773,7 +731,6 @@ def render_auth_screen():
     button[role="tab"] { color: #9C8B78 !important; font-family: 'Plus Jakarta Sans', sans-serif !important; }
     button[role="tab"][aria-selected="true"] { color: #1A1208 !important; }
 
-    /* ── Section header ── */
     .auth-section-h {
         font-family: 'Fraunces', serif;
         font-size: 1.15rem; font-weight: 600; color: #1A1208;
@@ -783,14 +740,12 @@ def render_auth_screen():
         font-size: 13px; color: #9C8B78; margin-bottom: 20px; line-height: 1.5;
     }
 
-    /* ── Role cards — Streamlit button styled as card ── */
     .role-label {
         font-size: 9.5px; font-weight: 700;
         letter-spacing: .14em; text-transform: uppercase;
         color: #9C8B78; display: block; margin-bottom: 9px;
     }
 
-    /* Student col button */
     div[data-testid="stHorizontalBlock"]
     div[data-testid="column"]:nth-of-type(1)
     .stButton > button {
@@ -818,7 +773,6 @@ def render_auth_screen():
         transform: none !important;
     }
 
-    /* Teacher col button */
     div[data-testid="stHorizontalBlock"]
     div[data-testid="column"]:nth-of-type(2)
     .stButton > button {
@@ -846,7 +800,6 @@ def render_auth_screen():
         transform: none !important;
     }
 
-    /* ── Role confirm badge ── */
     .role-confirm {
         font-size: 11px; font-weight: 700;
         letter-spacing: .1em; text-transform: uppercase;
@@ -854,7 +807,6 @@ def render_auth_screen():
         display: flex; align-items: center; gap: 5px;
     }
 
-    /* ── Inputs ── */
     .stTextInput > div > div > input {
         background: #FDFAF7 !important;
         border: 1.5px solid #E8DDD0 !important;
@@ -878,7 +830,6 @@ def render_auth_screen():
         font-family: 'Plus Jakarta Sans', sans-serif !important;
     }
 
-    /* ── CTA buttons ── */
     .stButton > button[kind="primary"],
     .auth-cta .stButton > button {
         background: #E8510A !important;
@@ -906,7 +857,6 @@ def render_auth_screen():
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&display=swap" rel="stylesheet">
     """, unsafe_allow_html=True)
 
-    # ── Hero ──
     st.markdown("""
     <div class="auth-hero">
         <div class="auth-badge">✦ Welcome</div>
@@ -919,7 +869,6 @@ def render_auth_screen():
     with col:
         tab_login, tab_signup = st.tabs(["Login", "Sign Up"])
 
-        # ── LOGIN ──
         with tab_login:
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown(
@@ -944,7 +893,6 @@ def render_auth_screen():
             st.markdown("</div>", unsafe_allow_html=True)
             st.markdown("<p class='auth-hint'>Don\'t have an account? Switch to Sign Up ↑</p>", unsafe_allow_html=True)
 
-        # ── SIGN UP ──
         with tab_signup:
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown(
@@ -959,7 +907,6 @@ def render_auth_screen():
             is_student = st.session_state.signup_role_pick == "student"
             is_teacher = st.session_state.signup_role_pick == "teacher"
 
-            # Dynamic selected style
             st.markdown(f"""
             <style>
             div[data-testid="stHorizontalBlock"]
@@ -1019,7 +966,6 @@ def render_auth_screen():
             st.markdown("</div>", unsafe_allow_html=True)
 
 
-
 # ──────────────────────────────────────────────────────────────────────────────
 # SIDEBAR
 # ──────────────────────────────────────────────────────────────────────────────
@@ -1030,7 +976,6 @@ def render_sidebar(all_chats: dict):
     full_name = user.get("full_name", username)
 
     with st.sidebar:
-        # ── User card ──
         st.markdown(
             f"""
             <div style="background:#FFF0E8;
@@ -1131,21 +1076,23 @@ def render_sidebar(all_chats: dict):
             _logout()
 
 
-
+# ──────────────────────────────────────────────────────────────────────────────
+# TEACHER DASHBOARD  (UPLOAD FIX + DUPLICATE FILTER)
+# ──────────────────────────────────────────────────────────────────────────────
 def render_teacher_dashboard():
     st.markdown(PASTEL_CSS, unsafe_allow_html=True)
     st.markdown('<div class="title-accent"></div>', unsafe_allow_html=True)
     st.title("👩‍🏫 Teacher Dashboard")
 
-    username       = st.session_state.current_user["username"]
-    rag            = RAGManager()
+    username = st.session_state.current_user["username"]
+    rag = RAGManager()
     teacher_courses = get_teacher_courses(username)
 
     tab_create, tab_upload, tab_manage = st.tabs(
         ["✦ Create Course", "✦ Upload Material", "✦ My Courses"]
     )
 
-    
+    # ── CREATE COURSE ──────────────────────────────────────────────────────────
     with tab_create:
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown(
@@ -1153,10 +1100,12 @@ def render_teacher_dashboard():
             unsafe_allow_html=True,
         )
         new_course_name = st.text_input(
-            "Course Name", key="teacher_new_course_name",
+            "Course Name",
+            key="teacher_new_course_name",
             placeholder="e.g. Introduction to Quantum Physics",
         )
         st.markdown("<br>", unsafe_allow_html=True)
+
         if st.button("Create Course →", key="create_course_btn", use_container_width=True):
             success, message = create_course(new_course_name, username)
             if success:
@@ -1165,8 +1114,10 @@ def render_teacher_dashboard():
             else:
                 st.error(message)
 
+    # ── UPLOAD MATERIAL ────────────────────────────────────────────────────────
     with tab_upload:
         st.markdown("<br>", unsafe_allow_html=True)
+
         if not teacher_courses:
             st.warning("⚠️ You need to create a course first.")
         else:
@@ -1174,73 +1125,176 @@ def render_teacher_dashboard():
                 f"{c['course_name']} ({cid})": cid
                 for cid, c in teacher_courses.items()
             }
-            selected_label     = st.selectbox("Select Course", list(course_options.keys()),
-                                               key="teacher_course_upload_select")
+
+            selected_label = st.selectbox(
+                "Select Course",
+                list(course_options.keys()),
+                key="teacher_course_upload_select",
+            )
             selected_course_id = course_options[selected_label]
-            st.markdown("<br>", unsafe_allow_html=True)
+
+            existing_materials = get_course_materials(selected_course_id)
+            existing_filenames = {
+                m.get("original_filename", "").strip().lower()
+                for m in existing_materials
+            }
+
+            if existing_materials:
+                st.markdown(
+                    "<p style='font-size:0.8rem;font-weight:700;color:#9C8B78;"
+                    "text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;'>"
+                    "Already uploaded</p>",
+                    unsafe_allow_html=True,
+                )
+
+                for material in existing_materials:
+                    fname = material.get("original_filename", "Unknown")
+                    st.markdown(
+                        f"<div style='font-size:0.82rem;color:#E8510A;padding:3px 0;"
+                        f"border-bottom:1px solid #F7F0E6;'>✓ {fname}</div>",
+                        unsafe_allow_html=True,
+                    )
+
+                st.markdown("<br>", unsafe_allow_html=True)
+
+            uploader_key = f"teacher_pdf_uploader_{selected_course_id}"
 
             uploaded_files = st.file_uploader(
                 "Upload one or more PDF files",
-                type=["pdf"], accept_multiple_files=True,
-                key="teacher_pdf_uploader",
+                type=["pdf"],
+                accept_multiple_files=True,
+                key=uploader_key,
             )
+
+            # her course için ayrı pending liste
+            if uploaded_files is not None:
+                st.session_state[f"pending_uploads_{selected_course_id}"] = uploaded_files
+
+            pending_files = st.session_state.get(f"pending_uploads_{selected_course_id}", [])
+
+            new_files = []
+            skipped_name_duplicates = []
+
+            for f in pending_files:
+                if f.name.strip().lower() in existing_filenames:
+                    skipped_name_duplicates.append(f)
+                else:
+                    new_files.append(f)
+
+            if skipped_name_duplicates:
+                st.markdown("<br>", unsafe_allow_html=True)
+                for f in skipped_name_duplicates:
+                    st.warning(f"⚠️ {f.name} was already uploaded before, so it will be skipped.")
+
+            if new_files:
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.markdown(
+                    f"<p style='font-size:0.85rem;color:#5C4D3A;'>"
+                    f"<b>{len(new_files)}</b> new file(s) ready to upload:</p>",
+                    unsafe_allow_html=True,
+                )
+                for f in new_files:
+                    st.markdown(
+                        f"<div style='font-size:0.82rem;color:#1A1208;padding:3px 0;"
+                        f"border-bottom:1px solid #F7F0E6;'>📄 {f.name}</div>",
+                        unsafe_allow_html=True,
+                    )
+
             st.markdown("<br>", unsafe_allow_html=True)
 
-            if st.button("⬆️  Process & Add Materials", use_container_width=True):
-                if not uploaded_files:
-                    st.warning("Please upload at least one PDF.")
-                else:
-                    added_count = skipped_count = 0
+            btn_disabled = len(new_files) == 0
 
-                    for pdf_file in uploaded_files:
-                        raw_text = _read_pdf_text(pdf_file)
-                        if not raw_text:
-                            st.warning(f"Skipped empty/unreadable file: {pdf_file.name}")
-                            skipped_count += 1
-                            continue
+            if st.button(
+                "⬆️ Process & Add Materials",
+                use_container_width=True,
+                key=f"process_upload_btn_{selected_course_id}",
+                disabled=btn_disabled,
+            ):
+                added_count = 0
+                skipped_count = 0
+                failed_count = 0
 
-                        try:
-                            rag_result = rag.add_document(
-                                text=raw_text,
-                                source_name=pdf_file.name,
-                                course_id=selected_course_id,
-                                teacher_username=username,
+                progress_bar = st.progress(0)
+                status_box = st.empty()
+
+                for i, pdf_file in enumerate(new_files):
+                    status_box.markdown(
+                        f"<p style='font-size:0.85rem;color:#5C4D3A;'>"
+                        f"Processing <b>{pdf_file.name}</b>...</p>",
+                        unsafe_allow_html=True,
+                    )
+
+                    raw_text = _read_pdf_text(pdf_file)
+
+                    if not raw_text or len(raw_text.strip()) < 20:
+                        st.error(
+                            f"{pdf_file.name} could not be processed. "
+                            f"This PDF may be scanned/image-based or contain no extractable text."
+                        )
+                        failed_count += 1
+                        progress_bar.progress((i + 1) / len(new_files))
+                        continue
+
+                    add_ok, add_msg = add_material_to_course(
+                        course_id=selected_course_id,
+                        filename=pdf_file.name,
+                        text_content=raw_text,
+                    )
+
+                    if not add_ok:
+                        st.warning(f"{pdf_file.name}: {add_msg}")
+                        skipped_count += 1
+                        progress_bar.progress((i + 1) / len(new_files))
+                        continue
+
+                    try:
+                        rag_result = rag.add_document(
+                            text=raw_text,
+                            source_name=pdf_file.name,
+                            course_id=selected_course_id,
+                            teacher_username=username,
+                        )
+
+                        if rag_result.get("skipped"):
+                            st.warning(f"{pdf_file.name}: added to course list, but RAG skipped it.")
+                        else:
+                            st.success(
+                                f"✅ {pdf_file.name} added successfully "
+                                f"({rag_result.get('chunks', 0)} chunks)."
                             )
 
-                            if rag_result["skipped"] and rag_result["reason"] == "duplicate_in_course":
-                                st.warning(f"{pdf_file.name}: already indexed for this course.")
-                                skipped_count += 1
-                                continue
+                        added_count += 1
 
-                            add_ok, add_msg = add_material_to_course(
-                                course_id=selected_course_id,
-                                filename=pdf_file.name,
-                                text_content=raw_text,
-                            )
+                    except Exception as e:
+                        st.error(f"{pdf_file.name}: RAG indexing failed → {e}")
+                        failed_count += 1
 
-                            if not add_ok:
-                                st.warning(f"{pdf_file.name}: {add_msg}")
-                                skipped_count += 1
-                                continue
+                    progress_bar.progress((i + 1) / len(new_files))
 
-                            st.success(f"✅ {pdf_file.name} added ({rag_result['chunks']} chunks).")
-                            added_count += 1
+                status_box.empty()
+                progress_bar.empty()
 
-                        except Exception as e:
-                            st.error(f"{pdf_file.name}: indexing failed → {e}")
-                            skipped_count += 1
+                # process sonrası seçili dosyaları temizle
+                if f"pending_uploads_{selected_course_id}" in st.session_state:
+                    del st.session_state[f"pending_uploads_{selected_course_id}"]
 
-                    st.info(f"Done — Added: **{added_count}** | Skipped: **{skipped_count}**")
-                    st.rerun()
-
+                st.info(
+                    f"Done — Added: **{added_count}** | "
+                    f"Skipped: **{skipped_count + len(skipped_name_duplicates)}** | "
+                    f"Failed: **{failed_count}**"
+                )
+                st.rerun()
+    # ── MY COURSES ─────────────────────────────────────────────────────────────
     with tab_manage:
         st.markdown("<br>", unsafe_allow_html=True)
+
         if not teacher_courses:
             st.info("You haven't created any courses yet.")
         else:
             for course_id, course_data in teacher_courses.items():
                 with st.expander(f"📚  {course_data['course_name']}  ·  {course_id}", expanded=False):
                     materials = get_course_materials(course_id)
+
                     col_a, col_b = st.columns(2)
                     col_a.markdown(
                         f"<p style='font-size:0.85rem;color:#5C4D3A;'><b>Teacher:</b> {course_data['teacher_username']}</p>",
@@ -1250,11 +1304,12 @@ def render_teacher_dashboard():
                         f"<p style='font-size:0.85rem;color:#5C4D3A;'><b>Materials:</b> {len(materials)}</p>",
                         unsafe_allow_html=True,
                     )
+
                     if not materials:
                         st.caption("No materials uploaded yet.")
                     else:
                         for idx, material in enumerate(materials):
-                            filename = material.get("original_filename", "Unknown")
+                            filename    = material.get("original_filename", "Unknown")
                             stored_path = material.get("stored_path", "")
 
                             row_a, row_b = st.columns([6, 1])
@@ -1275,7 +1330,6 @@ def render_teacher_dashboard():
                                     help=f"Delete {filename}",
                                     use_container_width=True,
                                 ):
-                                    # 1) JSON + stored txt sil
                                     ok, msg, removed_material = delete_material_from_course(
                                         course_id=course_id,
                                         stored_path=stored_path,
@@ -1300,15 +1354,18 @@ def render_teacher_dashboard():
                                         st.rerun()
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# COURSE IMAGE MAP
+# ──────────────────────────────────────────────────────────────────────────────
 COURSE_IMAGE_MAP = {
-    "se115":              "assets/se115.png",
-    "se116":              "assets/se115.png",
-    "linear":             "assets/linearalgebra.png",
-    "music and computers":"assets/musicandcomputers.jpg",
+    "se115":               "assets/se115.png",
+    "se116":               "assets/se115.png",
+    "linear":              "assets/linearalgebra.png",
+    "music and computers": "assets/musicandcomputers.jpg",
 }
 
+
 def _get_course_image(course_name: str) -> str:
-    """Return asset path for a course, or None if not found."""
     name_lower = course_name.lower()
     for key, path in COURSE_IMAGE_MAP.items():
         if key in name_lower:
@@ -1316,6 +1373,9 @@ def _get_course_image(course_name: str) -> str:
     return None
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# STARTER DASHBOARD
+# ──────────────────────────────────────────────────────────────────────────────
 def render_starter_dashboard(all_chats: dict):
     st.markdown(PASTEL_CSS, unsafe_allow_html=True)
     st.markdown('<div class="title-accent"></div>', unsafe_allow_html=True)
@@ -1333,7 +1393,7 @@ def render_starter_dashboard(all_chats: dict):
 
     courses_list = list(all_courses.items())
     num_cols = 3
-    rows = [courses_list[i:i+num_cols] for i in range(0, len(courses_list), num_cols)]
+    rows = [courses_list[i:i + num_cols] for i in range(0, len(courses_list), num_cols)]
 
     for row in rows:
         cols = st.columns(num_cols)
@@ -1345,7 +1405,7 @@ def render_starter_dashboard(all_chats: dict):
                 img_path    = _get_course_image(course_name)
 
                 st.markdown(
-                    f"""
+                    """
                     <div style="
                         background:#FFFFFF;
                         border:1.5px solid #E8DDD0;
@@ -1359,7 +1419,6 @@ def render_starter_dashboard(all_chats: dict):
                     unsafe_allow_html=True,
                 )
 
-            
                 if img_path:
                     try:
                         import base64, mimetypes
@@ -1386,9 +1445,8 @@ def render_starter_dashboard(all_chats: dict):
                         unsafe_allow_html=True,
                     )
 
-            
                 if materials:
-                    shown = materials[-3:]  
+                    shown = materials[-3:]
                     extra = len(materials) - len(shown)
                     mat_names = "".join(
                         f"<div style='font-size:0.75rem;color:#9C8B78;padding:0.15rem 0;"
@@ -1419,7 +1477,6 @@ def render_starter_dashboard(all_chats: dict):
 
                 st.markdown("</div>", unsafe_allow_html=True)
 
-                
                 if st.button("▶  Start", key=f"start_{course_id}", use_container_width=True):
                     username = st.session_state.current_user["username"]
                     new_chat_id = _create_chat_with_course(
@@ -1439,6 +1496,9 @@ def render_starter_dashboard(all_chats: dict):
                     st.empty()
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# CHAT SCREEN
+# ──────────────────────────────────────────────────────────────────────────────
 def render_chat_screen(all_chats: dict):
     st.markdown(PASTEL_CSS, unsafe_allow_html=True)
 
@@ -1458,7 +1518,6 @@ def render_chat_screen(all_chats: dict):
     tone         = current_chat.get("tone", "Professional Tutor")
     mode         = current_chat.get("mode", "direct")
 
-    
     top_col1, top_col2 = st.columns([5, 1])
     with top_col1:
         st.markdown('<div class="title-accent"></div>', unsafe_allow_html=True)
@@ -1478,7 +1537,6 @@ def render_chat_screen(all_chats: dict):
 
     st.divider()
 
-    
     if st.session_state.get("pending_starter_message") and st.session_state.get("starter_prompt"):
         first_prompt = st.session_state.starter_prompt.strip()
         if first_prompt:
@@ -1501,7 +1559,6 @@ def render_chat_screen(all_chats: dict):
         st.session_state.starter_prompt = ""
         st.rerun()
 
-   
     if not current_chat["messages"]:
         st.markdown(
             """
@@ -1518,12 +1575,10 @@ def render_chat_screen(all_chats: dict):
             unsafe_allow_html=True,
         )
 
-    
     for msg in current_chat["messages"]:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    
     messages = current_chat["messages"]
     has_exchange = (
         len(messages) >= 2
@@ -1554,7 +1609,6 @@ def render_chat_screen(all_chats: dict):
                 save_all_chats(username, all_chats)
                 st.rerun()
 
-    
     user_input = st.chat_input("Ask something about this course…")
 
     if user_input:

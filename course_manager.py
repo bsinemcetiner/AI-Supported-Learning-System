@@ -55,16 +55,17 @@ def create_course(course_name: str, teacher_username: str):
 
 
 def add_material_to_course(course_id: str, filename: str, text_content: str):
-    """
-    Adds a material to the course only if it is not already present
-    based on text hash.
-    """
     courses = load_courses()
 
     if course_id not in courses:
         return False, "Course not found."
 
+    clean_filename = filename.strip()
     clean_text = text_content.strip()
+
+    if not clean_filename:
+        return False, "Filename is empty."
+
     if not clean_text:
         return False, "Material content is empty."
 
@@ -72,6 +73,10 @@ def add_material_to_course(course_id: str, filename: str, text_content: str):
     existing_materials = courses[course_id].get("materials", [])
 
     for material in existing_materials:
+        existing_name = material.get("original_filename", "").strip().lower()
+        if existing_name == clean_filename.lower():
+            return False, "A material with the same filename already exists in this course."
+
         if material.get("file_hash") == file_hash:
             return False, "This material already exists in the selected course."
 
@@ -83,13 +88,14 @@ def add_material_to_course(course_id: str, filename: str, text_content: str):
     with open(material_path, "w", encoding="utf-8") as f:
         f.write(clean_text)
 
-    courses[course_id]["materials"].append({
-        "original_filename": filename,
+    new_material = {
+        "original_filename": clean_filename,
         "stored_path": material_path,
         "file_hash": file_hash,
         "uploaded_at": datetime.now().isoformat()
-    })
+    }
 
+    courses[course_id]["materials"].append(new_material)
     save_courses(courses)
     return True, "Material added successfully."
 
@@ -120,10 +126,6 @@ def get_course_materials(course_id: str):
 
 
 def get_course_materials_text(course_id: str):
-    """
-    Still available for compatibility, but later we should reduce reliance on this
-    and use RAG retrieval instead of dumping all raw text into chat state.
-    """
     courses = load_courses()
     if course_id not in courses:
         return ""
@@ -151,10 +153,6 @@ def get_course_display_options():
 
 
 def delete_material_from_course(course_id: str, stored_path: str):
-    """
-    Deletes a material record from the course and removes the stored text file if it exists.
-    Returns (success, message, removed_material or None)
-    """
     courses = load_courses()
 
     if course_id not in courses:
@@ -175,8 +173,8 @@ def delete_material_from_course(course_id: str, stored_path: str):
     if path and os.path.exists(path):
         try:
             os.remove(path)
-        except Exception as e:
-            pass # Dosya zaten silinmişse hatayı görmezden gel ve JSON'dan temizlemeye devam et
+        except Exception:
+            pass
 
     courses[course_id]["materials"] = [
         m for m in materials if m.get("stored_path") != stored_path

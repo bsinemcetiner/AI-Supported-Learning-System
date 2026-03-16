@@ -192,7 +192,7 @@ class RAGManager:
             return len(results["ids"]) > 0
         except Exception:
             return False
-        
+
     def delete_document(self, course_id: str, source_name: str) -> dict:
         try:
             results = self.collection.get(
