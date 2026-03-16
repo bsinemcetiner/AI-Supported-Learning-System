@@ -84,6 +84,18 @@
                 "stored_path": "course_materials\\MDemir__music and computers_1.txt",
                 "file_hash": "43c1405fb7b0d5edbf92afd7bfc8baec",
                 "uploaded_at": "2026-03-14T22:28:12.145128"
+            },
+            {
+                "original_filename": "Week 4.pdf",
+                "stored_path": "course_materials\\MDemir__music and computers_2.txt",
+                "file_hash": "c5245acd5319dc8c8491dc153834af87",
+                "uploaded_at": "2026-03-16T14:06:22.730516"
+            },
+            {
+                "original_filename": "musicAndComputers_Week 3.pdf",
+                "stored_path": "course_materials\\MDemir__music and computers_3.txt",
+                "file_hash": "7bac68a6950faf184c890b010fb44900",
+                "uploaded_at": "2026-03-16T15:38:28.529639"
             }
         ],
         "created_at": "2026-03-14T22:27:33.780911"

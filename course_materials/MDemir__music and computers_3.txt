@@ -1,0 +1,269 @@
+CE 476
+Music and Computers
+Week 3
+Digital Audio
+Summary
+• Shannon-Nyquist Theorem
+• Aliasing
+Sampling
+• Number Systems
+• Dither
+• PCM
+Quantization
+Analog vs Digital - Definitions 
+An analog audio system sound generates and manipulates continuous electrical signals, mirroring 
+the original sound wave. The signal varies smoothly over time (depending on any sound effect), 
+keeping sound within the electrical medium.
+• Examples: Vinyl, cassette, radio waves, analog mixing consoles, electric guitar amps & pedals
+A digital audio system represents sound by converting it into discrete numerical samples (or by 
+generating them). The waveform is represented as a sequence of numbers, allowing precise storage, 
+editing, and duplication.
+• Examples: CDs, any computer representation of sound, audio formats (WAV, MP3), streaming services, 
+computer music production tools
+Analog vs Digital
+Bucket of water vs bucket of ball bearings
+• Imprecise measurements with the bucket of water
+• Precisely measuring the bucket of ball bearings 
+needs resources
+• Measuring them entails entirely new concepts and 
+techniques
+Both systems have pros/cons!
+
+Analog vs Digital
+Analog Systems Digital Systems
+Bulky, expensive and power-hungry. Small circuits, cheaper to design & manufacture. Requires 
+less power
+Prone to breakdown Increased immunity to age, temperature etc.
+Introduce noise through every medium Have increased noise immunity
+Imprecise and inflexible Software algorithms help with both precision and flexibility
+No processing artifacts Introduce artifacts related to internal clock circuitry, 
+sampling, quantization
+Very small delay between sound source and output device Introduce latency
+Energy conversion is not an issue Have conversion challenges due to number formats, storage 
+formats, different bit depths and sample rates
+Discrete Time 
+Sampling
+• Report amplitude values at periodic 
+intervals
+• The frequency at which sampling is 
+done is called the sampling rate (or 
+sampling frequency), denoted by 𝐹𝑠
+• Have we lost information between the 
+samples?
+• No? Maybe? Depends!
+Discrete Time 
+Sampling
+• We might lose information if there are 
+high frequencies in the signal
+• In order to not lose any information, 
+we could:
+• Eliminate high frequencies
+• Sample more frequently
+• We do a bit of both!
+
+The Sampling Theorem
+“A signal can be exactly reproduced if it is sampled at a frequency 𝑭, where 𝑭 is twice the 
+maximum frequency in the signal.”
+ Harry Nyquist - Claude Shannon (proven 1948-49)
+Audio signals containing frequencies between 0 and 𝑆 can be exactly represented if 
+sampled at a rate of at least 2𝑆 samples per second.
+We cannot change the sampling frequency for every audio signal! It is strictly dependent 
+on the clock circuitry of the hardware and therefore needs to be fixed.
+Therefore, to be able to represent frequencies within the human hearing range, we need 
+𝐹𝑠 > 40 𝑘𝐻𝑧.
+Most systems use a universal sampling rate of 44.1 𝑘𝐻𝑧 or 48 𝑘𝐻𝑧.
+The Sampling Theorem 
+- Aliasing
+• Aliasing
+• Happens when sampling an input signal 
+that’s higher than 𝐹𝑠/2
+• You end up reconstructing an alias of the 
+original signal with frequency 𝐹, at:
+𝑚𝑖𝑛𝑘∈𝑍 𝐹𝑠 ∗ 𝑘 − 𝐹
+• We choose the 𝑘 that minimizes the result
+The 
+Sampling 
+Theorem - 
+Aliasing
+Q: A pseudo-square wave is sampled, 
+where the fundamental frequency is 
+𝐹0 = 1000 𝐻𝑧 . This pseudo-square 
+wave contains the first 4 odd harmonics. 
+The sampling rate was 𝐹𝑠 = 6250 𝐻𝑧. In 
+the reconstructed signal, which 
+frequencies are present?
+The Sampling Theorem - Aliasing
+Answer: The signal contains the first 4 odd harmonics (1st  3rd, 5th and 7th), which 
+are at:
+1000 𝐻𝑧, 3000 𝐻𝑧, 5000 𝐻𝑧, 7000 𝐻𝑧
+The first two are represented as-is, while the last two suffer from aliasing.
+In the reconstructed signal, the following frequencies are present:
+• 𝐹𝑠 ∗ 𝑘 − 𝐹 = 6250 ∗ 0 − 1000 = 1000 𝐻𝑧
+• 𝐹𝑠 ∗ 𝑘 − 𝐹 = 6250 ∗ 0 − 3000 = 3000 𝐻𝑧
+• 𝐹𝑠 ∗ 𝑘 − 𝐹 = 6250 ∗ 1 − 5000 = 1250 𝐻𝑧
+• 𝐹𝑠 ∗ 𝑘 − 𝐹 = 6250 ∗ 1 − 7000 = 750 𝐻𝑧
+The Sampling Theorem - Aliasing
+• On the analog side, aliasing can occur due to poor analog-to-digital converter circuit 
+design.
+• On the digital side, aliasing can happen due to changing the sampling rate, or using 
+effects that introduce new harmonics.
+• Overcoming aliasing during analog-digital conversion:
+• Input signal goes through a low-pass filter
+• Increase sampling rate to easily eliminate high frequencies
+• E.g. increase from 44.1 𝑘𝐻𝑧 to 48 𝑘𝐻𝑧, or to 96/192 𝑘𝐻𝑧 in movie/sound 
+production settings
+Quantization
+• Sampling intervals represent the time of audio measurement
+• Quantization represents the value of audio measurement
+• In the analog domain, the amplitude of a 
+signal can be represented in a continuous 
+domain (e.g. voltage levels)
+• In the digital domain, The amplitude levels 
+on the analog waveform at sample times are 
+mapped across a finite number of quanta
+
+Quantization
+• The resolution is limited to the word length (the number of bits 
+used to store values)
+• A high-quality representation might 
+require 65536 amplitude levels -> 16 
+bits 
+• Just 2 amplitude levels can (barely) 
+convey intelligible speech -> 1 bit
+000
+001
+010
+011
+100
+101
+110
+111
+
+Quantization
+• Number systems
+• One’s complement
+• Invert every bit to get negation
+• Negative numbers are in reverse order
+• If there’s a carry out of the most significant bit, add it back to the least significant bit
+• Two’s complement
+• Invert every bit and add 1 to get negation
+• Ignore overflows
+• Overflows naturally result in “wraparound” from positive to negative (and vice-versa).
+000 001 010 011 100 101 110 111
+0 1 2 3 -3 -2 -1 -0
+000 001 010 011 100 101 110 111
+0 1 2 3 -4 -3 -2 -1
+Quantization
+• Quantization error is limited to one-half of the least significant bit
+• Example:
+A voltage level mapping is given below:
+1.4 𝑉 → 101000,  1.5 𝑉 → 101001
+Any voltage level between 1.4 𝑉 and 1.5 𝑉 will be mapped to one of these two. 
+Worst case: A sample is measured as 1.45 𝑉 → a quantization error of 𝟎. 𝟎𝟓 𝑽
+Quantization
+• Signal-to-error ratio
+• Ratio of maximum expressible signal amplitude to the maximum 
+quantization error
+The maximum root mean square signal 𝑆𝑟𝑚𝑠:
+𝑆𝑟𝑚𝑠 = 𝑄 ∗ 2𝑛−1
+2
+The maximum quantization error 𝐸𝑟𝑚𝑠:
+𝐸𝑟𝑚𝑠 = න
+−∞
+∞
+𝑒2 𝑝 𝑒 𝑑𝑒
+1/2
+= 1
+𝑄 න
+−𝑄/2
+𝑄/2
+𝑒2 𝑑𝑒
+1/2
+= 𝑄
+12
+Quantization
+The power ratio:
+𝑆
+𝐸 = 𝑆𝑟𝑚𝑠
+𝐸𝑟𝑚𝑠
+2
+= 3
+2 22𝑛
+𝑆
+𝐸  𝑑𝐵 = 10log 3
+2 22𝑛 ≈ 6.02𝑛+ 1.76 𝑑𝐵
+16-bit quantization → 98 𝑑𝐵
+15-bit quantization → 92 𝑑𝐵
+Quantization - Dither
+• Quantization error has interesting characteristics:
+• When signal level (amplitude) is high, quantization errors are random.
+• Sounds like white noise, perceptually benign
+• When it’s low, we don’t use all the quantization levels, leading to an increased 
+percentage of errors.
+• Errors become more complex, yielding harmonic and intermodulation distortion, 
+as well as signal-dependent modulation of the noise floor.
+• Dither is small random noise
+• Added prior to quantization, randomizing the signal slightly
+• Quantization error is no longer a function of the signal
+• Turns into white noise
+Quantization - Dither
+Audible effects of aliasing & quantization error
+https://www.youtube.com/watch?v=UaKho805vCE
+Audible effects of dither
+https://www.youtube.com/watch?v=Y09DuqDXVz0
+ADC - DAC
+What happens in practice?
+1. The analog signal goes through a low-pass filter (anti-aliasing)
+2. Sampling occurs through a sample-and-hold circuit
+• Samples periodically, holds the value until another sample arrives
+000
+001
+010
+011
+100
+101
+110
+111
+3. ADC converts the sampled amplitude into the 
+nearest quantization level
+• Uses the corresponding binary coding 
+system, usually pulse-code-modulation 
+(PCM)
+Pulse Code Modulation
+A
+t
+1111
+0000
+1110
+1101
+1100
+0001
+0010
+0011
+0100
+0101
+0110
+A
+t0
+1
+Convert each sample to a binary word
+Usually using two’s complement system
+ADC - DAC
+• How do we bring it back to analog?
+• The theoretical reconstruction of a sampled signal 
+involves a series of sinc functions, also known as 
+impulse responses:
+𝑠𝑖𝑛𝑐 𝑥 = sin 𝑥
+𝑥
+• In practice, this is achieved through a low-pass 
+filter (anti-imaging).
+• The output of the filter provides the final output.
+Final Summary
+• We’ve talked about the journey of audio from the analog domain to the digital one, and 
+vice-versa.
+• Many details left unexplored:
+• Different number formats for sample storage
+• Channel coding
+• Filter design / oversampling
+• Oversampling
+• Circuit details

@@ -150,7 +150,7 @@ def get_course_display_options():
     return options
 
 
-def delete_material_from_course(course_id: str, file_hash: str):
+def delete_material_from_course(course_id: str, stored_path: str):
     """
     Deletes a material record from the course and removes the stored text file if it exists.
     Returns (success, message, removed_material or None)
@@ -164,7 +164,7 @@ def delete_material_from_course(course_id: str, file_hash: str):
     target = None
 
     for material in materials:
-        if material.get("file_hash") == file_hash:
+        if material.get("stored_path") == stored_path:
             target = material
             break
 
@@ -176,10 +176,10 @@ def delete_material_from_course(course_id: str, file_hash: str):
         try:
             os.remove(path)
         except Exception as e:
-            return False, f"Could not delete stored file: {e}", None
+            pass # Dosya zaten silinmişse hatayı görmezden gel ve JSON'dan temizlemeye devam et
 
     courses[course_id]["materials"] = [
-        m for m in materials if m.get("file_hash") != file_hash
+        m for m in materials if m.get("stored_path") != stored_path
     ]
 
     save_courses(courses)

@@ -517,15 +517,63 @@ kbd {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--orange);
 }
-
 /* Misc */
-#MainMenu, footer, header {
+#MainMenu, footer {
     visibility: hidden;
 }
 
-.stDeployButton,
+/* Header ve toolbar kesinlikle görünür kalsın */
+header {
+    visibility: visible !important;
+    display: block !important;
+    background: transparent !important;
+}
+
+[data-testid="stHeader"] {
+    display: block !important;
+    visibility: visible !important;
+    background: transparent !important;
+}
+
 [data-testid="stToolbar"] {
-    display: none;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Sidebar açma/kapatma kontrolü */
+button[kind="header"],
+[data-testid="collapsedControl"] {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 999999 !important;
+}
+
+/* İkon görünür olsun */
+button[kind="header"] svg,
+[data-testid="collapsedControl"] svg {
+    color: #1A1208 !important;
+    fill: #1A1208 !important;
+    opacity: 1 !important;
+}
+
+hr {
+    border-color: var(--line) !important;
+    opacity: 1 !important;
+}
+
+[data-testid="stHorizontalBlock"] {
+    gap: 0.75rem !important;
+}
+
+.title-accent {
+    display: inline-block;
+    width: 36px;
+    height: 3px;
+    border-radius: 99px;
+    background: var(--orange);
+    margin-bottom: 1rem;
 }
 
 hr {
@@ -1142,6 +1190,7 @@ def render_teacher_dashboard():
                     st.warning("Please upload at least one PDF.")
                 else:
                     added_count = skipped_count = 0
+
                     for pdf_file in uploaded_files:
                         raw_text = _read_pdf_text(pdf_file)
                         if not raw_text:
@@ -1149,29 +1198,36 @@ def render_teacher_dashboard():
                             skipped_count += 1
                             continue
 
-                        add_ok, add_msg = add_material_to_course(
-                            course_id=selected_course_id,
-                            filename=pdf_file.name,
-                            text_content=raw_text,
-                        )
-                        if not add_ok:
-                            st.warning(f"{pdf_file.name}: {add_msg}")
-                            skipped_count += 1
-                            continue
+                        try:
+                            rag_result = rag.add_document(
+                                text=raw_text,
+                                source_name=pdf_file.name,
+                                course_id=selected_course_id,
+                                teacher_username=username,
+                            )
 
-                        rag_result = rag.add_document(
-                            text=raw_text,
-                            source_name=pdf_file.name,
-                            course_id=selected_course_id,
-                            teacher_username=username,
-                        )
-                        if rag_result["skipped"] and rag_result["reason"] == "duplicate_in_course":
-                            st.warning(f"{pdf_file.name}: already indexed for this course.")
-                            skipped_count += 1
-                            continue
+                            if rag_result["skipped"] and rag_result["reason"] == "duplicate_in_course":
+                                st.warning(f"{pdf_file.name}: already indexed for this course.")
+                                skipped_count += 1
+                                continue
 
-                        st.success(f"✅ {pdf_file.name} added ({rag_result['chunks']} chunks).")
-                        added_count += 1
+                            add_ok, add_msg = add_material_to_course(
+                                course_id=selected_course_id,
+                                filename=pdf_file.name,
+                                text_content=raw_text,
+                            )
+
+                            if not add_ok:
+                                st.warning(f"{pdf_file.name}: {add_msg}")
+                                skipped_count += 1
+                                continue
+
+                            st.success(f"✅ {pdf_file.name} added ({rag_result['chunks']} chunks).")
+                            added_count += 1
+
+                        except Exception as e:
+                            st.error(f"{pdf_file.name}: indexing failed → {e}")
+                            skipped_count += 1
 
                     st.info(f"Done — Added: **{added_count}** | Skipped: **{skipped_count}**")
                     st.rerun()
