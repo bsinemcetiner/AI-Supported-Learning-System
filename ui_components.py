@@ -12,6 +12,7 @@ from course_manager import (
     get_teacher_courses,
     get_all_courses,
     get_course_materials,
+    delete_material_from_course,
 )
 from rag_manager import RAGManager
 
@@ -1252,14 +1253,51 @@ def render_teacher_dashboard():
                     if not materials:
                         st.caption("No materials uploaded yet.")
                     else:
-                        for material in materials:
-                            st.markdown(
-                                f"<div style='background:#FFF0E8;border-radius:8px;"
-                                f"padding:0.4rem 0.8rem;margin:0.25rem 0;font-size:0.85rem;"
-                                f"color:#1A1208;border:1px solid #FFD4BE;'>"
-                                f"📄 {material.get('original_filename', 'Unknown')}</div>",
-                                unsafe_allow_html=True,
-                            )
+                        for idx, material in enumerate(materials):
+                            filename = material.get("original_filename", "Unknown")
+                            stored_path = material.get("stored_path", "")
+
+                            row_a, row_b = st.columns([6, 1])
+
+                            with row_a:
+                                st.markdown(
+                                    f"<div style='background:#FFF0E8;border-radius:8px;"
+                                    f"padding:0.55rem 0.8rem;margin:0.25rem 0;font-size:0.85rem;"
+                                    f"color:#1A1208;border:1px solid #FFD4BE;'>"
+                                    f"📄 {filename}</div>",
+                                    unsafe_allow_html=True,
+                                )
+
+                            with row_b:
+                                if st.button(
+                                    "🗑️",
+                                    key=f"delete_material_{course_id}_{idx}",
+                                    help=f"Delete {filename}",
+                                    use_container_width=True,
+                                ):
+                                    # 1) JSON + stored txt sil
+                                    ok, msg, removed_material = delete_material_from_course(
+                                        course_id=course_id,
+                                        stored_path=stored_path,
+                                    )
+
+                                    if not ok:
+                                        st.error(msg)
+                                    else:
+                                        rag_delete = rag.delete_document(
+                                            course_id=course_id,
+                                            source_name=filename,
+                                        )
+
+                                        if rag_delete.get("found"):
+                                            st.success(
+                                                f"Deleted: {filename} "
+                                                f"({rag_delete.get('deleted', 0)} chunks removed from DB)"
+                                            )
+                                        else:
+                                            st.success(f"Deleted: {filename}")
+
+                                        st.rerun()
 
 
 COURSE_IMAGE_MAP = {

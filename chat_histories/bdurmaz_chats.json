@@ -459,5 +459,31 @@
         "mode": "direct",
         "tone": "Professional Tutor",
         "pdf_context": ""
+    },
+    "20260316_161150": {
+        "title": "bu ders hakkında kaç tane slayt var send",
+        "messages": [
+            {
+                "role": "user",
+                "content": "bu ders hakkında kaç tane slayt var sende"
+            },
+            {
+                "role": "assistant",
+                "content": "Ders materyallerinin tam sayısını ben de kesin olarak bilemiyorum; elimdeki kaynaklar sadece Week 2 ve Week 4 pdf’lerinden seçilmiş bölümler içeriyor. Bu bölümler, sesin özellikleri, sıcaklık ve nemin etkileri, mikrofon yerleştirme teknikleri gibi konuları kapsayan birkaç slayttan oluşuyor, ama bütün dersin kaç slayttan ibaret olduğunu görmek için tam PDF’ye bakmak gerekir.  \n\nEğer belirli bir konuyla ilgili slaytları görmek ya da bir konu hakkında daha fazla ayrıntı istersen, bana o kısmı sorabilirsin; elimdeki kesitlerden açıklamaları genişletebilirim. Bu, ihtiyacın olan bilgiyi edinmene yardımcı olur, değil mi?"
+            },
+            {
+                "role": "user",
+                "content": "week 3 yok mu"
+            },
+            {
+                "role": "assistant",
+                "content": "Açıkçası elimdeki dosyalarda **Week 3**’ün tam PDF’i yok; sadece **musicAndComputers_Week 3.pdf**‑den belli bölümler – örneğin düşük geçiren filtre, örnekleme oranı yükseltme, kuantizasyon ve dither gibi konular – mevcut. Bu kesitler birkaç slayttan alınmış gibi görünüyor, ama tüm sunumun kaç slayttan oluştuğunu söyleyebilmem için bütün dokümanı görmem gerekiyor.\n\nEğer **Week 3**’ün içinde yer alan bu temalar hakkında daha derin bir açıklama istersen, örneğin kuantizasyon hatasının nasıl hesaplandığını ya da örnekleme oranını arttırmanın pratik sonuçlarını, memnuniyetle detaylandırırım. Hangi konu üzerine yoğunlaşmak istersin?"
+            }
+        ],
+        "course_id": "MDemir::music and computers",
+        "uploaded_sources": [],
+        "mode": "direct",
+        "tone": "Professional Tutor",
+        "pdf_context": ""
     }
 }

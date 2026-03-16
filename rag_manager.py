@@ -179,6 +179,7 @@ class RAGManager:
     def _is_duplicate(self, file_hash: str, course_id: Optional[str] = None) -> bool:
         try:
             where = {"file_hash": file_hash}
+
             if course_id:
                 where = {
                     "$and": [
@@ -191,3 +192,25 @@ class RAGManager:
             return len(results["ids"]) > 0
         except Exception:
             return False
+        
+    def delete_document(self, course_id: str, source_name: str) -> dict:
+        try:
+            results = self.collection.get(
+                where={
+                    "$and": [
+                        {"course_id": course_id},
+                        {"source": source_name}
+                    ]
+                },
+                include=["metadatas"]
+            )
+
+            ids = results.get("ids", [])
+            if not ids:
+                return {"deleted": 0, "found": False}
+
+            self.collection.delete(ids=ids)
+            return {"deleted": len(ids), "found": True}
+
+        except Exception as e:
+            return {"deleted": 0, "found": False, "error": str(e)}

@@ -1,132 +1,133 @@
 CE 476
 Music and Computers
-Week 4
-Recording & Playback Tools
-Summary
-• Microphones
-• Capsule design
-• Placement techniques
-• Synthesizers
-• MIDI controllers
-• SFX units
-• Speakers
+Week 2
+Fundamental Concepts of Sound
+Sound Travel
+• A sound source disturbs the surrounding particles 
+in the air (medium).
+• The area surrounding the sound source are 
+compressed and rarefied.
+• Air molecules undergo successive displacements 
+that correspond to the original disturbance.
+• They arrive at a receptor (e.g. an ear or a 
+microphone diaphragm), which moves similarly 
+based on the pressure.
 
-Microphones
-• Condenser with backplate & power source
-• Operates by sensing capacitance differences
-• Air pressure moves diaphragm
-• Capacitance differences create voltage
-• Sensitive: Thin diaphragm made of nylon foil →
-• Also due to electronic mechanism
-• Can pick up subtle nuances of an instrument, flat frequency 
-response, ideal for studio use
+Frequency
+• The vibrations can occur periodically or aperiodically. (e.g. Violin 
+vs cymbal)
+• One sequence of a periodic vibration is one cycle (or period)
+• Frequency: Number of cycles each second. Measured in Hertz 
+(𝐻𝑧), defined as the reciprocal of period.
+• Barometric pressure (~10−5 𝐻𝑧)
+• Cosmic rays(~1022 𝐻𝑧)
+• Sound – roughly the range of human hearing (20 𝐻𝑧 −
+20𝑘𝐻𝑧)
+Certain frequencies are standardized as concert pitches (e.g. 
+𝑐𝑜𝑛𝑐𝑒𝑟𝑡 𝑝𝑖𝑡𝑐ℎ 𝐴 = 440 𝐻𝑧)
+Exists on a logarithmic scale. Exhibits interesting mathematical 
+relationships, e.g. A5 = 880 𝐻𝑧
+Sound Properties
+• Wavelength: The distance sound travels through one period.
+• E.g. 20 𝑘𝐻𝑧 wavelength is ~1.8cm, 20 𝐻𝑧 wavelength is ~1.7m
+• Can’t be received linearly
+• Diffraction: Sound bending through openings or 
+around obstacles
+• Longer wavelengths diffract better
+• Refraction: Sound bending because of velocity 
+changes
+• At night, you can hear better outside. Music also seems 
+louder.
 
-Microphones
-• Dynamic mics with moving coil & magnet
-• Operates through magnetic induction
-• Air pressure moves diaphragm
-• Movement in the magnetic field creates voltage
-• Durable due to sturdy parts:
-• Coil wires made of metal or dense polymer
-• Diaphragm made of thicker nylon, to be able to stress coil wires
-• No delicate electronics
-• Higher frequencies are attenuated since the parts are heavier
-• Ideal for on-stage use or for studio environments with loud amplifiers
+Sound Properties (cont)
+Things that affect sound:
+• Temperature
+• Speed of sound (in air): ~1191𝑘𝑚/ℎ at 0 °𝐶, 
+~1239 𝑘𝑚/ℎ at 20 °𝐶
+• Why woodwind players must warm their instrument before playing
+• Elasticity
+• Speed of sound through steel is 14 times greater than the speed of sound through air
+• Density
+• Dense mediums cause the speed of sound to decrease
+• Attenuation: Absorption of sound as it travels
+• High frequencies are absorbed more prominently
+• Why a nearby lightning is heard as a sharp clap, while a faraway one is a low rumble
+• Humidity increases attenuation since moist air is less dense
+Amplitude
+• The amount of air pressure displacement
+• Humans’ dynamic range is large -> sound pressure level uses a logarithmic measurement
+• The decibel:
+10 ∗ log
+𝑃1
+𝑃2
+𝑑𝐵, if 𝑃 is a power quantity (e.g intensity), or
+20 ∗ log
+𝐴1
+𝐴2
+𝑑𝐵, if 𝐴 is an amplitude quantity (e.g. pressure)
+• When measuring intensity level (𝐼𝐿) or sound pressure level (𝑆𝑃𝐿), 𝑃2 or 𝐴2 are set to thresholds of hearing.
+• For example, the threshold of hearing with power measurements is 10−12 Τ𝑊 𝑚2
+• In terms of pressure, the quietest sound threshold humans can detect is at 20 𝜇𝑃𝑎.
+Q: What is the intensity level of a loud rock band producing sound power of 10 Τ𝑊 𝑚2?
+𝐼𝑛𝑡𝑒𝑛𝑠𝑖𝑡𝑦 𝑙𝑒𝑣𝑒𝑙 = 10 ∗ log 𝑃1
+𝑃2
+𝑑𝐵
+= 10 ∗ log 101
+10−12 = 10 ∗ log 1013
+= 10 ∗ 13 = 130 𝑑𝐵
+Q: What is the combined intensity level of two motorcycle engines, each producing an 
+intensity level of 80 𝑑𝐵?
+80 = 10 ∗ log 𝑀1
+10−12
+𝑀1
+10−12 = 108 →→ 𝑀1 = 10−4 Τ𝑊 𝑚2
+10 ∗ log 𝑀1 + 𝑀1
+10−12 = 10 ∗ log 2 ∗ 10−4
+10−12
+= 10 ∗ log 2 ∗ 108 = 83.01 𝑑𝐵
+Important note: When multiple
+sound sources are added, we typically
+use power measurements. This is
+because amplitude can be positive or
+negative, and multiple sound sources’
+amplitudes can cancel one another in
+unpredictable ways. Power
+measurements, however, do not have
+this drawback and we can use that
+version of the formula safely.
+Periodic signals
+• Simplest periodic signal, the sine wave
+• Operates at a fundamental frequency (𝐹0)
+• Complex periodic signals -> series of extra 
+frequencies at multiples of 𝐹0 -> Harmonics
+• Ex: If 𝐹0 is 220, harmonics will be at 440, 
+660, 880, 1100 etc.
+• E.g. musical instruments
+• The sound color (timbre) is determined by 
+harmonics
+• Sometimes also called overtones
 
-Microphones – Capsule design
-• Pressure microphones
-• The diaphragm is exposed on the front. Every sound wave can reach the 
-front and move the diaphragm.
-• Pressure-gradient microphones
-• The diaphragm is exposed on the back and the front equally. The 
-microphone senses pressure differences between the two sides. Sounds 
-from either side are cancelled since the diaphragm receives equal 
-pressure from both front and back. 
+Fourier Theorem
+• Harmonic nature of periodic waveforms is summarized 
+by the Fourier theorem:
+Periodic waveforms                      Series of sine waves
+• Fourier transform converts a time-based representation 
+to a frequency-based representation (and vice-versa).
 
-Microphones – Capsule design
-Huge improvement over pressure-gradient microphones: Delay
-The rear side of the diaphragm is equipped with ports that delay the 
-sound. Directivity is achieved:
-• Rear sounds will be attenuated since it 
-will reach either side at the same time
-• Frontal sounds will be strengthened 
-since the delay will be close to one 
-period
-Microphones
-Directivity is shown using polar patterns. 
-Some important polar patterns:
-https://www.youtube.com/watch?v=keBa2ocQInI
-Omnidirectional Bidirectional (Figure 8) Cardioid Supercardioid
-Microphone Techniques
-• Need to find the correct type & directionality based on context (e.g. 
-instrument, venue/location, event)
-• Microphone placement becomes crucial for stereo imaging. 
-AB (spaced pair), omnidirectional mics XY, cardioid mics
+Phase
+𝑦 𝑡 = 𝐴 ∗ sin ω𝑡 + = 𝐴 ∗ sin 2π𝑓𝑡 +
+• Starting point of a periodic waveform. 
+• Indistinguishable to the human ear, but important 
+as a tool for signal manipulation
+• Phase inversion, phase cancellation, phasors 
+(flangers)
+• Creating rapid transient sounds, loudspeaker 
+imaging
 
-Microphone Techniques
-ORTF
- DIN NOS
-• Near-coincident placement variants
-• Different combinations of ambient and direct
-• Cardioid microphones
-Microphone Techniques
-MS (Mid-Side)
-• Adjustable stereo width, ideal for 
-situations where you might want to 
-change stereo imaging (e.g. film 
-production)
-• 𝑀 + 𝑆 → Left channel
-• 𝑀 − 𝑆 → Right channel
-
-Analog 
-Synthesizers
-• Input keys send control voltage
-• Voltage-controlled oscillators, 
-filters & amplifiers (VCO, VCF & 
-VCA)
-• Envelope generators for amplitude 
-& filter
-• Low-frequency oscillators (LFO) for 
-modulation purposes
-• Mixer
-• Output
-Minimoog Model D (1970)
-Digital 
-Synthesizers
-• Input keys send MIDI instructions
-• Oscillators for different kinds of waveforms
-• DSP units for filters, envelopes, LFOs and other sound effects
-• Mixer
-• Output (DAC)
-Yamaha DX7 (1983)
-MIDI Controllers
-• Interacts with digital audio units (digital 
-synths, mixers, SFX units, software)
-• Input can be:
-• The pitch, its velocity, its press/release if we use keyboard / pad input
-• Volume / filter control through knobs & sliders
-• Input is in the form of computer instructions. The processing and the output must be provided by 
-separate devices.
-Sound Effects Units
-• Delay
-• Tape delay: Magnetic loop with record/playback heads
-• Bucket-Brigade Device: Series of capacitors that hold signal for brief 
-periods of time
-• Reverb
-• Spring reverb - Springs in a small tank, vibrating due to signal - Example
-• Plate reverb - Large metal plate vibrating through signal Example
-• Amplifier
-• Electronic components to control current flow
-• … and many more!
-• Digital versions of all of these exist
-• Available as either parts of bigger systems or standalone devices
-Speakers
-• Once the signal reaches the speaker, it flows through the voice coil.
-• Due to the magnetic field, the voice coil moves back and forth.
-• The cone is attached to the 
-coil, moving along.
-• The moving cone pressures 
-the air, creating sound.
-• Note there are no “digital 
-speakers”, since air pressure 
-is always analog.
+Phase inversion & cancellation examples
+Standing wave formation
+(Very useful to know for studios, concert 
+halls or maybe even headphone design!)
+The signal manipulation is 
+caused by constructive / 
+destructive interference.
