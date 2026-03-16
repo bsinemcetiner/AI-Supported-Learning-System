@@ -56,16 +56,25 @@ html, body, .stApp, [class*="css"] {
     color: var(--text) !important;
 }
 
+html, body {
+    color-scheme: light !important;
+}
+
+body, p, span, div, li, label, input, textarea, button {
+    color: var(--text) !important;
+}
+
 .stApp {
     background: var(--bg) !important;
 }
 
+/* Genel container */
 .main .block-container {
     max-width: 860px;
     padding: 2.5rem 2rem 4rem !important;
 }
 
-/* ── Headings ── */
+/* Başlıklar */
 h1 {
     font-family: 'Fraunces', serif !important;
     font-size: 2rem !important;
@@ -73,22 +82,24 @@ h1 {
     color: var(--text) !important;
     letter-spacing: -0.03em !important;
 }
+
 h2, h3 {
     font-family: 'Fraunces', serif !important;
     color: var(--text-mid) !important;
     font-weight: 600 !important;
 }
 
-/* ── Sidebar ── */
+/* Sidebar */
 [data-testid="stSidebar"] {
     background: var(--card) !important;
     border-right: 1.5px solid var(--line) !important;
 }
+
 [data-testid="stSidebar"] .block-container {
     padding: 1.5rem 1rem !important;
 }
 
-/* ── Buttons — global ── */
+/* Genel butonlar */
 .stButton > button {
     background: var(--orange) !important;
     color: #ffffff !important;
@@ -101,20 +112,25 @@ h2, h3 {
     transition: all 0.18s ease !important;
     box-shadow: 0 3px 14px rgba(232,81,10,0.28) !important;
 }
+
 .stButton > button:hover {
     background: var(--orange2) !important;
     box-shadow: 0 6px 22px rgba(232,81,10,0.38) !important;
     transform: translateY(-1px) !important;
 }
-.stButton > button:active { transform: translateY(0) !important; }
 
-/* Sidebar buttons — subdued */
+.stButton > button:active {
+    transform: translateY(0) !important;
+}
+
+/* Sidebar butonları */
 [data-testid="stSidebar"] .stButton > button {
     background: var(--bg2) !important;
     color: var(--text-mid) !important;
     box-shadow: none !important;
     border: 1.5px solid var(--line) !important;
 }
+
 [data-testid="stSidebar"] .stButton > button:hover {
     background: var(--orange-lt) !important;
     border-color: var(--orange-md) !important;
@@ -123,41 +139,162 @@ h2, h3 {
     box-shadow: none !important;
 }
 
-/* ── Inputs ── */
-.stTextInput > div > div > input,
-.stTextArea > div > div > textarea {
+/* Input wrapper siyahlıklarını kaldır */
+.stTextInput,
+.stTextArea,
+.stSelectbox {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Text input / textarea dış katman */
+.stTextInput > div,
+.stTextArea > div {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.stTextInput > div > div,
+.stTextArea > div > div {
     background: var(--card) !important;
     border: 1.5px solid var(--line) !important;
     border-radius: var(--r-md) !important;
+    box-shadow: none !important;
+}
+
+.stTextInput > div > div:focus-within,
+.stTextArea > div > div:focus-within {
+    border-color: var(--orange) !important;
+    box-shadow: 0 0 0 3px var(--orange-gl) !important;
+}
+
+/* Input içi */
+.stTextInput > div > div > input,
+.stTextArea > div > div > textarea {
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
     color: var(--text) !important;
     font-family: 'Plus Jakarta Sans', sans-serif !important;
     font-size: 0.9rem !important;
-    transition: border-color 0.2s, box-shadow 0.2s !important;
+    caret-color: var(--text) !important;
 }
+
 .stTextInput > div > div > input:focus,
 .stTextArea > div > div > textarea:focus {
-    border-color: var(--orange) !important;
-    box-shadow: 0 0 0 3px var(--orange-gl) !important;
+    border: none !important;
     outline: none !important;
+    box-shadow: none !important;
 }
+
 .stTextInput > div > div > input::placeholder,
 .stTextArea > div > div > textarea::placeholder {
     color: var(--text-muted) !important;
+    opacity: 1 !important;
 }
 
-/* ── Selectbox ── */
+/* Sidebar search input ekstra siyah köşeleri kaldır */
+[data-testid="stSidebar"] .stTextInput,
+[data-testid="stSidebar"] .stTextInput * {
+    box-shadow: none !important;
+}
+
+/* Selectbox */
+.stSelectbox > div,
 .stSelectbox > div > div {
-    background: var(--card) !important;
-    border: 1.5px solid var(--line) !important;
-    border-radius: var(--r-md) !important;
-    color: var(--text) !important;
-}
-.stSelectbox > div > div:focus-within {
-    border-color: var(--orange) !important;
-    box-shadow: 0 0 0 3px var(--orange-gl) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
 }
 
-/* ── Tabs ── */
+/* Ana select kutusu */
+.stSelectbox div[data-baseweb="select"] {
+    background: #FFFFFF !important;
+    border: 1.5px solid #E8DDD0 !important;
+    border-radius: 14px !important;
+    box-shadow: none !important;
+    min-height: 52px !important;
+}
+
+.stSelectbox div[data-baseweb="select"]:focus-within {
+    border-color: #E8510A !important;
+    box-shadow: 0 0 0 3px rgba(232,81,10,0.10) !important;
+}
+
+.stSelectbox div[data-baseweb="select"],
+.stSelectbox div[data-baseweb="select"] > div,
+.stSelectbox div[data-baseweb="select"] > div > div,
+.stSelectbox div[data-baseweb="select"] span,
+.stSelectbox div[data-baseweb="select"] input,
+.stSelectbox div[data-baseweb="select"] p {
+    background: #FFFFFF !important;
+    color: #1A1208 !important;
+    caret-color: #1A1208 !important;
+}
+
+.stSelectbox div[data-baseweb="select"] input {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.stSelectbox div[data-baseweb="select"] svg {
+    fill: #9C8B78 !important;
+    color: #9C8B78 !important;
+}
+
+/* Selectbox dropdown popover */
+div[data-baseweb="popover"] {
+    background: transparent !important;
+}
+
+div[data-baseweb="popover"] > div {
+    background: #FFFFFF !important;
+    border: 1.5px solid #E8DDD0 !important;
+    border-radius: 22px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08) !important;
+    overflow: hidden !important;
+}
+
+/* Dropdown içi tüm katmanlar */
+div[data-baseweb="popover"] ul,
+div[data-baseweb="popover"] ol,
+div[data-baseweb="popover"] li,
+div[data-baseweb="popover"] li > div,
+div[data-baseweb="popover"] [role="listbox"],
+div[data-baseweb="popover"] [role="option"],
+div[data-baseweb="popover"] [role="option"] > div,
+div[data-baseweb="popover"] span,
+div[data-baseweb="popover"] p {
+    background: #FFFFFF !important;
+    color: #1A1208 !important;
+}
+
+/* Hover ve selected durumları */
+div[data-baseweb="popover"] [role="option"]:hover,
+div[data-baseweb="popover"] li:hover,
+div[data-baseweb="popover"] li:hover > div {
+    background: #FFF0E8 !important;
+    color: #E8510A !important;
+}
+
+div[data-baseweb="popover"] [aria-selected="true"],
+div[data-baseweb="popover"] [aria-selected="true"] > div {
+    background: #F7F0E6 !important;
+    color: #1A1208 !important;
+}
+
+/* Genel fallback */
+ul[role="listbox"],
+li[role="option"],
+div[role="option"] {
+    background: #FFFFFF !important;
+    color: #1A1208 !important;
+}
+
+/* Tabs */
 .stTabs [data-baseweb="tab-list"] {
     background: var(--card) !important;
     border-radius: var(--r-md) !important;
@@ -166,6 +303,7 @@ h2, h3 {
     gap: 2px !important;
     box-shadow: 0 1px 6px rgba(0,0,0,0.04) !important;
 }
+
 .stTabs [data-baseweb="tab"] {
     background: transparent !important;
     border-radius: var(--r-sm) !important;
@@ -176,22 +314,55 @@ h2, h3 {
     padding: 0.4rem 1.2rem !important;
     transition: all 0.18s !important;
 }
+
 .stTabs [aria-selected="true"] {
     background: var(--orange) !important;
     color: #ffffff !important;
     box-shadow: 0 3px 14px rgba(232,81,10,0.28) !important;
 }
-button[role="tab"] { color: var(--text-mid) !important; }
-button[role="tab"][aria-selected="true"] { color: #ffffff !important; }
 
-/* ── Alerts ── */
-.stAlert { border-radius: var(--r-md) !important; }
-div.stSuccess { background: linear-gradient(135deg,#d1fae5,#a7f3d0) !important; color:#065f46 !important; border-left:3px solid #34d399 !important; border-radius: var(--r-md) !important; }
-div.stWarning { background: linear-gradient(135deg,#fef3c7,#fde68a) !important; color:#78350f !important; border-left:3px solid #fbbf24 !important; border-radius: var(--r-md) !important; }
-div.stInfo    { background: var(--orange-lt) !important; color: var(--orange) !important; border-left:3px solid var(--orange) !important; border-radius: var(--r-md) !important; }
-div.stError   { background: linear-gradient(135deg,#fee2e2,#fecaca) !important; color:#7f1d1d !important; border-left:3px solid #f87171 !important; border-radius: var(--r-md) !important; }
+button[role="tab"] {
+    color: var(--text-mid) !important;
+}
 
-/* ── Expander ── */
+button[role="tab"][aria-selected="true"] {
+    color: #ffffff !important;
+}
+
+/* Alerts */
+.stAlert {
+    border-radius: var(--r-md) !important;
+}
+
+div.stSuccess {
+    background: linear-gradient(135deg,#d1fae5,#a7f3d0) !important;
+    color:#065f46 !important;
+    border-left:3px solid #34d399 !important;
+    border-radius: var(--r-md) !important;
+}
+
+div.stWarning {
+    background: linear-gradient(135deg,#fef3c7,#fde68a) !important;
+    color:#78350f !important;
+    border-left:3px solid #fbbf24 !important;
+    border-radius: var(--r-md) !important;
+}
+
+div.stInfo {
+    background: var(--orange-lt) !important;
+    color: var(--orange) !important;
+    border-left:3px solid var(--orange) !important;
+    border-radius: var(--r-md) !important;
+}
+
+div.stError {
+    background: linear-gradient(135deg,#fee2e2,#fecaca) !important;
+    color:#7f1d1d !important;
+    border-left:3px solid #f87171 !important;
+    border-radius: var(--r-md) !important;
+}
+
+/* Expander */
 .streamlit-expanderHeader {
     background: var(--bg2) !important;
     border: 1.5px solid var(--line) !important;
@@ -199,18 +370,20 @@ div.stError   { background: linear-gradient(135deg,#fee2e2,#fecaca) !important; 
     color: var(--text-mid) !important;
     font-weight: 600 !important;
 }
+
 .streamlit-expanderContent {
     background: var(--card) !important;
     border: 1.5px solid var(--line) !important;
     border-top: none !important;
 }
+
 details {
     background: var(--card) !important;
     border: 1.5px solid var(--line) !important;
     border-radius: var(--r-md) !important;
 }
 
-/* ── File uploader ── */
+/* File uploader */
 [data-testid="stFileUploadDropzone"],
 [data-testid="stFileUploader"] {
     background: var(--card) !important;
@@ -218,13 +391,14 @@ details {
     border-radius: var(--r-lg) !important;
     transition: all 0.2s !important;
 }
+
 [data-testid="stFileUploadDropzone"]:hover,
 [data-testid="stFileUploader"]:hover {
     border-color: var(--orange) !important;
     background: var(--orange-lt) !important;
 }
 
-/* ── Chat messages ── */
+/* Chat message */
 [data-testid="stChatMessage"] {
     background: var(--card) !important;
     border: 1.5px solid var(--line) !important;
@@ -233,57 +407,135 @@ details {
     margin-bottom: 0.6rem !important;
     box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important;
 }
+
 [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
     background: var(--orange-lt) !important;
     border-color: var(--orange-md) !important;
 }
 
-/* ── Chat input ── */
+/* Chat input container */
+[data-testid="stChatInputContainer"] {
+    background: transparent !important;
+}
+
+[data-testid="stChatInputContainer"] > div {
+    background: transparent !important;
+}
+
+/* Chat input asıl alan */
 [data-testid="stChatInput"] {
-    border-radius: var(--r-lg) !important;
-    border: 1.5px solid var(--line) !important;
-    background: var(--card) !important;
+    border-radius: 22px !important;
+    border: 1.5px solid #E8DDD0 !important;
+    background: #FFFFFF !important;
     box-shadow: 0 2px 10px rgba(0,0,0,0.05) !important;
     transition: border-color 0.2s !important;
 }
+
 [data-testid="stChatInput"]:focus-within {
-    border-color: var(--orange) !important;
+    border-color: #E8510A !important;
     box-shadow: 0 4px 18px rgba(232,81,10,0.14) !important;
 }
 
-/* ── Labels ── */
-.stTextInput label, .stTextArea label,
-.stSelectbox label, .stFileUploader label,
+[data-testid="stChatInput"] > div,
+[data-testid="stChatInput"] > div > div,
+[data-testid="stChatInput"] > div > div > div {
+    background: #FFFFFF !important;
+    border-radius: 22px !important;
+}
+
+/* Chat textarea/input */
+[data-testid="stChatInput"] textarea,
+[data-testid="stChatInput"] input,
+[data-testid="stChatInput"] p {
+    background: #FFFFFF !important;
+    color: #1A1208 !important;
+    caret-color: #1A1208 !important;
+}
+
+[data-testid="stChatInput"] textarea::placeholder,
+[data-testid="stChatInput"] input::placeholder {
+    color: #9C8B78 !important;
+    opacity: 1 !important;
+}
+
+/* Send button */
+[data-testid="stChatInput"] button {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+[data-testid="stChatInput"] button svg {
+    fill: #9C8B78 !important;
+    color: #9C8B78 !important;
+}
+
+/* Labels */
+.stTextInput label,
+.stTextArea label,
+.stSelectbox label,
+.stFileUploader label,
 label {
     font-weight: 600 !important;
     font-size: 0.82rem !important;
     color: var(--text-mid) !important;
     letter-spacing: 0.06em !important;
     text-transform: uppercase !important;
-    font-family: 'Plus Jakarta Sans', monospace !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
 }
 
-/* ── Markdown text ── */
-.stMarkdown p, [data-testid="stMarkdownContainer"] p,
+/* Markdown */
+.stMarkdown p,
+[data-testid="stMarkdownContainer"] p,
 [data-testid="stMarkdownContainer"] * {
     color: var(--text) !important;
     line-height: 1.65 !important;
 }
-body, p, span, div, li {
-    color: var(--text) !important;
+
+/* Keyboard / arrow gibi gereksiz görsel yazıları bastır */
+kbd {
+    background: transparent !important;
+    color: var(--text-soft) !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
-/* ── Scrollbar ── */
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--orange-md); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: var(--orange); }
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 5px;
+}
 
-/* ── Misc ── */
-#MainMenu, footer, header { visibility: hidden; }
-.stDeployButton, [data-testid="stToolbar"] { display: none; }
-hr { border-color: var(--line) !important; opacity: 1 !important; }
-[data-testid="stHorizontalBlock"] { gap: 0.75rem !important; }
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--orange-md);
+    border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--orange);
+}
+
+/* Misc */
+#MainMenu, footer, header {
+    visibility: hidden;
+}
+
+.stDeployButton,
+[data-testid="stToolbar"] {
+    display: none;
+}
+
+hr {
+    border-color: var(--line) !important;
+    opacity: 1 !important;
+}
+
+[data-testid="stHorizontalBlock"] {
+    gap: 0.75rem !important;
+}
 
 .title-accent {
     display: inline-block;
