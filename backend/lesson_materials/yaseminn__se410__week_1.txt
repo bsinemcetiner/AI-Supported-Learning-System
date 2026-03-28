@@ -1,0 +1,473 @@
+SE 410
+Software Framework Applications
+Week 2: Concepts, Data Types, Strings, Loops, Patterns
+Basıc codıng ın c#
+● C# is a statically typed language, any element of 
+code that represents or produces information, 
+such as a variable or an expression, has a data 
+type determined at compile time. 
+● This is different than dynamically typed 
+languages, such as JavaScript, in which types are 
+determined at runtime.
+
+Varıable declaratıons
+string part1 = "the ultimate question";
+string part2 = "of something";
+int theAnswer = 42;
+int andAnotherThing;
+part2 = " of life, the universe, and everything";
+andAnotherThing = 123;
+theAnswer = "The compiler will reject this"; // Be careful
+VAR DATA TYPE
+● It is not necessary to state the variable type explicitly. 
+● You can let the compiler work it out for you by using the 
+keyword var in place of the data type.
+var part1 = "the ultimate question";
+var part2 = "of something";
+var theAnswer = 42;
+theAnswer = "The compiler will reject this"; // Be careful
+Usıng varıables
+string part1 = "the ultimate question";
+string part2 = "of something";
+int theAnswer = 42;
+part2 = "of life, the universe, and everything";
+string questionText = "What is the answer to " + part1 + ", " + part2 + "?";
+string answerText = "The answer to " + part1 + ", " + part2 + ", is: " + theAnswer;
+Console.WriteLine(questionText);
+Console.WriteLine(answerText);
+scope
+● A variable’s scope is the range of code in which you can 
+refer to that variable by its name. 
+● Variables are not the only things with scope. 
+● Methods, properties, types, and, anything with a name all 
+have scope.
+Scope (cont’d)
+static void SomeMethod()
+{
+int thisWillNotWork = 42;
+}
+static void AnUncompilableMethod()
+{
+Console.WriteLine(thisWillNotWork);
+}
+Varıable not ın scope
+int someValue = 200;
+if (someValue > 100)
+{
+int willNotWork = someValue - 100;
+}
+Console.WriteLine(willNotWork);
+Variable Name Ambiguity
+int someValue = 200;
+if (someValue > 100)
+{
+   int anotherValue = someValue - 100; // Compiler error
+   Console.WriteLine(anotherValue);
+}
+int anotherValue = 123;
+Variable Name Ambiguity (cont’d)
+error CS0136: A local or parameter named 'anotherValue' 
+cannot be declared in this scope because that name is used 
+in an enclosing local scope to define a local or parameter
+Statements
+● When we write a C# method, we are writing a sequence of statements. 
+● The statements in a method describe the actions we want the method to 
+perform.
+int a = 19;
+int b = 23;
+int c;
+c = a + b;
+Console.WriteLine(c);
+Expressions
+double a = 1, b = 2.5, c = -3;
+double x = ( -b + Math.Sqrt(b * b - 4 * a * c)) / (2 * a);
+Console.WriteLine(x);
+Structure of an expressıon
+
+Comments and Whitespace
+Console.WriteLine("Say"); // This text will be ignored, but the code on
+Console.WriteLine("Anything"); // the left is still compiled as usual.
+Console.WriteLine(/* Has side effects */ GetLog());
+/* Some developers like to use delimited comments for big blocks of text,
+* where they need to explain something particularly complex or odd in the
+* code. The column of asterisks on the left is for decoration - asterisks
+* are necessary only at the start and end of the comment.
+*/
+Multılıne comments
+Console.WriteLine("This will run"); /* This comment includes not just the
+Console.WriteLine("This won't");     * text on the right but also the text
+Console.WriteLine("Nor will this"); /* on the left except the first and last
+Console.WriteLine("Nor this");       * lines. */
+Console.WriteLine("This will also run")
+Compilation Symbols
+● C# offers a #define directive that lets you define a 
+compilation symbol. 
+● These symbols are commonly used in conjunction with the 
+#if directive to compile code in different ways for 
+different situations.
+Conditional compilation
+#if DEBUG
+Console.WriteLine("Starting work");
+#endif
+DoWork();
+#if DEBUG
+Console.WriteLine("Finished work");
+#endif
+#error and #warning
+#if NETSTANDARD
+#error .NET Standard is not a supported target for this  
+source file
+#endif
+Fundamental Data Types
+● #.NET defines thousands of types in its runtime libraries, and 
+you can write your own, so C# can work with an unlimited 
+number of data types. 
+● However, a handful of types get special handling from the 
+compiler.
+● C# provides various special services not just for strings but 
+also for certain numeric data types, Booleans, and two 
+specific types called dynamic and object.
+Numeric Types
+
+Numeric Types (cont’d)
+● Floating-point values do not work in the same way as integers, 
+so this table is a little different than the integer types 
+table.
+● Floating-point numbers store a value and an exponent.
+● The Precision column shows how many bits are available for the 
+value part, and then the range is expressed as the smallest 
+nonzero value and the largest value that can be represented.
+Numeric conversions
+
+Checked contexts
+● In C#, the checked keyword is used to explicitly enable 
+overflow checking for arithmetic operations and type 
+conversions.
+● By default, arithmetic operations in C# do not throw 
+exceptions if an overflow occurs (they wrap around instead). 
+● Using checked, you can force the runtime to detect and throw 
+an OverflowException when an overflow happens.
+Checked Syntax
+// Statement block form
+checked
+{
+    int a = int.MaxValue;
+    int b = a + 1;  // Throws OverflowException
+}
+// Expression form
+int x = checked(int.MaxValue + 1); // Throws OverflowException
+
+Example: Wıthout Checked
+int a = int.MaxValue;
+int b = a + 1; 
+Console.WriteLine(b); // Output: -2147483648 (wraps around, 
+                                              no exception) 
+
+Example: Wıth Checked
+try
+{
+    int a = int.MaxValue;
+    int b = checked(a + 1); 
+    Console.WriteLine(b);
+}
+catch (OverflowException ex)
+{
+    Console.WriteLine("Overflow detected!");
+}
+
+BigInteger
+● System.Numerics.BigInteger is an arbitrary-precision integer type: 
+○ it grows as large as memory allows, so it never overflows like 
+int/long. 
+● It’s a value type (struct) and immutable.
+
+BigInteger (Cont’d)
+using System;
+using System.Numerics;
+class Program
+{
+    static void Main()
+    { 
+        BigInteger a = BigInteger.Parse("12345678901234567890");
+        BigInteger b = BigInteger.Pow(10, 30);   // 10^30
+        BigInteger sum = a + b;
+        Console.WriteLine($"a = {a}"); // a = 12345678901234567890
+        Console.WriteLine($"b = {b}"); // b = 1000000000000000000000000000000
+        Console.WriteLine($"a + b = {sum}");  // a + b = 10000123456789012345678901234567890
+    } 
+}
+booleans
+● C# defines a type called bool: System.Boolean. 
+● Whereas some C-family languages allow numeric types to stand in 
+for Boolean values, with conventions such as 0 meaning false and 
+anything else meaning true, C# will not accept a number. 
+● It demands that values indicating truth or falsehood be 
+represented by a bool, and none of the numeric types is 
+convertible to bool. 
+● For example, in an if statement, you cannot write if (someNumber) 
+to get some code to run only when someNumber is nonzero. 
+● If that’s what you want, you need to say so explicitly by writing 
+if (someNumber != 0).
+Strıngs and characters
+● The string type (synonymous with the CLR System.String 
+type) represents text. 
+● A string is a sequence of values of type char (or 
+System.Char, as the CLR calls it), and each char is a 
+16-bit value representing a single UTF-16 code unit.
+
+Immutability of strings
+● .NET strings are immutable. 
+● There are many operations that sound as though they will 
+modify a string, 
+○ concatenation, 
+○ ToUpper
+○ ToLower methods 
+● offered by instances of the string type, but each of these 
+generates a new string, leaving the original one unmodified. 
+● This means that if you pass strings as arguments, even to 
+code you didn’t write, you can be certain that it cannot 
+change your strings.
+Immutability of strings (cont’d)
+string s1 = "A string is more ";
+string s2 = "than the sum of its chars.";
+// Concatenate s1 and s2. This actually creates a new
+// string object and stores it in s1, releasing the
+// reference to the original object.
+s1 += s2;
+System.Console.WriteLine(s1);
+// Output: A string is more than the sum of its chars.
+Immutability of strings (cont’d)
+string str1 = "Hello ";
+string str2 = str1;
+str1 += "World";
+System.Console.WriteLine(str2);
+//Output: Hello
+
+String manipulation methods
+● ToUpper and ToLower convert characters into uppercase or 
+lowercase.
+● IndexOf and LastIndexOf return the index for the first 
+occurrence and the last occurrence of the substring.
+● StartsWith and EndsWith return a bool indicating whether the 
+string starts or ends with a particular character or string.
+● Split takes one or more separator characters (e.g., commas or 
+spaces) and returns an array with an entry for each substring 
+between the separators. 
+○ For example, "One,two,three".Split(',') returns an array 
+containing the three strings "One", "two", and "three". 
+
+String manipulation methods (cont’d)
+● Substring takes a starting position and optional length and 
+returns a new string containing all characters from the start 
+position up to either the and of the string or the specified 
+length; 
+● Remove does the opposite: it forms a new string by removing the 
+part of the original string that Substring would have returned. 
+● Insert forms a new string by inserting one string into the middle 
+of another. 
+● Replace returns a new string formed by replacing all instances of 
+a particular character or string with another. 
+● Trim can be used to remove unwanted leading and trailing 
+characters such as whitespace.
+Formatting data in strings
+● C# provides a syntax that makes it easy to produce strings 
+containing a mixture of fixed text and information 
+determined at runtime. 
+● The official name for this feature is string interpolation.
+○ For example, if you have local variables called name and 
+age, you could use them in a string:
+    string message = $"{name} is {age} years old";
+Formatting data in strings (cont’d)
+● More complex expressions in strings:
+double width = 3, height = 4;
+string info = $"Hypotenuse: {Math.Sqrt(width * width + height * height)}";
+● Splitting up an interpolated string:
+string info = $"Hypotenuse:" +
+   $" {Math.Sqrt(width * width + height * height)}";
+Formatting data in strings (cont’d)
+● Using string.Format:
+string message = string.Format("{0} is {1} years old", name, age);
+string info = string.Format(
+    "Hypotenuse: {0}",
+    Math.Sqrt(width * width + height * height));
+● Format specifiers:
+string message = $"{name} is {age:f1} years old";
+Raw string literals
+● In C#, you can combine JSON with string interpolation ( $"...") to build 
+JSON strings dynamically.
+string name = "Alice";
+int age = 30;
+string json = $@"{{
+  ""name"": ""{name}"",
+  ""age"": {age}
+}}";
+Console.WriteLine(json);
+
+Tuples
+● Tuples combine multiple values into a single value. 
+● The name tuple is meant to be a generalized version of words like 
+double, triple, quadruple, and so on, but we generally call them tuples 
+even in cases where we don’t need the generality.
+○ For example, even if we’re talking about a tuple with two items in 
+it, we still call it a tuple, not a double.
+● Creating and using a tuple:
+(int X, int Y) point = (10, 5);
+Console.WriteLine($"X: {point.X}, Y: {point.Y}");
+Tuples (cont’d)
+● Naming tuple members in the initializer:
+var point = (X: 10, Y: 5);
+Console.WriteLine($"X: {point.X}, Y: {point.Y}");
+● Inferring tuple member names from variables:
+int x = 10, y = 5;
+var point = (x, y);
+Console.WriteLine($"X: {point.x}, Y: {point.y}");
+● Default tuple member names:
+(int, int) point = (10, 5);
+Console.WriteLine($"X: {point.Item1}, Y: {point.Item2}");
+Dynamic
+● In C#, the dynamic keyword lets you declare variables whose 
+type is resolved at runtime instead of compile-time. 
+● It is like object, but with the ability to call members 
+without compile-time checking.
+Dynamic Example
+ dynamic x = 10;
+        Console.WriteLine(x + 5);  // 15
+        x = "Hello"; 
+        Console.WriteLine(x.ToUpper()); // HELLO
+        // Even if the member doesn't exist, compiler won't complain:
+        try 
+        { 
+            x.NonExistentMethod(); // RuntimeBinderException at runtime
+        } 
+        catch (Exception ex)
+        { 
+            Console.WriteLine(ex.Message);
+        } 
+Operators
+Basic arithmetic operators
+Binary integer operators
+Operators for bool
+Operators (cont’d)
+● The conditional AND operator
+if (s is not null && s.Length > 10)
+● The conditional operator
+int max = (x > y) ? x : y;
+● Exploiting conditional evaluation
+int characterCount = s is null ? 0 : s.Length;
+Flow of Control
+if (temperatureInCelsius < 52)
+{
+Console.WriteLine("Too cold");
+}
+else if (temperatureInCelsius > 58)
+{
+Console.WriteLine("Too hot");
+}
+else
+{
+Console.WriteLine("Just right");
+}
+Flow of Control (cont’d)
+
+Loops: while and do
+● while loop:
+while (!reader.EndOfStream)
+{
+Console.WriteLine(reader.ReadLine());
+}
+● do while loop:
+char k;
+do
+{
+Console.WriteLine("Press x to exit");
+k = Console.ReadKey().KeyChar;
+}
+while (k != 'x');
+Loops: for
+● C-style for loop:
+for (int i = 0; i < myArray.Length; i++)
+{
+myArray[i] *= 2;
+}
+● foreach loop:
+string[] messages = GetMessagesFromSomewhere();
+foreach (string message in messages)
+{
+Console.WriteLine(message);
+}
+Patterns
+● A pattern describes one or more criteria that a value can 
+be tested against. 
+● Some simple patterns in action: each case in a switch 
+specifies a pattern. 
+● There are many kinds of patterns, and they aren’t just 
+for switch statements.
+Declaratıon Patterns
+switch (o)
+{
+case string s:
+Console.WriteLine($"A piece of string is {s.Length} long");
+break;
+case int i:
+Console.WriteLine($"That's numberwang! {i}");
+break;
+}
+Type Patterns
+switch (o)
+{
+case string:
+Console.WriteLine("This is a piece of string");
+break;
+case int:
+Console.WriteLine("That's numberwang!");
+break;
+}
+Posıtıonal Patterns
+switch (p) 
+{
+case (0, 0):
+Console.WriteLine("How original");
+break;
+case (0, 1):
+case (1, 0):
+Console.WriteLine("What an absolute unit");
+break;
+case (1, 1):
+Console.WriteLine("Be there and be square");
+break;
+}
+Lıst Patterns
+case [int x]:
+Console.WriteLine($"Scalar: {x}");
+break;
+case [int x, int y]:
+Console.WriteLine($"2D vector: ({x}, {y})");
+break;
+case [int x, int y, int z]:
+Console.WriteLine($"3D vector: ({x}, {y}, {z})");
+break;
+Relatıonal Patterns
+switch (value)
+{
+case > 0: Console.WriteLine("Positive"); 
+break;
+case < 0: Console.WriteLine("Negative"); 
+break;
+default: Console.WriteLine("Neither strictly positive nor negative"); 
+break;
+};
+Programmıng Questıon 1
+Write a C# program to find the GCD (Greatest Common Divisor) 
+of two numbers using recursion.
+Programmıng Questıon 2
+Write a program to reverse a string using a foreach loop.
+Programmıng Questıon 3
+Write a program to demonstrate how the checked keyword works in 
+handling overflow during arithmetic operations.
+Programmıng Questıon 4
+Write a program that takes two numbers and returns their sum, 
+difference, product, and quotient using a tuple.
+Programmıng Questıon 5
+Write a program that counts the frequency of each character in a 
+given string (ignoring case sensitivity and spaces).
+Any questıons?

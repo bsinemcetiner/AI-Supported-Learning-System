@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+python-jose[cryptography]
+pydantic-settings
+pypdf
+python-multipart
+chromadb
+sentence-transformers
+ollama
+python-dotenv

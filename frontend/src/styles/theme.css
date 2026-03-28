@@ -1,0 +1,278 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&display=swap');
+
+/* ── Design tokens ── */
+:root {
+  --bg:        #FDF8F2;
+  --bg2:       #F7F0E6;
+  --bg3:       #EFE6D8;
+  --card:      #FFFFFF;
+  --line:      #E8DDD0;
+  --line2:     #D9CCBA;
+
+  --text:      #1A1208;
+  --text-mid:  #5C4D3A;
+  --text-soft: #9C8B78;
+  --text-muted:#C4B5A0;
+
+  --orange:    #E8510A;
+  --orange2:   #FF6B2B;
+  --orange-lt: #FFF0E8;
+  --orange-md: #FFD4BE;
+  --orange-gl: rgba(232,81,10,0.10);
+
+  --teal:      #0A8A7A;
+  --teal-lt:   #E6F5F3;
+
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 22px;
+
+  --shadow-sm: 0 1px 6px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 12px rgba(0,0,0,0.06);
+  --shadow-orange: 0 3px 14px rgba(232,81,10,0.28);
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--orange-md); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--orange); }
+
+/* ── Utility classes ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.55rem 1.1rem;
+  border: none;
+  border-radius: var(--r-md);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.btn-primary {
+  background: var(--orange);
+  color: #fff;
+  box-shadow: var(--shadow-orange);
+}
+.btn-primary:hover {
+  background: var(--orange2);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 22px rgba(232,81,10,0.38);
+}
+
+.btn-ghost {
+  background: var(--bg2);
+  color: var(--text-mid);
+  border: 1.5px solid var(--line);
+}
+.btn-ghost:hover {
+  background: var(--orange-lt);
+  border-color: var(--orange-md);
+  color: var(--orange);
+}
+
+.btn-danger {
+  background: transparent;
+  color: #dc2626;
+  border: 1.5px solid #fecaca;
+}
+.btn-danger:hover { background: #fee2e2; }
+
+.card {
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.input {
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--r-md);
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--text);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+.input:focus {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px var(--orange-gl);
+}
+.input::placeholder { color: var(--text-muted); }
+
+.label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  margin-bottom: 6px;
+}
+
+.section-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--orange);
+  font-family: monospace;
+  margin-bottom: 0.4rem;
+}
+
+.title-accent {
+  display: inline-block;
+  width: 36px;
+  height: 3px;
+  border-radius: 99px;
+  background: var(--orange);
+  margin-bottom: 1rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 12px;
+  border-radius: 99px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.badge-orange {
+  background: var(--orange-lt);
+  border: 1px solid var(--orange-md);
+  color: var(--orange);
+}
+
+/* ── Layout ── */
+.app-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 280px;
+  min-width: 280px;
+  height: 100vh;
+  background: var(--card);
+  border-right: 1.5px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 1.25rem 1rem;
+  gap: 0.5rem;
+}
+
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2.5rem 2rem 4rem;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Chat specific */
+.chat-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.chat-input-bar {
+  padding: 1rem 2rem;
+  border-top: 1.5px solid var(--line);
+  background: var(--card);
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.message-bubble {
+  padding: 1rem 1.2rem;
+  border-radius: var(--r-lg);
+  border: 1.5px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  max-width: 100%;
+  white-space: pre-wrap;
+  line-height: 1.65;
+}
+.message-bubble.user {
+  background: var(--orange-lt);
+  border-color: var(--orange-md);
+  align-self: flex-end;
+  max-width: 80%;
+}
+.message-bubble.assistant {
+  background: var(--card);
+  align-self: flex-start;
+}
+
+.select {
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--r-md);
+  font-family: inherit;
+  font-size: 0.88rem;
+  color: var(--text);
+  cursor: pointer;
+  outline: none;
+}
+.select:focus { border-color: var(--orange); box-shadow: 0 0 0 3px var(--orange-gl); }
+
+.divider {
+  height: 1px;
+  background: var(--line);
+  margin: 0.75rem 0;
+}
+
+.alert {
+  padding: 0.75rem 1rem;
+  border-radius: var(--r-md);
+  font-size: 0.88rem;
+  border-left: 3px solid;
+}
+.alert-error   { background: #fee2e2; color: #7f1d1d; border-color: #f87171; }
+.alert-success { background: #d1fae5; color: #065f46; border-color: #34d399; }
+.alert-warning { background: #fef3c7; color: #78350f; border-color: #fbbf24; }
+.alert-info    { background: var(--orange-lt); color: var(--orange); border-color: var(--orange); }

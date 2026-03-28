@@ -1,9 +1,0 @@
-streamlit
-pypdf
-elevenlabs
-python-dotenv
-chromadb
-sentence-transformers
-torch
-ollama
-pillow
