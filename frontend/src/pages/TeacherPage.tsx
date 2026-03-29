@@ -6,7 +6,7 @@ import type { Lesson } from "../services/api";
 export default function TeacherPage({ username }: { username: string }) {
   const [courseMap, setCourseMap] = useState<Record<string, Course>>({});
   const [lessonMap, setLessonMap] = useState<Record<string, Record<string, Lesson>>>({});
-  const [activeTab, setActiveTab] = useState<"create" | "upload" | "manage">("create");
+  const [activeTab, setActiveTab] = useState<"create" | "upload" | "upload_material" | "manage">("create");
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error" | "info"; text: string } | null>(null);
 
@@ -14,6 +14,10 @@ export default function TeacherPage({ username }: { username: string }) {
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [weekTitle, setWeekTitle] = useState("");
   const [files, setFiles] = useState<FileList | null>(null);
+
+  // Upload Material state
+  const [materialCourseId, setMaterialCourseId] = useState("");
+  const [materialFiles, setMaterialFiles] = useState<FileList | null>(null);
 
   const [previewText, setPreviewText] = useState<Record<string, string>>({});
   const [previewLoading, setPreviewLoading] = useState<Record<string, boolean>>({});
@@ -40,6 +44,9 @@ export default function TeacherPage({ username }: { username: string }) {
       const ids = Object.keys(data);
       if (ids.length > 0 && !selectedCourseId) {
         setSelectedCourseId(ids[0]);
+      }
+      if (ids.length > 0 && !materialCourseId) {
+        setMaterialCourseId(ids[0]);
       }
 
       const lessonEntries = await Promise.all(
@@ -137,6 +144,33 @@ export default function TeacherPage({ username }: { username: string }) {
     showFeedback("info", `Done — Added: ${added} | Skipped: ${skipped}`);
     setFiles(null);
     setWeekTitle("");
+    await loadCourses();
+    setLoading(false);
+  }
+
+  async function handleUploadMaterial(e: React.FormEvent) {
+    e.preventDefault();
+    if (!materialFiles || materialFiles.length === 0 || !materialCourseId) return;
+
+    setLoading(true);
+
+    let added = 0;
+    let skipped = 0;
+    const errors: string[] = [];
+
+    for (const file of Array.from(materialFiles)) {
+      try {
+        await coursesApi.uploadMaterial(materialCourseId, file);
+        added++;
+      } catch (e: any) {
+        skipped++;
+        errors.push(`${file.name}: ${e.message}`);
+      }
+    }
+
+    errors.forEach((err) => showFeedback("error", err));
+    showFeedback("info", `Done — Added: ${added} | Skipped: ${skipped}`);
+    setMaterialFiles(null);
     await loadCourses();
     setLoading(false);
   }
@@ -264,9 +298,10 @@ export default function TeacherPage({ username }: { username: string }) {
   const courseList = Object.entries(courseMap);
 
   const tabs = [
-    { key: "create", label: "✦ Create Course" },
-    { key: "upload", label: "✦ Upload Lesson" },
-    { key: "manage", label: "✦ My Courses" },
+    { key: "create",          label: "✦ Create Course" },
+    { key: "upload",          label: "✦ Upload Lesson" },
+    { key: "upload_material", label: "✦ Upload Material" },
+    { key: "manage",          label: "✦ My Courses" },
   ] as const;
 
   return (
@@ -314,12 +349,12 @@ export default function TeacherPage({ username }: { username: string }) {
         ))}
       </div>
 
+      {/* Create Course */}
       {activeTab === "create" && (
         <form onSubmit={handleCreate} style={{ maxWidth: 480, display: "flex", flexDirection: "column", gap: 14 }}>
           <p style={{ color: "var(--text-mid)", fontSize: "0.9rem" }}>
             Give your course a clear, descriptive name.
           </p>
-
           <div>
             <label className="label">Course Name</label>
             <input
@@ -330,13 +365,13 @@ export default function TeacherPage({ username }: { username: string }) {
               required
             />
           </div>
-
           <button className="btn btn-primary" type="submit" disabled={loading} style={{ alignSelf: "flex-start" }}>
             {loading ? "Creating…" : "Create Course →"}
           </button>
         </form>
       )}
 
+      {/* Upload Lesson */}
       {activeTab === "upload" && (
         <form onSubmit={handleUpload} style={{ maxWidth: 620, display: "flex", flexDirection: "column", gap: 14 }}>
           {courseList.length === 0 ? (
@@ -345,94 +380,45 @@ export default function TeacherPage({ username }: { username: string }) {
             <>
               <div>
                 <label className="label">Select Course</label>
-                <select
-                  className="select"
-                  value={selectedCourseId}
-                  onChange={(e) => setSelectedCourseId(e.target.value)}
-                >
+                <select className="select" value={selectedCourseId} onChange={(e) => setSelectedCourseId(e.target.value)}>
                   {courseList.map(([id, c]) => (
-                    <option key={id} value={id}>
-                      {c.course_name} ({id})
-                    </option>
+                    <option key={id} value={id}>{c.course_name} ({id})</option>
                   ))}
                 </select>
               </div>
-
               <div>
                 <label className="label">Week / Lesson Title</label>
-                <input
-                  className="input"
-                  placeholder="e.g. Week 1"
-                  value={weekTitle}
-                  onChange={(e) => setWeekTitle(e.target.value)}
-                />
+                <input className="input" placeholder="e.g. Week 1" value={weekTitle} onChange={(e) => setWeekTitle(e.target.value)} />
                 <p style={{ marginTop: 6, fontSize: "0.8rem", color: "var(--text-soft)" }}>
                   If you upload one file, this title will be used. If you upload multiple files, each file name will be used as the lesson title.
                 </p>
               </div>
-
               <div>
                 <label className="label">Upload PDF Files</label>
                 <div
-                  style={{
-                    border: "2px dashed var(--line2)",
-                    borderRadius: "var(--r-lg)",
-                    padding: "2rem",
-                    textAlign: "center",
-                    background: "var(--card)",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                  }}
+                  style={{ border: "2px dashed var(--line2)", borderRadius: "var(--r-lg)", padding: "2rem", textAlign: "center", background: "var(--card)", cursor: "pointer" }}
                   onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setFiles(e.dataTransfer.files);
-                  }}
+                  onDrop={(e) => { e.preventDefault(); setFiles(e.dataTransfer.files); }}
                 >
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    multiple
-                    style={{ display: "none" }}
-                    id="pdf-upload"
-                    onChange={(e) => setFiles(e.target.files)}
-                  />
-                  <label htmlFor="pdf-upload" style={{ cursor: "pointer" }}>
+                  <input type="file" accept=".pdf" multiple style={{ display: "none" }} id="lesson-upload" onChange={(e) => setFiles(e.target.files)} />
+                  <label htmlFor="lesson-upload" style={{ cursor: "pointer" }}>
                     <div style={{ fontSize: "2rem", marginBottom: 8 }}>📂</div>
                     <p style={{ color: "var(--text-soft)", fontSize: "0.9rem" }}>
-                      {files && files.length > 0
-                        ? `${files.length} file(s) selected`
-                        : "Click to browse or drag & drop PDF files here"}
+                      {files && files.length > 0 ? `${files.length} file(s) selected` : "Click to browse or drag & drop PDF files here"}
                     </p>
                   </label>
                 </div>
               </div>
-
               {files && files.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   {Array.from(files).map((f, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        background: "var(--orange-lt)",
-                        borderRadius: "var(--r-sm)",
-                        padding: "0.4rem 0.8rem",
-                        fontSize: "0.85rem",
-                        border: "1px solid var(--orange-md)",
-                      }}
-                    >
+                    <div key={i} style={{ background: "var(--orange-lt)", borderRadius: "var(--r-sm)", padding: "0.4rem 0.8rem", fontSize: "0.85rem", border: "1px solid var(--orange-md)" }}>
                       📄 {f.name}
                     </div>
                   ))}
                 </div>
               )}
-
-              <button
-                className="btn btn-primary"
-                type="submit"
-                disabled={loading || !files || files.length === 0}
-                style={{ alignSelf: "flex-start" }}
-              >
+              <button className="btn btn-primary" type="submit" disabled={loading || !files || files.length === 0} style={{ alignSelf: "flex-start" }}>
                 {loading ? "Uploading…" : "⬆️ Upload Lesson(s)"}
               </button>
             </>
@@ -440,6 +426,58 @@ export default function TeacherPage({ username }: { username: string }) {
         </form>
       )}
 
+      {/* Upload Material */}
+      {activeTab === "upload_material" && (
+        <form onSubmit={handleUploadMaterial} style={{ maxWidth: 620, display: "flex", flexDirection: "column", gap: 14 }}>
+          <p style={{ color: "var(--text-mid)", fontSize: "0.9rem" }}>
+            Upload PDF materials to a course. Students can chat with these materials using RAG.
+          </p>
+          {courseList.length === 0 ? (
+            <div className="alert alert-warning">⚠️ You need to create a course first.</div>
+          ) : (
+            <>
+              <div>
+                <label className="label">Select Course</label>
+                <select className="select" value={materialCourseId} onChange={(e) => setMaterialCourseId(e.target.value)}>
+                  {courseList.map(([id, c]) => (
+                    <option key={id} value={id}>{c.course_name} ({id})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label">Upload PDF Files</label>
+                <div
+                  style={{ border: "2px dashed var(--line2)", borderRadius: "var(--r-lg)", padding: "2rem", textAlign: "center", background: "var(--card)", cursor: "pointer" }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => { e.preventDefault(); setMaterialFiles(e.dataTransfer.files); }}
+                >
+                  <input type="file" accept=".pdf" multiple style={{ display: "none" }} id="material-upload" onChange={(e) => setMaterialFiles(e.target.files)} />
+                  <label htmlFor="material-upload" style={{ cursor: "pointer" }}>
+                    <div style={{ fontSize: "2rem", marginBottom: 8 }}>📁</div>
+                    <p style={{ color: "var(--text-soft)", fontSize: "0.9rem" }}>
+                      {materialFiles && materialFiles.length > 0 ? `${materialFiles.length} file(s) selected` : "Click to browse or drag & drop PDF files here"}
+                    </p>
+                  </label>
+                </div>
+              </div>
+              {materialFiles && materialFiles.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {Array.from(materialFiles).map((f, i) => (
+                    <div key={i} style={{ background: "var(--orange-lt)", borderRadius: "var(--r-sm)", padding: "0.4rem 0.8rem", fontSize: "0.85rem", border: "1px solid var(--orange-md)" }}>
+                      📄 {f.name}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button className="btn btn-primary" type="submit" disabled={loading || !materialFiles || materialFiles.length === 0} style={{ alignSelf: "flex-start" }}>
+                {loading ? "Uploading…" : "⬆️ Upload Material(s)"}
+              </button>
+            </>
+          )}
+        </form>
+      )}
+
+      {/* My Courses */}
       {activeTab === "manage" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           {courseList.length === 0 ? (
@@ -478,26 +516,10 @@ export default function TeacherPage({ username }: { username: string }) {
 }
 
 function CourseExpander({
-  course,
-  lessons,
-  previewText,
-  previewLoading,
-  feedbackDraft,
-  customPromptDraft,
-  previewQuestionDraft,
-  publishDraft,
-  actionLoading,
-  setFeedbackDraft,
-  setCustomPromptDraft,
-  setPreviewQuestionDraft,
-  setPublishDraft,
-  onDeleteMaterial,
-  onPreview,
-  onSaveInstruction,
-  onApplyFeedbackAndRegenerate,
-  onSavePreviewQuestion,
-  onPublishUpdate,
-  onApprove,
+  course, lessons, previewText, previewLoading, feedbackDraft, customPromptDraft,
+  previewQuestionDraft, publishDraft, actionLoading, setFeedbackDraft, setCustomPromptDraft,
+  setPreviewQuestionDraft, setPublishDraft, onDeleteMaterial, onPreview, onSaveInstruction,
+  onApplyFeedbackAndRegenerate, onSavePreviewQuestion, onPublishUpdate, onApprove,
 }: {
   course: Course;
   lessons: Record<string, Lesson>;
@@ -529,38 +551,22 @@ function CourseExpander({
       <button
         onClick={() => setOpen((o) => !o)}
         style={{
-          width: "100%",
-          padding: "0.9rem 1.2rem",
-          background: "var(--bg2)",
-          border: "none",
-          borderBottom: open ? "1.5px solid var(--line)" : "none",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          cursor: "pointer",
-          fontWeight: 600,
-          fontSize: "0.95rem",
-          color: "var(--text-mid)",
+          width: "100%", padding: "0.9rem 1.2rem", background: "var(--bg2)", border: "none",
+          borderBottom: open ? "1.5px solid var(--line)" : "none", display: "flex",
+          justifyContent: "space-between", alignItems: "center", cursor: "pointer",
+          fontWeight: 600, fontSize: "0.95rem", color: "var(--text-mid)",
         }}
       >
-        <span>
-          📚 {course.course_name} · <span style={{ fontWeight: 400, opacity: 0.7 }}>{course.course_id}</span>
-        </span>
+        <span>📚 {course.course_name} · <span style={{ fontWeight: 400, opacity: 0.7 }}>{course.course_id}</span></span>
         <span style={{ fontSize: "0.75rem", color: "var(--text-soft)" }}>{open ? "▲" : "▼"}</span>
       </button>
 
       {open && (
         <div style={{ padding: "1rem 1.2rem" }}>
           <div style={{ display: "flex", gap: "2rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
-            <p style={{ fontSize: "0.85rem", color: "var(--text-mid)" }}>
-              <b>Teacher:</b> {course.teacher_username}
-            </p>
-            <p style={{ fontSize: "0.85rem", color: "var(--text-mid)" }}>
-              <b>Materials:</b> {materials.length}
-            </p>
-            <p style={{ fontSize: "0.85rem", color: "var(--text-mid)" }}>
-              <b>Lessons:</b> {lessonList.length}
-            </p>
+            <p style={{ fontSize: "0.85rem", color: "var(--text-mid)" }}><b>Teacher:</b> {course.teacher_username}</p>
+            <p style={{ fontSize: "0.85rem", color: "var(--text-mid)" }}><b>Materials:</b> {materials.length}</p>
+            <p style={{ fontSize: "0.85rem", color: "var(--text-mid)" }}><b>Lessons:</b> {lessonList.length}</p>
           </div>
 
           <h3 style={{ marginBottom: 10 }}>Materials</h3>
@@ -569,25 +575,9 @@ function CourseExpander({
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 18 }}>
               {materials.map((m: Material) => (
-                <div
-                  key={m.file_hash}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    background: "var(--orange-lt)",
-                    borderRadius: "var(--r-sm)",
-                    padding: "0.4rem 0.8rem",
-                    border: "1px solid var(--orange-md)",
-                    gap: 12,
-                  }}
-                >
+                <div key={m.file_hash} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--orange-lt)", borderRadius: "var(--r-sm)", padding: "0.4rem 0.8rem", border: "1px solid var(--orange-md)", gap: 12 }}>
                   <span style={{ fontSize: "0.85rem" }}>📄 {m.original_filename}</span>
-                  <button
-                    className="btn btn-danger"
-                    style={{ padding: "0.2rem 0.6rem", fontSize: "0.78rem" }}
-                    onClick={() => onDeleteMaterial(m.file_hash)}
-                  >
+                  <button className="btn btn-danger" style={{ padding: "0.2rem 0.6rem", fontSize: "0.78rem" }} onClick={() => onDeleteMaterial(m.file_hash)}>
                     🗑 Delete
                   </button>
                 </div>
@@ -602,27 +592,14 @@ function CourseExpander({
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {lessonList.map((lesson) => {
                 const isBusy = !!actionLoading[lesson.lesson_id] || !!previewLoading[lesson.lesson_id];
-                const shownPreview =
-                  previewText[lesson.lesson_id] ||
-                  lesson.draft_explanation ||
-                  "";
+                const shownPreview = previewText[lesson.lesson_id] || lesson.draft_explanation || "";
                 const approvedExplanation = lesson.approved_explanation || "";
 
                 return (
-                  <div
-                    key={lesson.lesson_id}
-                    style={{
-                      border: "1px solid var(--line)",
-                      borderRadius: "var(--r-md)",
-                      padding: "1rem",
-                      background: "var(--card)",
-                    }}
-                  >
+                  <div key={lesson.lesson_id} style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)", padding: "1rem", background: "var(--card)" }}>
                     <div style={{ marginBottom: 10 }}>
                       <div style={{ fontWeight: 700 }}>{lesson.week_title}</div>
-                      <div style={{ fontSize: "0.8rem", color: "var(--text-soft)" }}>
-                        📄 {lesson.original_filename}
-                      </div>
+                      <div style={{ fontSize: "0.8rem", color: "var(--text-soft)" }}>📄 {lesson.original_filename}</div>
                     </div>
 
                     <div style={{ display: "grid", gap: 10 }}>
@@ -630,33 +607,12 @@ function CourseExpander({
                         <label className="label">Preview Prompt</label>
                         <input
                           className="input"
-                          value={
-                            previewQuestionDraft[lesson.lesson_id] ??
-                            lesson.preview_question ??
-                            "Teach this lesson as a natural spoken teaching script."
-                          }
-                          onChange={(e) =>
-                            setPreviewQuestionDraft((prev) => ({
-                              ...prev,
-                              [lesson.lesson_id]: e.target.value,
-                            }))
-                          }
+                          value={previewQuestionDraft[lesson.lesson_id] ?? lesson.preview_question ?? "Teach this lesson as a natural spoken teaching script."}
+                          onChange={(e) => setPreviewQuestionDraft((prev) => ({ ...prev, [lesson.lesson_id]: e.target.value }))}
                         />
                         <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
-                          <button
-                            className="btn btn-ghost"
-                            type="button"
-                            onClick={() => onSavePreviewQuestion(lesson.lesson_id)}
-                            disabled={isBusy}
-                          >
-                            Save Preview Prompt
-                          </button>
-                          <button
-                            className="btn btn-primary"
-                            type="button"
-                            onClick={() => onPreview(lesson.lesson_id)}
-                            disabled={isBusy}
-                          >
+                          <button className="btn btn-ghost" type="button" onClick={() => onSavePreviewQuestion(lesson.lesson_id)} disabled={isBusy}>Save Preview Prompt</button>
+                          <button className="btn btn-primary" type="button" onClick={() => onPreview(lesson.lesson_id)} disabled={isBusy}>
                             {previewLoading[lesson.lesson_id] ? "Generating…" : "Generate / Regenerate Preview"}
                           </button>
                         </div>
@@ -668,16 +624,7 @@ function CourseExpander({
                       {(shownPreview || previewLoading[lesson.lesson_id]) && (
                         <div>
                           <div className="label">Current Draft Preview</div>
-                          <div
-                            style={{
-                              background: "var(--bg2)",
-                              border: "1px solid var(--line)",
-                              borderRadius: "var(--r-sm)",
-                              padding: "0.9rem",
-                              whiteSpace: "pre-wrap",
-                              lineHeight: 1.6,
-                            }}
-                          >
+                          <div style={{ background: "var(--bg2)", border: "1px solid var(--line)", borderRadius: "var(--r-sm)", padding: "0.9rem", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
                             {shownPreview || "Generating preview…"}
                           </div>
                         </div>
@@ -686,16 +633,7 @@ function CourseExpander({
                       {approvedExplanation && (
                         <div>
                           <div className="label">Approved Student Version</div>
-                          <div
-                            style={{
-                              background: "#F7F3EE",
-                              border: "1px solid var(--orange-md)",
-                              borderRadius: "var(--r-sm)",
-                              padding: "0.9rem",
-                              whiteSpace: "pre-wrap",
-                              lineHeight: 1.6,
-                            }}
-                          >
+                          <div style={{ background: "#F7F3EE", border: "1px solid var(--orange-md)", borderRadius: "var(--r-sm)", padding: "0.9rem", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
                             {approvedExplanation}
                           </div>
                         </div>
@@ -703,35 +641,12 @@ function CourseExpander({
 
                       <div>
                         <label className="label">Teacher Feedback</label>
-                        <textarea
-                          className="input"
-                          rows={4}
-                          placeholder="e.g. Explain this more deeply, add clearer transitions, and make it sound more like a spoken lecture."
-                          value={feedbackDraft[lesson.lesson_id] ?? ""}
-                          onChange={(e) =>
-                            setFeedbackDraft((prev) => ({
-                              ...prev,
-                              [lesson.lesson_id]: e.target.value,
-                            }))
-                          }
-                          style={{ resize: "vertical" }}
-                        />
+                        <textarea className="input" rows={4} placeholder="e.g. Explain this more deeply, add clearer transitions..." value={feedbackDraft[lesson.lesson_id] ?? ""} onChange={(e) => setFeedbackDraft((prev) => ({ ...prev, [lesson.lesson_id]: e.target.value }))} style={{ resize: "vertical" }} />
                       </div>
 
                       <div>
                         <label className="label">Final Custom Lesson Prompt</label>
-                        <textarea
-                          className="input"
-                          rows={5}
-                          value={customPromptDraft[lesson.lesson_id] ?? lesson.custom_prompt ?? ""}
-                          onChange={(e) =>
-                            setCustomPromptDraft((prev) => ({
-                              ...prev,
-                              [lesson.lesson_id]: e.target.value,
-                            }))
-                          }
-                          style={{ resize: "vertical" }}
-                        />
+                        <textarea className="input" rows={5} value={customPromptDraft[lesson.lesson_id] ?? lesson.custom_prompt ?? ""} onChange={(e) => setCustomPromptDraft((prev) => ({ ...prev, [lesson.lesson_id]: e.target.value }))} style={{ resize: "vertical" }} />
                       </div>
 
                       {lesson.teacher_feedback_history?.length > 0 && (
@@ -739,16 +654,7 @@ function CourseExpander({
                           <div className="label">Saved Feedback History</div>
                           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                             {lesson.teacher_feedback_history.map((item, index) => (
-                              <div
-                                key={`${lesson.lesson_id}-${index}`}
-                                style={{
-                                  fontSize: "0.82rem",
-                                  padding: "0.5rem 0.75rem",
-                                  background: "var(--orange-lt)",
-                                  border: "1px solid var(--orange-md)",
-                                  borderRadius: "var(--r-sm)",
-                                }}
-                              >
+                              <div key={`${lesson.lesson_id}-${index}`} style={{ fontSize: "0.82rem", padding: "0.5rem 0.75rem", background: "var(--orange-lt)", border: "1px solid var(--orange-md)", borderRadius: "var(--r-sm)" }}>
                                 {item}
                               </div>
                             ))}
@@ -758,55 +664,13 @@ function CourseExpander({
 
                       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                         <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <input
-                            type="checkbox"
-                            checked={publishDraft[lesson.lesson_id] ?? lesson.is_published ?? false}
-                            onChange={(e) =>
-                              setPublishDraft((prev) => ({
-                                ...prev,
-                                [lesson.lesson_id]: e.target.checked,
-                              }))
-                            }
-                          />
+                          <input type="checkbox" checked={publishDraft[lesson.lesson_id] ?? lesson.is_published ?? false} onChange={(e) => setPublishDraft((prev) => ({ ...prev, [lesson.lesson_id]: e.target.checked }))} />
                           Published for students
                         </label>
-
-                        <button
-                          className="btn btn-ghost"
-                          type="button"
-                          onClick={() => onPublishUpdate(lesson.lesson_id)}
-                          disabled={isBusy}
-                        >
-                          Update Publish State
-                        </button>
-
-                        <button
-                          className="btn btn-ghost"
-                          type="button"
-                          onClick={() => onSaveInstruction(lesson.lesson_id)}
-                          disabled={isBusy}
-                        >
-                          Save Instruction
-                        </button>
-
-                        <button
-                          className="btn btn-primary"
-                          type="button"
-                          onClick={() => onApplyFeedbackAndRegenerate(lesson.lesson_id)}
-                          disabled={isBusy}
-                        >
-                          Apply Feedback & Regenerate
-                        </button>
-
-                        <button
-                          className="btn btn-primary"
-                          type="button"
-                          onClick={() => onApprove(lesson.lesson_id)}
-                          disabled={isBusy || !shownPreview.trim()}
-                          style={{ background: "#1f8f5f" }}
-                        >
-                          Approve & Publish
-                        </button>
+                        <button className="btn btn-ghost" type="button" onClick={() => onPublishUpdate(lesson.lesson_id)} disabled={isBusy}>Update Publish State</button>
+                        <button className="btn btn-ghost" type="button" onClick={() => onSaveInstruction(lesson.lesson_id)} disabled={isBusy}>Save Instruction</button>
+                        <button className="btn btn-primary" type="button" onClick={() => onApplyFeedbackAndRegenerate(lesson.lesson_id)} disabled={isBusy}>Apply Feedback & Regenerate</button>
+                        <button className="btn btn-primary" type="button" onClick={() => onApprove(lesson.lesson_id)} disabled={isBusy || !shownPreview.trim()} style={{ background: "#1f8f5f" }}>Approve & Publish</button>
                       </div>
 
                       <p style={{ fontSize: "0.78rem", color: "var(--text-soft)", marginTop: 2 }}>
