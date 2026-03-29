@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import type { Chat } from "../types";
 
 interface ChatPageProps {
@@ -88,10 +89,90 @@ export default function ChatPage({
 
         {messages.map((msg, i) => (
           <div key={i} className={`message-bubble ${msg.role}`}>
-            {msg.content ||
-              (streaming && i === messages.length - 1 ? (
+            {msg.content ? (
+              <ReactMarkdown
+                components={{
+                  p: ({ children }) => (
+                    <p style={{ margin: "0.4rem 0", lineHeight: 1.65 }}>{children}</p>
+                  ),
+                  h1: ({ children }) => (
+                    <h1 style={{ fontSize: "1.2rem", fontWeight: 700, margin: "0.75rem 0 0.4rem" }}>{children}</h1>
+                  ),
+                  h2: ({ children }) => (
+                    <h2 style={{ fontSize: "1.05rem", fontWeight: 700, margin: "0.75rem 0 0.4rem" }}>{children}</h2>
+                  ),
+                  h3: ({ children }) => (
+                    <h3 style={{ fontSize: "0.95rem", fontWeight: 700, margin: "0.5rem 0 0.3rem" }}>{children}</h3>
+                  ),
+                  ul: ({ children }) => (
+                    <ul style={{ paddingLeft: "1.4rem", margin: "0.4rem 0" }}>{children}</ul>
+                  ),
+                  ol: ({ children }) => (
+                    <ol style={{ paddingLeft: "1.4rem", margin: "0.4rem 0" }}>{children}</ol>
+                  ),
+                  li: ({ children }) => (
+                    <li style={{ marginBottom: "0.2rem" }}>{children}</li>
+                  ),
+                  code: ({ children }) => (
+                    <code style={{
+                      background: "var(--bg3)",
+                      padding: "0.15rem 0.4rem",
+                      borderRadius: 4,
+                      fontSize: "0.88rem",
+                      fontFamily: "monospace",
+                    }}>{children}</code>
+                  ),
+                  pre: ({ children }) => (
+                    <pre style={{
+                      background: "var(--bg3)",
+                      padding: "0.75rem 1rem",
+                      borderRadius: 8,
+                      overflowX: "auto",
+                      fontSize: "0.88rem",
+                      margin: "0.5rem 0",
+                    }}>{children}</pre>
+                  ),
+                  table: ({ children }) => (
+                    <table style={{
+                      borderCollapse: "collapse",
+                      width: "100%",
+                      margin: "0.5rem 0",
+                      fontSize: "0.88rem",
+                    }}>{children}</table>
+                  ),
+                  th: ({ children }) => (
+                    <th style={{
+                      border: "1px solid var(--line)",
+                      padding: "0.4rem 0.7rem",
+                      background: "var(--bg2)",
+                      fontWeight: 700,
+                      textAlign: "left",
+                    }}>{children}</th>
+                  ),
+                  td: ({ children }) => (
+                    <td style={{
+                      border: "1px solid var(--line)",
+                      padding: "0.4rem 0.7rem",
+                    }}>{children}</td>
+                  ),
+                  strong: ({ children }) => (
+                    <strong style={{ fontWeight: 700 }}>{children}</strong>
+                  ),
+                  em: ({ children }) => (
+                    <em style={{ fontStyle: "italic" }}>{children}</em>
+                  ),
+                  hr: () => (
+                    <hr style={{ border: "none", borderTop: "1px solid var(--line)", margin: "0.75rem 0" }} />
+                  ),
+                }}
+              >
+                {msg.content}
+              </ReactMarkdown>
+            ) : (
+              streaming && i === messages.length - 1 ? (
                 <span style={{ color: "var(--text-muted)" }}>▌</span>
-              ) : null)}
+              ) : null
+            )}
           </div>
         ))}
 

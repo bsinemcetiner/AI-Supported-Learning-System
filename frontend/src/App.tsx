@@ -167,6 +167,38 @@ export default function App() {
     }
   }
 
+async function handleModeChange(mode: TeachingMode) {
+    setTeachingMode(mode);
+    if (activeChatId) {
+      const token = tokenStore.get();
+      await fetch(`/api/chats/${activeChatId}/settings`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ mode }),
+      });
+      await loadChats();
+    }
+  }
+
+  async function handleToneChange(tone: TeachingTone) {
+    setTeachingTone(tone);
+    if (activeChatId) {
+      const token = tokenStore.get();
+      await fetch(`/api/chats/${activeChatId}/settings`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ tone }),
+      });
+      await loadChats();
+    }
+  }
+
   if (!user) {
     return <AuthPage onLogin={handleLogin} />;
   }
@@ -185,8 +217,8 @@ export default function App() {
         onLogout={handleLogout}
         teachingMode={teachingMode}
         teachingTone={teachingTone}
-        onModeChange={setTeachingMode}
-        onToneChange={setTeachingTone}
+        onModeChange={handleModeChange}
+        onToneChange={handleToneChange}
       />
 
       {user.role === "teacher" ? (

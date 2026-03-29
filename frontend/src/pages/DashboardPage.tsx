@@ -9,6 +9,15 @@ interface DashboardPageProps {
   teachingTone: TeachingTone;
 }
 
+function getCourseImage(courseName: string): string {
+  const name = courseName.toLowerCase();
+  if (name.includes("se115") || name.includes("se116")) return "/assets/se115.png";
+  if (name.includes("linear")) return "/assets/linearalgebra.png";
+  if (name.includes("music")) return "/assets/musicandcomputers.jpg";
+   if (name.includes("eee")) return "/assets/digitalDesign.png";
+  return "";
+}
+
 export default function DashboardPage({
   onOpenChat,
   teachingMode,
@@ -153,21 +162,32 @@ function CourseCard({ course, onOpen }: { course: Course; onOpen: () => void }) 
   const materials = course.materials ?? [];
   const shown = materials.slice(-3);
   const extra = materials.length - shown.length;
+  const imgSrc = getCourseImage(course.course_name);
+  const [imgError, setImgError] = useState(false);
 
   return (
     <div className="card" style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}>
-      <div
-        style={{
-          height: 140,
-          background: "linear-gradient(135deg, var(--orange-lt), var(--orange-md))",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: "2.5rem",
-        }}
-      >
-        📚
-      </div>
+      {imgSrc && !imgError ? (
+        <img
+          src={imgSrc}
+          alt={course.course_name}
+          onError={() => setImgError(true)}
+          style={{ width: "100%", height: 140, objectFit: "cover", display: "block" }}
+        />
+      ) : (
+        <div
+          style={{
+            height: 140,
+            background: "linear-gradient(135deg, var(--orange-lt), var(--orange-md))",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "2.5rem",
+          }}
+        >
+          📚
+        </div>
+      )}
 
       <div style={{ padding: "0.9rem 1rem", flex: 1 }}>
         <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 2 }}>{course.course_name}</div>

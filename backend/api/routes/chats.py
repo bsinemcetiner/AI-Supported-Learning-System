@@ -220,3 +220,28 @@ def regenerate(chat_id: str, current_user: dict = Depends(get_current_user)):
         yield f"data: {json.dumps({'done': True})}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+# ── PATCH /chats/{chat_id}/settings
+class UpdateSettingsRequest(BaseModel):
+    mode: Optional[str] = None
+    tone: Optional[str] = None
+
+
+@router.patch("/{chat_id}/settings")
+def update_settings(
+    chat_id: str,
+    body: UpdateSettingsRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    username  = current_user["username"]
+    all_chats = load_all_chats(username)
+
+    if chat_id not in all_chats:
+        raise HTTPException(status_code=404, detail="Chat not found")
+
+    if body.mode is not None:
+        all_chats[chat_id]["mode"] = body.mode
+    if body.tone is not None:
+        all_chats[chat_id]["tone"] = body.tone
+
+    save_all_chats(username, all_chats)
+    return {"message": "Settings updated"}
