@@ -7,7 +7,7 @@ from api.routes.chats import router as chats_router
 from api.routes.lessons import router as lessons_router
 
 from database import Base, engine
-from models import User, Course, Lesson
+from models import User, Course, Lesson, Chat, Message, Material
 
 app = FastAPI(title="LLM Based Tutoring API", version="1.0.0")
 
@@ -19,14 +19,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth_router,    prefix="/api")
-app.include_router(courses_router, prefix="/api")
-app.include_router(chats_router,   prefix="/api")
-app.include_router(lessons_router, prefix="/api")
-
-Base.metadata.create_all(bind=engine)
-
+@app.get("/")
+def root():
+    return {"message": "Backend is running"}
 
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+app.include_router(auth_router, prefix="/api")
+app.include_router(courses_router, prefix="/api")
+app.include_router(chats_router, prefix="/api")
+app.include_router(lessons_router, prefix="/api")
+
+Base.metadata.create_all(bind=engine)

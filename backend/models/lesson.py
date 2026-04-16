@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text
+from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
 
@@ -25,3 +26,5 @@ class Lesson(Base):
     last_generated_at = Column(DateTime, nullable=True)
     approved_at = Column(DateTime, nullable=True)
     is_published = Column(Boolean, default=False)
+
+    materials = relationship("Material", back_populates="lesson", cascade="all, delete-orphan")

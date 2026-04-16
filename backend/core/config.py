@@ -1,22 +1,17 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_name: str = "Learning Assistant API"
-
-    secret_key: str = "change-this-in-production-please"
-    algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60 * 24 * 7
-
     database_url: str
-    qdrant_url: str = ""
-    qdrant_api_key: str = ""
-    groq_api_key: str = ""
+    secret_key: str
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60
 
-    frontend_origin: str = "http://localhost:5173"
-
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
 
 
 settings = Settings()

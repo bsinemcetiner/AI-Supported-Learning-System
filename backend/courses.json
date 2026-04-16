@@ -63,5 +63,12 @@
         "teacher_username": "MDemir",
         "materials": [],
         "created_at": "2026-03-29T00:23:40.674336"
+    },
+    "yaseminkocar::abc": {
+        "course_id": "yaseminkocar::abc",
+        "course_name": "abc",
+        "teacher_username": "yaseminkocar",
+        "materials": [],
+        "created_at": "2026-04-16T22:47:29.892128"
     }
 }
