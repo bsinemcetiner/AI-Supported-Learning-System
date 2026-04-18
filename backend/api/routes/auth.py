@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 
 from core.auth import create_access_token
@@ -28,6 +29,18 @@ class TokenResponse(BaseModel):
 @router.post("/login", response_model=TokenResponse)
 def login(body: LoginRequest):
     success, message, user = login_user(body.username.strip(), body.password)
+    if not success:
+        raise HTTPException(status_code=401, detail=message)
+    token = create_access_token({"sub": user["username"], "role": user["role"]})
+    return TokenResponse(
+        access_token=token,
+        user={"username": user["username"], "full_name": user["full_name"], "role": user["role"]},
+    )
+
+
+@router.post("/token", response_model=TokenResponse)
+def login_for_swagger(form_data: OAuth2PasswordRequestForm = Depends()):
+    success, message, user = login_user(form_data.username.strip(), form_data.password)
     if not success:
         raise HTTPException(status_code=401, detail=message)
     token = create_access_token({"sub": user["username"], "role": user["role"]})

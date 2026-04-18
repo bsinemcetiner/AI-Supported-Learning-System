@@ -70,5 +70,54 @@
         "teacher_username": "yaseminkocar",
         "materials": [],
         "created_at": "2026-04-16T22:47:29.892128"
+    },
+    "tsinem::se410": {
+        "course_id": "tsinem::se410",
+        "course_name": "se410",
+        "teacher_username": "tsinem",
+        "materials": [
+            {
+                "original_filename": "SE410-Week1-Introduction(1).pdf",
+                "stored_path": "course_materials\\tsinem__se410_1.txt",
+                "file_hash": "e982998ea764617b0abd4a0a37f3c532",
+                "uploaded_at": "2026-04-18T15:41:03.575680"
+            }
+        ],
+        "created_at": "2026-04-18T15:11:54.989621"
+    },
+    "tsinem::software framework": {
+        "course_id": "tsinem::software framework",
+        "course_name": "software framework",
+        "teacher_username": "tsinem",
+        "materials": [
+            {
+                "original_filename": "SE410-Week5-Delegates_Lambdas_Events.pdf",
+                "stored_path": "course_materials\\tsinem__software framework_1.txt",
+                "file_hash": "9b3ba5cbaef08d4f6eae86a6151a66bc",
+                "uploaded_at": "2026-04-18T15:41:50.900396"
+            }
+        ],
+        "created_at": "2026-04-18T15:40:31.072443"
+    },
+    "tsinem::410": {
+        "course_id": "tsinem::410",
+        "course_name": "410",
+        "teacher_username": "tsinem",
+        "materials": [
+            {
+                "original_filename": "SE410-Week5-Delegates_Lambdas_Events.pdf",
+                "stored_path": "course_materials\\tsinem__410_1.txt",
+                "file_hash": "9b3ba5cbaef08d4f6eae86a6151a66bc",
+                "uploaded_at": "2026-04-18T15:47:51.045906"
+            }
+        ],
+        "created_at": "2026-04-18T15:47:19.064526"
+    },
+    "tsinem::se 480": {
+        "course_id": "tsinem::se 480",
+        "course_name": "se 480",
+        "teacher_username": "tsinem",
+        "materials": [],
+        "created_at": "2026-04-18T15:54:42.472220"
     }
 }

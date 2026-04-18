@@ -1,0 +1,359 @@
+SE 410
+Software Framework Applications
+Week 3: Arrays, Collections, Generics
+Prevıously on SE 410
+● Data types
+○ int, BigInteger, String, char, Boolean, dynamic, object
+● Immutability of strings
+● String manipulation methods
+○ toUpper, toLower, IndexOf, LastIndexOf
+● Tuples
+● Flow of control
+○ if-else, switch-case, loops: for, while, do while
+Content
+● Arrays
+● Collections
+● Generics
+Arrays
+● Arrays are similar to Java.
+○ int[] intArray;
+● Creates a reference to an array
+○ intArray = new int[5];
+● Creates an array object and assigns it.
+● Array objects are reference types created on the 
+heap.
+● The integers in the array are value types.
+● Array indexing is zero based.
+System.Array
+● All arrays are derived from this class.
+● Properties
+○ Length – number of elements in all dimensions
+○ Rank – number of dimensions
+● Methods
+○ BinarySearch – performs a binary search for a member
+○ Clear – sets a range of elements to 0 or null
+○ Clone – creates a shallow copy
+○ Copy – copies elements from one array to another
+○ getLength – returns the length of a single dimension
+○ IndexOf – returns the first occurrence of a value
+○ Sort – sorts the array
+Arrays of Objects
+● When you create an array of objects, it is simply an 
+array of references to objects, not the actual objects.
+● These references are initialized to null.
+● You must then create objects and assign to each member of 
+the array.
+The foreach Statement (Remember)
+● This iterates through all elements of an array or collection.
+● foreach (type ident in expression) statement:
+int[] ar = new int[5] {1,2,3,4,5};
+foreach(int i in ar) {
+Console.WriteLine(i);
+}
+
+Rectangular Arrays
+● C# supports rectangular and jagged arrays.
+● Arrays can be of 1 or more dimensions.
+● To declare a rectangular array:
+int[,] int2d = new int[2,3];
+for (int i = 0; i < 2; i++) {
+for(int j = 0; j < 3; j++) {
+ int2d[i,j] = i+j;
+}
+}
+Jagged Arrays
+● These are really arrays of arrays.
+● Each member must be created as a separate array.
+● Note the difference in subscripting.
+int jag[][] = new int[2][];
+jag[0] = new int[5];
+jag[1] = new int[10];
+jag[0][1] = 15;
+
+Indexers
+● Indexers allow any class to be indexed like an array.
+● Indexers are declared in a way similar to properties.
+● They always use the keyword this.
+● The index can be an integer or even a string.
+Indexers (cont’d)
+● Create a simple array which can be indexed:
+○ By an integer
+○ By a string using “first”, “middle” or “last”
+class IndexedArray{
+        int[] data;
+        public IndexedArray(int sz){
+            data = new int[sz];
+        } 
+…
+
+Indexers (cont’d)
+● An indexer with integer indices:
+public int this[int index] {
+   get { return data[index]; }
+   set { data[index] = value; }
+}
+
+An Indexer wıth Strıng ındıces
+public int this[string index]  {            
+       get  { 
+           int idx = 0;
+           switch (index) {
+               case "middle":
+                   idx = data.Length / 2;
+                   break;
+               case "first":
+                   idx = 0;
+                   break;
+               case "last":
+                   idx = data.Length - 1;
+                   break;
+           } 
+           return data[idx]; 
+       } 
+}
+
+Collectıons
+● Collections are generic data structures for containing 
+objects or primitives.
+● These are often in the form of common data structures 
+like lists, and dictionaries.
+● Many of the collections have interfaces representing 
+their functionality.
+The IEnumerable Interface
+● This states that the class supports an enumerator or 
+iterator which steps through the elements one-by-one.
+● Classes which implement this interface can be used with 
+the foreach statement.
+public interface IEnumerable {
+IEnumerator GetEnumerator();
+}
+
+The IEnumerator Interface
+● This is the interface the enumerator must implement.
+● It is usually implemented as a private class within the 
+class being enumerated.
+public interface IEnumerator {
+bool MoveNext();
+bool Reset();
+object Current { get; }
+}
+
+Indexed array enumerator
+private class IndexedArrayEnumerator: IEnumerator  {
+    int idx; 
+    IndexedArray theArray;
+    public IndexedArrayEnumerator(IndexedArray ar)  {
+        theArray = ar; 
+        idx = -1; 
+    } 
+    public bool MoveNext()  {
+        idx++; 
+        if(idx >= theArray.data.Length)
+            return false; 
+        else 
+            return true; 
+    } 
+    public void Reset()  {
+        idx = -1; 
+    } 
+    public object Current  {
+        get{ return theArray[idx]; }
+    } 
+}
+
+Getting an Enumerator
+public IEnumerator GetEnumerator()
+{
+    return new IndexedArrayEnumerator(this);
+}
+● This creates and returns an enumerator.
+● Using a separate enumerator class allows several enumerators to operate 
+at the same time.
+The Icolllectıon Interface
+● Defines properties and methods for all collections.
+● Implements: IEnumerable
+○ Count  
+■ the number of elements in the collection
+○ CopyTo(Array ar, int idx)
+■ Copies all elements to an array starting at the index
+ArrayLısts
+● The problem with arrays is their fixed size.
+● ArrayLists fix this by resizing the array when the 
+addition of new members exceeds the capacity.
+● The class has an extensive set of methods.
+
+ArrayLıst methods
+
+ArrayLıst methods (cont’d)
+
+Sortıng
+● Sorting primitives is easy since comparing one to 
+another is well-defined.
+● Sorting user-defined types is more difficult since 
+you do not know how to compare one to another.
+● There are two solutions
+○ IComparable
+○ IComparer
+The IComparable ınterface
+● This require one method CompareTo which returns.
+○ -1 if the first value is less than the second
+○ 0 if the values are equal
+○ 1 if the first value is greater than the second
+● This is a member of the class and compares this to an instance 
+passed as a parameter.
+public interface IComparable {
+int CompareTo(object obj)
+}
+The IComparer Interface
+● This is similar to IComparable but is designed to be 
+implemented in a class outside the class whose instances 
+are being compared.
+● Compare() works just like CompareTo()
+public interface IComparer {
+int Compare(object o1, object o2);
+}
+Sorting an ArrayList
+● To use CompareTo() of IComparable
+○ ArrayList.Sort()
+● To use a custom comparer object
+○ ArrayList.Sort(IComparer cmp)
+● To sort a range
+○ ArrayList.Sort(int start, int len, IComparer cmp)
+
+Implementing IComparer
+● To sort people based on age
+class PersonComparer: IComparer
+{
+public int Compare(object o1, object o2)
+{
+ PersonBase p1 = (PersonBase)o1;
+ PersonBase p2 = (PersonBase)o2;
+ return p1.Age.CompareTo(p2.Age);
+}
+}
+ICloneable Interface
+● This guarantees that a class can be cloned.
+● The Clone method can be implemented to make a shallow or deep 
+clone.
+public interface ICloneable {
+object Clone();
+}
+Queue Class
+● Implements: ICollection, IComparable, ICloneable
+
+Stack Class
+● Implements: ICollection, IComparable, ICloneable
+
+IDıctıonary ınterface
+● A dictionary is an associative array.
+● It associates a key with a value and allows a value to be 
+retrieved by providing the key.
+● Implements: ICollection, IEnumerable
+IDıctıonary ınterface (cont’D)
+
+Hash Tables
+● The hash table is a common implementation of the 
+IDictionary interface.
+● If the key is not an integer then the hashcode for the 
+key is used as an index into the hashtable.
+● Keys used with hash tables must have unique hashcode 
+for every value.
+IDictionaryEnumerator Interface
+● This is the type of enumerator used with dictionaries.
+● It implements IEnumerator
+● Has properties:
+○ Key
+■ Returns the key for the item
+○ Value
+■ Returns the value for the item
+Generics
+● All of the containers so far have stored data as objects.
+● This means:
+○ Containers hold any type.
+○ Operations must test the type before operating on the 
+objects in the container.
+○ When objects are removed from the container they must be 
+cast to their true type.
+○ The programmer must remember the type of the object 
+placed in the container.
+○ CLR must test to see that the cast is legal.
+Generics (cont’d)
+● All of this
+○ Places an extra burden on the programmer having to 
+remember the types.
+○ Introduces new potential sources of error.
+○ Forces expensive run-time type checking.
+● What is needed is a way to make a class work with many types 
+but
+○ Do so efficiently.
+○ Enforce compile type strong type checking.
+
+Generics (cont’d)
+ ● The solution is generics!
+● This is almost the same as the template facility of C++
+● Classes and methods are parameterized with a type.
+● Every time the class or method is used with a new type, 
+the compiler generates the code for that type and 
+compiles it.
+● This allows strong type checking at compile time.
+
+Generic classes
+● To create a generic class, we parameterize it with one 
+or more type parameters.
+● The parameter types can then be used as types within 
+the class and will be replaced with the actual types 
+used when the class instance is created.
+Generic Array
+● A growable array which can hold any type::
+class GenericArray<T>
+{
+    T[] data;
+    public GenericArray(int sz)
+    { 
+        if (sz < 1) sz = 1;
+        data = new T[sz];
+    } 
+    … 
+}
+Creating Generic Class Instances
+● To create an instance of our generic array for 
+integers:
+○ GenericArray<int> iar = new GenericArray<int>(5);
+● This will cause the compiler to write a new class and 
+replace every occurrence of the parameter T by int and 
+compile this new class.
+
+Generic methods
+● A class can also have generic methods which can 
+work with any type.
+● We will demonstrate this by writing a method to 
+test the Generic Array.
+● This method will be placed in the class containing 
+the Main method.
+Generic methods (cont’d)
+static void test<E>(string id, GenericArray<E> ar, 
+E[] data)  {
+    for (int i = 0; i < data.Length; i++) {
+         ar[i] = data[i]; 
+    } 
+    for (int i = 0; i < data.Length; i++) {
+        Console.WriteLine("{0}[{1}] = {2}", 
+ id, i, ar[i]);
+    } 
+    Console.WriteLine("final capacity={0}",
+  ar.Capacity);
+}
+Generic Array
+● There are actually three different namespaces for 
+collections:
+○ System.Collections
+■ Non-generic collections with data stored as 
+objects
+○ System.Collections.Generic
+■ Generic collections
+○ System.Collections.Specialized
+■ Specialized, strongly typed collections designed 
+to work efficiently with specific types
+Generic colllectıons
+
+Any questıons?

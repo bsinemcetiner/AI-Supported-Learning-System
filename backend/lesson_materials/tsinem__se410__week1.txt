@@ -1,0 +1,251 @@
+SE 410
+Software Framework Applications
+Week 1: Introduction
+INSTRUCTOR
+Asst. Prof. Dr. Serhat UZUNBAYIR
+E-mail: uzunbayir.serhat@ieu.edu.tr
+Room: A 310
+Office Hours: TBD
+
+Course objectıves
+The objective of this course is to present to students the concept of 
+software framework and how to implement it for various purposes.
+● Understand how .NET has changed in recent releases
+● Select the appropriate C# language features for any task
+● Learn when to use the new features and when to stick with older ones
+● Examine the range of functionality in .NET class libraries
+● Apply these class libraries to practical programming tasks
+● Explore numerous small additions to .NET that improve expressiveness
+
+Learnıng outcomes
+The students who succeeded in this course;
+● Describe the concept of software framework.
+● Identify the 3-tier software architecture.
+● Discuss the protocols behind web services.
+● Utilize software framework to build applications.
+● Implement mechanisms and techniques for the deployment 
+and configuration of .NET applications.
+Materıals - TEXT BOOK
+Programming C# 12: Build Cloud, Web, and 
+Desktop Applications 
+1st Edition
+by Ian Griffiths
+
+Materıals - SUGGESTED MATERIALS
+C# 12 and .NET 8 - Modern Cross-Platform 
+Development Fundamentals - Eighth Edition: 
+Start building websites and services with 
+ASP.NET Core 8, Blazor, and EF Core 8 
+by Mark J Price
+C# 12 in a Nutshell: The Definitive 
+Reference 1st Edition 
+by Joseph Albahari
+
+evaluatıon
+Project: 30%
+Midterm Exam: 30%
+Final Exam: 40%
+Weekly subjects
+Week Subjects 
+1     Introduction 
+2     Concepts 
+3     Data Types, Strings, Loops, Patterns
+4     Arrays, Collections, Generics
+5     Delegates, Lambdas and Events
+6     LINQ 
+7     Assemblies, Files, Streams
+  
+Weekly subjects
+Week Subjects 
+8     GUI Programming I 
+9     Midterm Exam 
+10     GUI Programming II
+11     Three-tier Architecture
+12     Web Application Programming I
+13     Web Application Programming II
+14      Project Presentations
+15      Final Review
+
+syllabus
+https://se.ieu.edu.tr/en/syllabus/type/read/id/SE+410
+
+Introducıng c#
+● C# is used for many kinds of applications: 
+○ Websites
+■ Stack Overflow (Q&A site)
+■ Microsoft.com
+○ Cloud-based systems
+■ Azure Functions (serverless apps in C#)
+■ Orchard Core CMS (open-source, modular cloud-ready CMS)
+○ Artificial intelligence
+■ ML.NET (machine learning library in .NET for sentiment 
+analysis, recommendation engines)
+■ Chatbots integrated into Microsoft Teams using C#
+Introducıng c# (cont’d)
+○ IoT devices
+■ .NET NanoFramework (runs C# on microcontrollers)
+■ Home automation apps (smart thermostats, sensors)
+○ Desktop applications
+■ Visual Studio IDE itself is partly written in C#
+■ Paint.NET (popular free image editor)
+○ Mobile apps
+■ Xamarin-based apps (now .NET MAUI) → e.g., UPS Mobile App
+■ BBC Good Food app (built with Xamarin in C#)
+○ Games
+■ Unity Engine games (C# is the scripting language)
+● Pokémon Go
+● Monument Valley
+Introducıng c# (cont’d)
+● C#, along with the supporting runtime, libraries, and 
+tools known collectively as .NET, has been center 
+stage for Windows developers for over 20 years.
+● .NET is cross-platform and open source, enabling 
+applications and services written in C# to run on 
+operating systems including Android, iOS, macOS, 
+Linux, and of course Windows.
+Introducıng c# (cont’d)
+● New versions of C# has enhanced developer productivity.
+○ Pattern-matching features (more expressive and succinct code) 
+○ Primary constructors and collection expressions (reduce verbosity 
+in some common scenarios)
+○ Type-system enhancements (more flexible libraries, and better 
+compile-time diagnostics).
+Why c#?
+● Simple, readable and easy to use
+● All about developer productivity
+● A multi-paradigm programming language
+● A flexible general-purpose language
+● Runs on a solid well-engineered .NET runtime
+● Cross-platform
+● Mature, popular and in very active development
+Why c#? (cont’d)
+● Offers object-oriented features, generics, and functional 
+programming.
+● Supports both dynamic and static typing. It provides 
+powerful list- and set-oriented features, thanks to 
+Language Integrated Query (LINQ). 
+● Has support for asynchronous programming. 
+● The various development environments that support C# all 
+offer a wide range of productivity-enhancing features.
+
+Why c#? (cont’d)
+● Open-source and led by Microsoft
+● An active and vibrant community
+● A well-documented language
+● Has built-in design patterns and best practices
+● Can leverage an extensive collection of libraries
+● Can run very fast
+● Can run in the browser
+● Developers are in high demand
+Managed Code and the CLR
+● Traditional Compilers
+○ Source → Machine Code → Runs directly on CPU
+○ Output = Native code (CPU instructions)
+● C# Compilers
+○ Source → Binary code Intermediate Language (IL)
+○ Runs on CLR (via JIT compilation)
+○ Called Managed Code
+● Benefits of CLR
+○ Portability
+○ Security
+○ Memory management
+Managed Code and the CLR (cont’d)
+
+C# Standards and Implementations
+● European Computer Manufacturers Association (ECMA) has 
+written specifications that define language and runtime 
+behavior for C# implementations. 
+● This has made it possible for multiple implementations of 
+C# and the runtime to emerge. 
+C# Standards and Implementations (cont’d)
+● There are four in widespread use: 
+○ .NET Core (an open-source platform for building desktop, web, 
+and mobile applications that can run natively on any operating 
+system), 
+○ Mono (the implementation of .NET on platforms other than 
+Windows),
+○ .NET Native (a precompilation technology for building and 
+deploying Windows apps that is included with Visual Studio 
+2015),
+○ .NET Framework (a framework that provides a runtime 
+environment and libraries). 
+C# Standards and Implementations (cont’d)
+● When a version of .NET goes out of support, this does not 
+deprecate components that target it. 
+● .NET supports using components built for older versions, 
+so if you find a component on NuGet that targets .NET 
+5.0, you can use it on .NET 8.0. 
+● It would be wise to check whether such a component is 
+still under active development.
+.net vs c#
+● .NET is a software framework with a runtime environment 
+and a set of libraries for running applications. 
+● It offers a consistent programming model and supports 
+multiple languages -> C#, Visual Basic, and F#. 
+● Includes various components:
+○ CLR
+○ the Base Class Library (BCL) 
+○ a collection of development tools
+.net vs c# (cont’d)
+● C# is an object-oriented programming language. 
+● It is designed to be simple, expressive, and type-safe, 
+offering a balance between high-level abstraction and 
+low-level control. 
+● C# is often associated with .NET development as it is the 
+primary language used for building .NET applications.
+.net vs c# (cont’d)
+● It is crucial to understand that .NET and C# are not 
+synonymous but rather closely related. 
+● C# is one of the primary programming languages that can 
+be used within the .NET framework. 
+● In other words, C# is a language that runs on the .NET 
+platform and leverages its rich libraries and runtime 
+environment.
+Visual Studio, Visual Studio Code, and JetBrains Rider
+● Microsoft offers two desktop development environments: 
+○ Visual Studio Code
+○ Visual Studio
+● Both provide the basic features—such as a text editor, build 
+tools, and a debugger—but Visual Studio provides the most 
+extensive support for developing C# applications, whether 
+those applications will run on Windows or other platforms. 
+● Microsoft is not the only option: 
+○ the developer productivity company JetBrains sells a fully fledged .NET IDE 
+called Rider, which runs on Windows, Linux, and macOS.
+Anatomy of a Simple Program
+
+Wrıtıng a unıt  test
+
+Test results
+
+A Faılıng test
+
+namespaces
+● Namespaces bring order and structure to what would otherwise be a 
+horrible mess.
+● The .NET runtime libraries contain thousands of types, and there 
+are many more out there in NuGet packages both from Microsoft and 
+third parties, not to mention the classes you will write yourself. 
+● There are two problems that can occur when dealing with this many 
+named entities:
+○ First, it becomes hard to guarantee uniqueness. 
+○ Second, it can become challenging to discover the API you need; unless you know or 
+can guess the right name, it’s difficult to find what you need from an 
+unstructured list of tens of thousands of things.
+● Namespaces solve both of these problems.
+Namespaces (cont’d)
+● Most .NET types are defined in a namespace. 
+● There are certain conventions for namespaces that you’ll 
+see a lot. 
+● For example, types in .NET’s runtime libraries are in 
+namespaces that start with System.
+● The namespace usually gives a clue as to the purpose of a 
+type.
+● Namespaces also provide a way to ensure uniqueness.
+summary
+● We’ve now seen the basic structure of C# programs. 
+● We will look at types and their members in much more 
+detail in Chapter 3, but first, Chapter 2 will deal with 
+the code that lives inside methods, where we express what 
+we want our programs to do.
+Any questıons?

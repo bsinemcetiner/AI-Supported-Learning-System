@@ -1,0 +1,188 @@
+SE 410
+Software Framework Applications
+Week 5: Delegates, Lambdas, Events
+Prevıously on SE 410
+● Arrays
+○ Rectangular Arrays
+○ Jagged Arrays
+○ Indexers
+● Collections
+○ IEnumerable
+○ IEnumerator
+○ ArrayLists
+○ Queue and Stack
+○ BitArray
+● Generics
+Content
+● More advanced topics on C#:
+○ Delegates
+○ Lambdas
+○ Events
+What are Delegates?
+● Delegates are one of the most powerful features of the 
+C# language. 
+● When implemented correctly, they allow developers to 
+implement applications that are loosely coupled and 
+easily scalable. 
+● However, they can be difficult to understand, 
+especially when encountered for the first time. 
+● But with time and some practice, the concept will 
+become clear and can be easily integrated in any design 
+when needed.
+What are Delegates? (cont’d)
+● One of the most interesting concepts in C# is Event-Driven 
+approach.
+● Delegation model is a process in which a task is handed 
+over to some other process so as to accomplish it.
+ 
+● Delegates are the special objects in C# which are pointers 
+to methods (similar to function pointers in C and C++).
+● Implemented as classes derived from the base class 
+System.Delegate.
+● Question: How delegates differ from classes? 
+Understandıng Delegates
+● The syntax for defining delegates looks like this: 
+delegate <return type> <delegate name> (<parameter list>); 
+● Ex: public delegate int SomeDelegate(string s, bool b);  
+● When you instantiate delegates, you pass in the function name 
+to which this delegate will refer as its constructor 
+parameter.  
+● Only functions that have the same signature as the delegate, 
+can be passed as a parameter: 
+● Ex: private int SomeFunction(string str, bool bln){...}
+Understandıng Delegates (cont’d)
+● Pass this function to SomeDelegate's constructor : 
+SomeDelegate sd = new SomeDelegate(SomeFunction); 
+● Now, sd refers to SomeFunction:
+● Ex: SomeFunction is registered to sd. 
+sd("somestring", true);
+A Sımple Delegate Example now
+A sımple Delegate Example
+
+A sımple Delegate Example (cont’d)
+
+Delegate types: Sıngle-cast Delegate
+● This is a delegate that points to a single method. 
+● It can be invoked on that one method at a time.
+
+Delegate types: Multı-cast Delegate
+● A multicast delegate can hold references to more than one method. 
+● When invoked, it calls all the methods in its invocation list.
+
+Delegate types: Multı-cast Delegate (cont’d)
+
+Delegate types: Generıc Delegate
+● C# provides some built-in generic delegates that eliminate the 
+need to declare new delegate types for common use cases. 
+● The most common generic delegates are:
+○ Func<T, TResult>: A delegate that can point to a method 
+that returns a value and takes up to 16 parameters.
+○ Action<T>: A delegate that points to a method that returns 
+void and can take up to 16 parameters.
+○ Predicate<T>: A delegate that points to a method that 
+returns bool and takes a single parameter.
+Delegate types: Generıc Delegate (cont’d)
+
+Delegate types: Generıc Delegate (cont’d)
+
+In short
+● Single-Cast Delegate: Points to a single method.
+● Multi-Cast Delegate: Points to multiple methods and 
+invokes them in sequence.
+● Generic Delegates (Func, Action, Predicate): Predefined 
+delegates that can be used for common patterns with 
+varying parameter counts and return types.
+
+Lambdas
+● A lambda expression in C# is an anonymous function that 
+can be used to create delegates or expression tree 
+types. 
+● It provides a concise way to represent small methods 
+inline without formally defining them.
+● Lambdas are defined using the following syntax:
+○ (parameters) => expression
+● or for multi-line expressions:
+○ (parameters) => { statements }
+Key Characterıstıcs of Lambdas
+● Anonymous: Lambdas do not require a method name.
+● Inline: They are often used where delegates are 
+expected, such as in LINQ queries or event handlers.
+● Concise: They allow for more readable and shorter code, 
+especially for simple functions.
+Lambda Example: Multı-Lıne Lambda
+
+Lambda Example: Sıngle-Cast Delegate
+
+Events
+● In C#, events are a way for objects to notify 
+other objects when something happens. 
+● They are built on top of delegates and provide 
+a mechanism to implement the observer pattern, 
+where one or more "subscribers" are notified 
+when a "publisher" triggers the event.
+Key Concepts of Events
+● Publisher: The class that triggers the event.
+● Subscriber: The class that listens for the event 
+and defines what happens when the event is 
+triggered.
+● Delegate: The type that defines the method 
+signature for the event handler.
+
+How Events Work?
+● You declare a delegate that defines the signature of the 
+event handler methods.
+● You declare an event using the delegate type.
+● Subscribers can subscribe to the event by attaching event 
+handler methods (using the += operator).
+● When the publisher triggers the event (using the event 
+keyword), all subscribed event handlers are called.
+Sımple Event Example
+
+Sımple Event Example (cont’d)
+
+Sımple Event Example (cont’d)
+
+Explanatıon
+● NotifyEventHandler: This delegate defines the signature for the 
+event handler (no parameters and no return value).
+● NotifyEvent: This is the event declared in the Publisher class. 
+It will notify all subscribers when triggered.
+● Event Subscription: In the Main method, the Subscriber 
+subscribes to the event using publisher.NotifyEvent += 
+subscriber.OnEventNotified;.
+● Event Triggering: The publisher.TriggerEvent() method triggers 
+the event, and the subscriber is notified, executing the 
+OnEventNotified method.
+Example: Combıne Delegates, Lambdas, Events
+
+Example: Combıne Delegates, Lambdas, Events (cont’d)
+
+Example: Combıne Delegates, Lambdas, Events (cont’d)
+
+Example: Combıne Delegates, Lambdas, Events (cont’d)
+● Delegate (TaskCompletedEventHandler): This delegate 
+defines the signature for event handler methods, which 
+take a string parameter (taskName).
+● Event (TaskCompleted): The event is declared in the 
+Publisher class, using the TaskCompletedEventHandler 
+delegate. It is triggered whenever a task is completed.
+● Lambda Expression: In the Subscriber class, the Subscribe 
+method attaches a lambda expression to the TaskCompleted 
+event. The lambda takes taskName as input and prints a 
+message when the event is raised.
+● Event Triggering: The publisher.CompleteTask("Task 1") 
+and publisher.CompleteTask("Task 2") methods trigger the 
+TaskCompleted event, which notifies the subscriber.
+How They Work Together?
+● Event: The TaskCompleted event is used to notify subscribers 
+when a task is completed.
+● Delegate: The event uses the delegate 
+TaskCompletedEventHandler to define the signature of the 
+event handler.
+● Lambda: The Subscriber class subscribes to the event with a 
+lambda expression, which handles the event inline without 
+needing a separate method.
+This combination of events, delegates, and lambdas provides a 
+flexible and concise way to handle notifications and 
+event-driven programming in C#.
+Any questıons?

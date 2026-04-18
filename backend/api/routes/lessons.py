@@ -7,7 +7,10 @@ import io
 import json
 import os
 
+from sqlalchemy.orm import Session
+
 from core.auth import get_current_user, require_teacher
+from database import get_db
 from services.lesson_manager import (
     create_lesson,
     get_lessons_by_course,
@@ -69,6 +72,7 @@ async def upload_lesson(
     week_title: str,
     file: UploadFile = File(...),
     current_user: dict = Depends(require_teacher),
+    db: Session = Depends(get_db),
 ):
     _ensure_lesson_dir()
     content = await file.read()
@@ -86,6 +90,7 @@ async def upload_lesson(
         f.write(text)
 
     ok, msg, lesson_id = create_lesson(
+        db=db,
         course_id=course_id,
         teacher_username=current_user["username"],
         week_title=week_title,
@@ -113,8 +118,12 @@ async def upload_lesson(
 
 
 @router.get("/course/{course_id}")
-def list_lessons(course_id: str, _: dict = Depends(get_current_user)):
-    lessons = get_lessons_by_course(course_id)
+def list_lessons(
+    course_id: str,
+    _: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    lessons = get_lessons_by_course(db, course_id)
     return {
         lid: ldata
         for lid, ldata in lessons.items()
@@ -123,13 +132,21 @@ def list_lessons(course_id: str, _: dict = Depends(get_current_user)):
 
 
 @router.get("/course/{course_id}/all")
-def list_all_lessons(course_id: str, current_user: dict = Depends(require_teacher)):
-    return get_lessons_by_course(course_id)
+def list_all_lessons(
+    course_id: str,
+    current_user: dict = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    return get_lessons_by_course(db, course_id)
 
 
 @router.get("/{lesson_id}")
-def get_lesson(lesson_id: str, _: dict = Depends(get_current_user)):
-    lesson = get_lesson_by_id(lesson_id)
+def get_lesson(
+    lesson_id: str,
+    _: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    lesson = get_lesson_by_id(db, lesson_id)
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
     return lesson
@@ -139,8 +156,9 @@ def get_lesson(lesson_id: str, _: dict = Depends(get_current_user)):
 def preview_lesson(
     lesson_id: str,
     current_user: dict = Depends(require_teacher),
+    db: Session = Depends(get_db),
 ):
-    lesson = get_lesson_by_id(lesson_id)
+    lesson = get_lesson_by_id(db, lesson_id)
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
 
@@ -179,7 +197,7 @@ def preview_lesson(
             if delta:
                 yield f"data: {json.dumps({'delta': delta})}\n\n"
 
-        save_draft_explanation(lesson_id, full_reply)
+        save_draft_explanation(db, lesson_id, full_reply)
         yield f"data: {json.dumps({'done': True})}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
@@ -195,12 +213,14 @@ def submit_feedback(
     lesson_id: str,
     body: FeedbackRequest,
     current_user: dict = Depends(require_teacher),
+    db: Session = Depends(get_db),
 ):
-    lesson = get_lesson_by_id(lesson_id)
+    lesson = get_lesson_by_id(db, lesson_id)
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
 
     ok, msg = update_lesson_feedback(
+        db=db,
         lesson_id=lesson_id,
         feedback_text=body.feedback,
         custom_prompt=body.custom_prompt,
@@ -221,8 +241,9 @@ def update_preview_question(
     lesson_id: str,
     body: PreviewQuestionRequest,
     current_user: dict = Depends(require_teacher),
+    db: Session = Depends(get_db),
 ):
-    ok, msg = set_lesson_preview_question(lesson_id, body.preview_question)
+    ok, msg = set_lesson_preview_question(db, lesson_id, body.preview_question)
     if not ok:
         raise HTTPException(status_code=404, detail=msg)
     return {"message": msg}
@@ -237,8 +258,9 @@ def toggle_publish(
     lesson_id: str,
     body: PublishRequest,
     current_user: dict = Depends(require_teacher),
+    db: Session = Depends(get_db),
 ):
-    ok, msg = set_lesson_published(lesson_id, body.is_published)
+    ok, msg = set_lesson_published(db, lesson_id, body.is_published)
     if not ok:
         raise HTTPException(status_code=404, detail=msg)
     return {"message": msg, "is_published": body.is_published}
@@ -248,12 +270,13 @@ def toggle_publish(
 def approve_lesson(
     lesson_id: str,
     current_user: dict = Depends(require_teacher),
+    db: Session = Depends(get_db),
 ):
-    lesson = get_lesson_by_id(lesson_id)
+    lesson = get_lesson_by_id(db, lesson_id)
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
 
-    ok, msg = approve_lesson_explanation(lesson_id)
+    ok, msg = approve_lesson_explanation(db, lesson_id)
     if not ok:
         raise HTTPException(status_code=400, detail=msg)
 
@@ -270,15 +293,16 @@ def start_lesson_chat(
     lesson_id: str,
     body: StartLessonChatRequest,
     current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    lesson = get_lesson_by_id(lesson_id)
+    lesson = get_lesson_by_id(db, lesson_id)
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
 
     if not lesson.get("is_published", False):
         raise HTTPException(status_code=403, detail="This lesson is not published yet.")
 
-    approved_text = (get_student_visible_explanation(lesson_id) or "").strip()
+    approved_text = (get_student_visible_explanation(db, lesson_id) or "").strip()
     if not approved_text:
         raise HTTPException(
             status_code=400,

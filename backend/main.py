@@ -7,9 +7,9 @@ from api.routes.chats import router as chats_router
 from api.routes.lessons import router as lessons_router
 
 from database import Base, engine
-from models import User, Course, Lesson, Chat, Message, Material
+from models import User, Course, Lesson, Chat, Message, Material, CourseMaterial
 
-app = FastAPI(title="LLM Based Tutoring API", version="1.0.0")
+app = FastAPI(title="AI Supported Learning System API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,

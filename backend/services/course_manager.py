@@ -1,67 +1,51 @@
-import json
 import os
 import hashlib
 from datetime import datetime
+from sqlalchemy.orm import Session
 
-COURSES_FILE = "courses.json"
+from models import Course, CourseMaterial
+
 COURSE_MATERIALS_DIR = "course_materials"
 
 
 def _ensure_storage():
-    if not os.path.exists(COURSES_FILE):
-        with open(COURSES_FILE, "w", encoding="utf-8") as f:
-            json.dump({}, f, ensure_ascii=False, indent=4)
-
     if not os.path.exists(COURSE_MATERIALS_DIR):
         os.makedirs(COURSE_MATERIALS_DIR)
-
-
-def load_courses():
-    _ensure_storage()
-    with open(COURSES_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def save_courses(courses):
-    with open(COURSES_FILE, "w", encoding="utf-8") as f:
-        json.dump(courses, f, ensure_ascii=False, indent=4)
 
 
 def _hash_text(text: str) -> str:
     return hashlib.md5(text.encode("utf-8")).hexdigest()
 
 
-def create_course(course_name: str, teacher_username: str):
-    courses = load_courses()
-
+def create_course(db: Session, course_name: str, teacher_username: str):
     clean_name = course_name.strip()
     if not clean_name:
         return False, "Course name cannot be empty."
 
     course_id = f"{teacher_username}::{clean_name.lower()}"
-    if course_id in courses:
+
+    existing = db.query(Course).filter(Course.course_id == course_id).first()
+    if existing:
         return False, "This course already exists."
 
-    courses[course_id] = {
-        "course_id": course_id,
-        "course_name": clean_name,
-        "teacher_username": teacher_username,
-        "materials": [],
-        "created_at": datetime.now().isoformat()
-    }
+    course = Course(
+        course_id=course_id,
+        course_name=clean_name,
+        teacher_username=teacher_username,
+        created_at=datetime.utcnow(),
+    )
+    db.add(course)
+    db.commit()
+    db.refresh(course)
 
-    save_courses(courses)
     return True, course_id
 
 
-def add_material_to_course(course_id: str, filename: str, text_content: str):
-    """
-    Adds a material to the course only if it is not already present
-    based on text hash.
-    """
-    courses = load_courses()
+def add_material_to_course(db: Session, course_id: str, filename: str, text_content: str):
+    _ensure_storage()
 
-    if course_id not in courses:
+    course = db.query(Course).filter(Course.course_id == course_id).first()
+    if not course:
         return False, "Course not found."
 
     clean_text = text_content.strip()
@@ -69,16 +53,14 @@ def add_material_to_course(course_id: str, filename: str, text_content: str):
         return False, "Material content is empty."
 
     file_hash = _hash_text(clean_text)
-    existing_materials = courses[course_id].get("materials", [])
+
+    existing_materials = db.query(CourseMaterial).filter(CourseMaterial.course_id == course_id).all()
     for material in existing_materials:
-        existing_name = material.get("original_filename", "").strip().lower()
-        existing_hash = material.get("file_hash")
-
-        if existing_name == filename.strip().lower():
+        if material.original_filename.strip().lower() == filename.strip().lower():
             return False, "A file with the same name already exists in this course."
-
-        if existing_hash == file_hash:
+        if material.file_hash == file_hash:
             return False, "A file with the same content already exists in this course."
+
     safe_course_id = course_id.replace("::", "__").replace("/", "_")
     material_index = len(existing_materials) + 1
     material_filename = f"{safe_course_id}_{material_index}.txt"
@@ -87,104 +69,146 @@ def add_material_to_course(course_id: str, filename: str, text_content: str):
     with open(material_path, "w", encoding="utf-8") as f:
         f.write(clean_text)
 
-    courses[course_id]["materials"].append({
-        "original_filename": filename,
-        "stored_path": material_path,
-        "file_hash": file_hash,
-        "uploaded_at": datetime.now().isoformat()
-    })
+    material = CourseMaterial(
+        course_id=course_id,
+        original_filename=filename,
+        stored_path=material_path,
+        file_hash=file_hash,
+        uploaded_at=datetime.utcnow(),
+    )
+    db.add(material)
+    db.commit()
 
-    save_courses(courses)
     return True, "Material added successfully."
 
 
-def get_teacher_courses(teacher_username: str):
-    courses = load_courses()
+def get_teacher_courses(db: Session, teacher_username: str):
+    courses = db.query(Course).filter(Course.teacher_username == teacher_username).all()
+    result = {}
+    for c in courses:
+        materials = db.query(CourseMaterial).filter(CourseMaterial.course_id == c.course_id).all()
+        result[c.course_id] = {
+            "course_id": c.course_id,
+            "course_name": c.course_name,
+            "teacher_username": c.teacher_username,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+            "materials": [
+                {
+                    "original_filename": m.original_filename,
+                    "stored_path": m.stored_path,
+                    "file_hash": m.file_hash,
+                    "uploaded_at": m.uploaded_at.isoformat() if m.uploaded_at else None,
+                }
+                for m in materials
+            ],
+        }
+    return result
+
+
+def get_all_courses(db: Session):
+    courses = db.query(Course).all()
+    result = {}
+    for c in courses:
+        materials = db.query(CourseMaterial).filter(CourseMaterial.course_id == c.course_id).all()
+        result[c.course_id] = {
+            "course_id": c.course_id,
+            "course_name": c.course_name,
+            "teacher_username": c.teacher_username,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+            "materials": [
+                {
+                    "original_filename": m.original_filename,
+                    "stored_path": m.stored_path,
+                    "file_hash": m.file_hash,
+                    "uploaded_at": m.uploaded_at.isoformat() if m.uploaded_at else None,
+                }
+                for m in materials
+            ],
+        }
+    return result
+
+
+def get_course_by_id(db: Session, course_id: str):
+    course = db.query(Course).filter(Course.course_id == course_id).first()
+    if not course:
+        return None
+
+    materials = db.query(CourseMaterial).filter(CourseMaterial.course_id == course_id).all()
     return {
-        cid: cdata
-        for cid, cdata in courses.items()
-        if cdata["teacher_username"] == teacher_username
+        "course_id": course.course_id,
+        "course_name": course.course_name,
+        "teacher_username": course.teacher_username,
+        "created_at": course.created_at.isoformat() if course.created_at else None,
+        "materials": [
+            {
+                "original_filename": m.original_filename,
+                "stored_path": m.stored_path,
+                "file_hash": m.file_hash,
+                "uploaded_at": m.uploaded_at.isoformat() if m.uploaded_at else None,
+            }
+            for m in materials
+        ],
     }
 
 
-def get_all_courses():
-    return load_courses()
+def get_course_materials(db: Session, course_id: str):
+    materials = db.query(CourseMaterial).filter(CourseMaterial.course_id == course_id).all()
+    return [
+        {
+            "original_filename": m.original_filename,
+            "stored_path": m.stored_path,
+            "file_hash": m.file_hash,
+            "uploaded_at": m.uploaded_at.isoformat() if m.uploaded_at else None,
+        }
+        for m in materials
+    ]
 
 
-def get_course_by_id(course_id: str):
-    courses = load_courses()
-    return courses.get(course_id)
-
-
-def get_course_materials(course_id: str):
-    courses = load_courses()
-    if course_id not in courses:
-        return []
-    return courses[course_id].get("materials", [])
-
-
-def get_course_materials_text(course_id: str):
-    """
-    Still available for compatibility, but later we should reduce reliance on this
-    and use RAG retrieval instead of dumping all raw text into chat state.
-    """
-    courses = load_courses()
-    if course_id not in courses:
-        return ""
-
-    materials = courses[course_id].get("materials", [])
+def get_course_materials_text(db: Session, course_id: str):
+    materials = db.query(CourseMaterial).filter(CourseMaterial.course_id == course_id).all()
     all_text = []
 
     for material in materials:
-        path = material.get("stored_path")
+        path = material.stored_path
         if path and os.path.exists(path):
             with open(path, "r", encoding="utf-8") as f:
                 text = f.read()
-                all_text.append(f"\n\n--- {material['original_filename']} ---\n{text}")
+                all_text.append(f"\n\n--- {material.original_filename} ---\n{text}")
 
     return "".join(all_text)
 
 
-def get_course_display_options():
-    courses = load_courses()
-    options = {}
-    for course_id, course_data in courses.items():
-        label = f"{course_data['course_name']} — {course_data['teacher_username']}"
-        options[label] = course_id
-    return options
+def get_course_display_options(db: Session):
+    courses = db.query(Course).all()
+    return {
+        f"{course.course_name} — {course.teacher_username}": course.course_id
+        for course in courses
+    }
 
 
-def delete_material_from_course(course_id: str, file_hash: str):
-    """
-    Deletes a material record from the course and removes the stored text file if it exists.
-    Returns (success, message, removed_material or None)
-    """
-    courses = load_courses()
+def delete_material_from_course(db: Session, course_id: str, file_hash: str):
+    material = db.query(CourseMaterial).filter(
+        CourseMaterial.course_id == course_id,
+        CourseMaterial.file_hash == file_hash
+    ).first()
 
-    if course_id not in courses:
-        return False, "Course not found.", None
-
-    materials = courses[course_id].get("materials", [])
-    target = None
-
-    for material in materials:
-        if material.get("file_hash") == file_hash:
-            target = material
-            break
-
-    if not target:
+    if not material:
         return False, "Material not found.", None
 
-    path = target.get("stored_path")
-    if path and os.path.exists(path):
+    removed = {
+        "original_filename": material.original_filename,
+        "stored_path": material.stored_path,
+        "file_hash": material.file_hash,
+        "uploaded_at": material.uploaded_at.isoformat() if material.uploaded_at else None,
+    }
+
+    if material.stored_path and os.path.exists(material.stored_path):
         try:
-            os.remove(path)
+            os.remove(material.stored_path)
         except Exception as e:
             return False, f"Could not delete stored file: {e}", None
 
-    courses[course_id]["materials"] = [
-        m for m in materials if m.get("file_hash") != file_hash
-    ]
+    db.delete(material)
+    db.commit()
 
-    save_courses(courses)
-    return True, "Material deleted successfully.", target
+    return True, "Material deleted successfully.", removed

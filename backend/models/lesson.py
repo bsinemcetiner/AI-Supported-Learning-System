@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
@@ -17,6 +17,8 @@ class Lesson(Base):
     file_hash = Column(String, nullable=False)
 
     uploaded_at = Column(DateTime, default=datetime.utcnow)
+
+    teacher_feedback_history = Column(JSON, default=list)
 
     custom_prompt = Column(Text, default="")
     preview_question = Column(Text, default="")
