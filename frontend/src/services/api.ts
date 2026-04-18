@@ -7,7 +7,7 @@ import type {
   Material,
 } from "../types";
 
-const BASE = "/api";
+const BASE = "http://127.0.0.1:8011/api";
 
 export type Lesson = {
   lesson_id: string;

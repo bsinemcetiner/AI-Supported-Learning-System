@@ -23,11 +23,7 @@ from services.lesson_manager import (
     get_student_visible_explanation,
 )
 from services.rag_manager import RAGManager
-from services.chat_manager import (
-    load_all_chats,
-    create_new_chat,
-    append_message,
-)
+from models import Chat, Message, User
 from services import ai_engine
 
 router = APIRouter(prefix="/lessons", tags=["lessons"])
@@ -310,22 +306,35 @@ def start_lesson_chat(
         )
 
     username = current_user["username"]
-    all_chats = load_all_chats(username)
 
-    chat_id = create_new_chat(
-        username=username,
-        all_chats=all_chats,
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    chat = Chat(
+        title=lesson.get("week_title", "Lesson Chat"),
+        user_id=user.id,
         course_id=lesson.get("course_id"),
         lesson_id=lesson_id,
-        title=lesson.get("week_title", "Lesson Chat"),
         mode=body.mode,
         tone=body.tone,
     )
 
-    append_message(username, all_chats, chat_id, "assistant", approved_text)
+    db.add(chat)
+    db.commit()
+    db.refresh(chat)
+
+    msg = Message(
+        chat_id=chat.id,
+        sender="assistant",
+        content=approved_text
+    )
+
+    db.add(msg)
+    db.commit()
 
     return {
-        "chat_id": chat_id,
+        "chat_id": str(chat.id),
         "lesson_id": lesson_id,
         "week_title": lesson.get("week_title"),
     }

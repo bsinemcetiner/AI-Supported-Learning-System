@@ -8,7 +8,6 @@ psycopg2-binary
 alembic
 pypdf
 python-multipart
-chromadb
 sentence-transformers
 ollama
 python-dotenv
