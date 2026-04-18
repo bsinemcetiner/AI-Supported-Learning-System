@@ -9,5 +9,5 @@ alembic
 pypdf
 python-multipart
 sentence-transformers
-ollama
+groq
 python-dotenv

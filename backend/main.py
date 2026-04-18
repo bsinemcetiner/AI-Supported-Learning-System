@@ -9,6 +9,9 @@ from api.routes.lessons import router as lessons_router
 from database import Base, engine
 from models import User, Course, Lesson, Chat, Message, Material, CourseMaterial
 
+from dotenv import load_dotenv
+load_dotenv(dotenv_path=".env")
+
 app = FastAPI(title="AI Supported Learning System API", version="1.0.0")
 
 app.add_middleware(

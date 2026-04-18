@@ -1,5 +1,6 @@
+import os
 import re
-import ollama
+from groq import Groq
 
 
 def _normalize_latex(text: str) -> str:
@@ -31,6 +32,18 @@ def _trim_text(text: str, max_chars: int = 12000) -> str:
         return text
 
     return text[:max_chars] + "\n\n[Context truncated for length.]"
+
+
+def _get_client() -> Groq:
+    api_key = os.getenv("GROQ_API_KEY", "").strip()
+    if not api_key:
+        raise ValueError("GROQ_API_KEY bulunamadı veya boş. .env içine gerçek anahtarı eklemelisin.")
+    return Groq(api_key=api_key)
+
+
+def _get_model_name() -> str:
+    # İstersen .env içine GROQ_MODEL de koyabilirsin
+    return os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
 
 
 def _get_style_instruction(teaching_style: str) -> str:
@@ -113,7 +126,6 @@ BAD: "Frequency refers to the rate of oscillation of a periodic phenomenon."
 
 
 def _get_mode_instruction(mode: str) -> str:
-
     style_mode_bridge = """
 STYLE + MODE NOTE:
 Your style controls HOW you phrase things. Your mode controls WHAT you do.
@@ -146,38 +158,20 @@ RULES — never break these:
 4. Do NOT use bullet points or headers.
 5. After the hint, stop completely. Do not add more.
 6. Only reveal more if the student replies and asks for another hint.
-
-Apply your STYLE to the wording of the hint — but do not add extra sentences.
-
-GOOD hint (Friendly Mentor style): "Here's a nudge — think about what the air actually feels like after dark. Does that spark anything?"
-GOOD hint (Encouraging Coach style): "You're so close! Just think: what does the night air feel like compared to daytime?"
-BAD hint: "At night, cooler air near the ground causes refraction, bending sound waves downward." ← This IS the answer.
 """,
 
         "socratic": """
 You are a STRICT Socratic tutor. Your only job is to ask ONE question. You never explain anything.
 
-ABSOLUTE RULES — these override everything else, including style:
-1. NEVER explain the concept. Not even one sentence of explanation.
-2. Ask exactly ONE short question per response. Nothing more.
+ABSOLUTE RULES:
+1. NEVER explain the concept.
+2. Ask exactly ONE short question per response.
 3. Your question must NOT contain or imply the answer.
 4. Maximum response length: 2 sentences total.
 5. Do NOT use bullet points, headers, or lists.
 6. If the student answers correctly, ask them to go one step deeper.
 7. If the student answers incorrectly, ask WHY they think that — do not correct.
 8. If the student says "just tell me" or "give the full answer", switch to direct explanation.
-
-Apply your STYLE only to how the question is worded — not to add explanations.
-
-GOOD (Friendly Mentor): "Ooh, interesting! Have you noticed how the air feels different at night compared to daytime?"
-GOOD (Encouraging Coach): "Great question! What do you think actually changes in the environment after the sun goes down?"
-GOOD (Professional Tutor): "Before we proceed — what environmental factors do you think shift after sunset?"
-GOOD (Funny YouTuber): "Okay but wait — what even changes out there when the sun clocks out for the night?"
-
-BAD (forbidden — these all explain or imply the answer):
-→ "What changes in the air — like temperature or humidity — have you noticed?" ← hints at the answer
-→ "Think about how cooler air near the ground bends sound..." ← explains the answer
-→ "At night the air cools off near the ground..." ← direct explanation, completely forbidden
 """,
 
         "quiz_me": """
@@ -190,11 +184,6 @@ RULES:
 4. If the student is correct, acknowledge briefly and ask a follow-up.
 5. If the student is wrong, give a small hint — do NOT give the full answer immediately.
 6. Keep responses short and focused.
-
-Apply your STYLE to how you ask and respond — but do not add explanations before the student answers.
-
-GOOD (Friendly Mentor): "Okay, let's see what you've got! What's the difference between frequency and amplitude?"
-GOOD (Encouraging Coach): "Alright, brain cells activate! What unit do we use to measure frequency? You've got this!"
 """,
     }
 
@@ -223,23 +212,14 @@ def _get_first_turn_instruction(mode: str) -> str:
     return instructions.get(mode, "")
 
 
-# ──────────────────────────────────────────────
-# NEW: Build teacher feedback block for system prompt
-# ──────────────────────────────────────────────
 def _build_teacher_feedback_block(
     custom_prompt: str = "",
     feedback_history: list = None,
 ) -> str:
-    """
-    Converts teacher's custom_prompt and feedback_history into a
-    system-level instruction block injected into the AI prompt.
-    """
     parts = []
 
     if custom_prompt and custom_prompt.strip():
-        parts.append(
-            f"TEACHER'S CUSTOM INSTRUCTION:\n{custom_prompt.strip()}"
-        )
+        parts.append(f"TEACHER'S CUSTOM INSTRUCTION:\n{custom_prompt.strip()}")
 
     if feedback_history:
         cleaned = [f.strip() for f in feedback_history if f and f.strip()]
@@ -259,7 +239,7 @@ INSTRUCTOR PERSONALIZATION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {block}
 
-These are direct instructions from the course instructor. 
+These are direct instructions from the course instructor.
 Follow them strictly and consistently throughout your response.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """.strip()
@@ -276,7 +256,6 @@ def _build_system_instruction(
     mode_instruction = _get_mode_instruction(mode)
     cleaned_context = _trim_text(context, 12000)
 
-    # NEW: build teacher feedback block
     teacher_block = _build_teacher_feedback_block(
         custom_prompt=custom_prompt,
         feedback_history=feedback_history or [],
@@ -304,7 +283,7 @@ TEACHING MODE:
 
 IMPORTANT BEHAVIOR RULES:
 1. Always reply in the user's language.
-2. Speak naturally, like a real teacher talking to a student — not like a textbook or a chatbot. Use flowing sentences, natural transitions, and occasional acknowledgments like "Good thinking" or "That's a fair point." Avoid dry, robotic phrasing.
+2. Speak naturally, like a real teacher talking to a student — not like a textbook or a chatbot.
 3. Be educational, clear, and honest.
 4. Use the provided course context when it is relevant.
 5. If the course context clearly contains the answer, use it carefully — but follow your teaching mode rules above.
@@ -312,15 +291,13 @@ IMPORTANT BEHAVIOR RULES:
    - Do NOT say "this topic is not in the materials" or "the PDF doesn't cover this".
    - Instead, briefly acknowledge it wasn't covered in the course, then give a helpful general explanation.
    - After explaining, gently bring the student back to the course topic.
-   - Example: "We haven't covered this in the course materials, but generally speaking... Now, going back to what we've been studying..."
-   - Never leave the student without an answer just because the PDF doesn't mention it.
-7. Never fabricate or misrepresent course content — be honest but always helpful.
+7. Never fabricate or misrepresent course content.
 8. If the user asks about math, you may use LaTeX with $ or $$.
 9. Do not use <br> tags.
 10. Keep the answer readable and natural.
 11. If the user is greeting, thanking, or making small talk, respond naturally without forcing course context.
-12. In socratic mode, ask ONE question per turn. Never explain. Never teach.
-13. In hint_first mode, give only ONE nudge per turn. Do not explain the concept.
+12. In socratic mode, ask ONE question per turn. Never explain.
+13. In hint_first mode, give only ONE nudge per turn.
 14. If the student has not answered yet, do not continue solving multiple steps at once.
 15. If the user explicitly asks for the complete answer, you may become direct.
 {context_usage_note}
@@ -377,6 +354,10 @@ def _build_extra_messages(mode: str, is_first_turn: bool) -> list:
     return extra_messages
 
 
+def _build_messages(system_instruction: str, extra_messages: list, messages: list) -> list:
+    return [{"role": "system", "content": system_instruction}] + extra_messages + messages
+
+
 def generate_ai_response(
     messages,
     context,
@@ -385,9 +366,6 @@ def generate_ai_response(
     custom_prompt: str = "",
     feedback_history: list = None,
 ):
-    """
-    Non-streaming response. Supports teacher custom_prompt and feedback_history.
-    """
     system_instruction = _build_system_instruction(
         context=context,
         teaching_style=teaching_style,
@@ -398,16 +376,17 @@ def generate_ai_response(
 
     user_messages = [m for m in messages if m.get("role") == "user"]
     is_first_turn = len(user_messages) <= 1
-
     extra_messages = _build_extra_messages(mode, is_first_turn)
 
-    response = ollama.chat(
-        model="gpt-oss:120b-cloud",
-        messages=[{"role": "system", "content": system_instruction}] + extra_messages + messages,
+    client = _get_client()
+    response = client.chat.completions.create(
+        model=_get_model_name(),
+        messages=_build_messages(system_instruction, extra_messages, messages),
+        temperature=0.4,
         stream=False,
     )
 
-    content = response["message"]["content"]
+    content = response.choices[0].message.content or ""
     return _normalize_latex(content)
 
 
@@ -420,36 +399,8 @@ def stream_ai_response(
     custom_prompt: str = "",
     feedback_history: list = None,
 ):
-    """
-    Streaming response. Supports teacher custom_prompt and feedback_history.
-    """
-    visual_description = ""
-
-    if image_data:
-        try:
-            vision_response = ollama.chat(
-                model="llama3.2-vision",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": "Analyze this image in detail. Extract text, code, labels, and explain any diagrams.",
-                        "images": [image_data]
-                    }
-                ],
-                stream=False,
-            )
-            visual_description = (
-                "\n\n[Information extracted from uploaded image]\n"
-                + vision_response["message"]["content"]
-            )
-        except Exception:
-            visual_description = (
-                "\n\n[Image analysis could not be completed due to a system/resource issue.]"
-            )
-
+    # Şimdilik Groq tarafında image analizi eklenmediği için bunu pas geçiyoruz.
     combined_context = context or ""
-    if visual_description:
-        combined_context = (combined_context + "\n\n---\n\n" + visual_description).strip()
 
     system_instruction = _build_system_instruction(
         context=combined_context,
@@ -461,22 +412,19 @@ def stream_ai_response(
 
     user_messages = [m for m in messages if m.get("role") == "user"]
     is_first_turn = len(user_messages) <= 1
-
     extra_messages = _build_extra_messages(mode, is_first_turn)
 
-    stream = ollama.chat(
-        model="gpt-oss:120b-cloud",
-        messages=[{"role": "system", "content": system_instruction}] + extra_messages + messages,
+    client = _get_client()
+    stream = client.chat.completions.create(
+        model=_get_model_name(),
+        messages=_build_messages(system_instruction, extra_messages, messages),
+        temperature=0.4,
         stream=True,
     )
 
     full_answer = ""
     for chunk in stream:
-        piece = chunk["message"]["content"]
-        full_answer += piece
-        yield _normalize_latex(full_answer)
-
-    def fix_latex(text: str) -> str:
-        text = text.replace("bmatrixrix", "bmatrix")
-        text = text.replace("\\$", "$")
-        return text
+        delta = chunk.choices[0].delta.content or ""
+        if delta:
+            full_answer += delta
+            yield _normalize_latex(full_answer)
