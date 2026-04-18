@@ -13,8 +13,7 @@ from services.rag_manager import RAGManager
 from services import ai_engine
 
 router = APIRouter(prefix="/chats", tags=["chats"])
-rag = None  # Qdrant kapalıysa şimdilik None bırak
-
+rag = RAGManager()
 
 def _get_lesson_ai_params(lesson_id: Optional[int]) -> dict:
     return {"custom_prompt": "", "feedback_history": []}
