@@ -44,6 +44,54 @@ def list_all_courses(
     return get_all_courses(db)
 
 
+# ── GET /courses/assigned ── öğrencinin atanmış kursları
+@router.get("/assigned")
+def list_assigned_courses(
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    from models.student_course import StudentCourseAssignment
+    from models.course import Course
+    from models.user import User
+    from models import CourseMaterial
+
+    username = current_user["username"] if isinstance(current_user, dict) else current_user.username
+    role = current_user["role"] if isinstance(current_user, dict) else current_user.role
+
+    if role == "teacher":
+        return get_teacher_courses(db, username)
+
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        return {}
+
+    assignments = db.query(StudentCourseAssignment).filter_by(student_id=user.id).all()
+    course_ids = [a.course_id for a in assignments]
+
+    if not course_ids:
+        return {}
+
+    courses = db.query(Course).filter(Course.course_id.in_(course_ids)).all()
+
+    result = {}
+    for c in courses:
+        materials = db.query(CourseMaterial).filter(CourseMaterial.course_id == c.course_id).all()
+        result[c.course_id] = {
+            "course_id": c.course_id,
+            "course_name": c.course_name,
+            "teacher_username": c.teacher_username,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+            "materials": [
+                {
+                    "original_filename": m.original_filename,
+                    "stored_path": m.stored_path,
+                    "file_hash": m.file_hash,
+                    "uploaded_at": m.uploaded_at.isoformat() if m.uploaded_at else None,
+                }
+                for m in materials
+            ],
+        }
+    return result
 # ── GET /courses/mine ── öğretmenin kendi kursları
 @router.get("/mine")
 def list_my_courses(

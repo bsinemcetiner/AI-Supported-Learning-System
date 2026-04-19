@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   fetchAllStudents,
+  fetchAllTeachers,
   fetchAllCourses,
   fetchStudentCourses,
   assignCourse,
@@ -9,28 +10,38 @@ import {
   getAdminToken,
 } from "../services/api";
 
-interface Student {
+interface Person {
   id: number;
   username: string;
-  email: string;
+  full_name: string;
 }
 
 interface Course {
-  id: number;
+  id: string;
   title: string;
+  teacher: string;
 }
 
-export default function AdminDashboardPage() {
-  const [students, setStudents] = useState<Student[]>([]);
+interface Props {
+  onLogout: () => void;
+}
+
+type ActiveTab = "students" | "teachers";
+
+export default function AdminDashboardPage({ onLogout }: Props) {
+  const [activeTab, setActiveTab] = useState<ActiveTab>("students");
+  const [students, setStudents] = useState<Person[]>([]);
+  const [teachers, setTeachers] = useState<Person[]>([]);
   const [allCourses, setAllCourses] = useState<Course[]>([]);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<Person | null>(null);
+  const [selectedTeacher, setSelectedTeacher] = useState<Person | null>(null);
   const [assignedCourses, setAssignedCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
     if (!getAdminToken()) {
-      window.location.href = "/";
+      onLogout();
       return;
     }
     loadData();
@@ -38,15 +49,20 @@ export default function AdminDashboardPage() {
 
   const loadData = async () => {
     try {
-      const [s, c] = await Promise.all([fetchAllStudents(), fetchAllCourses()]);
+      const [s, t, c] = await Promise.all([
+        fetchAllStudents(),
+        fetchAllTeachers(),
+        fetchAllCourses(),
+      ]);
       setStudents(s);
+      setTeachers(t);
       setAllCourses(c);
     } catch {
-      setMessage("Veri yüklenemedi");
+      setMessage("Failed to load data.");
     }
   };
 
-  const selectStudent = async (student: Student) => {
+  const selectStudent = async (student: Person) => {
     setSelectedStudent(student);
     setMessage("");
     try {
@@ -57,14 +73,19 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleAssign = async (courseId: number) => {
+  const selectTeacher = (teacher: Person) => {
+    setSelectedTeacher(teacher);
+    setMessage("");
+  };
+
+  const handleAssign = async (courseId: string) => {
     if (!selectedStudent) return;
     setLoading(true);
     try {
       await assignCourse(selectedStudent.id, courseId);
       const courses = await fetchStudentCourses(selectedStudent.id);
       setAssignedCourses(courses);
-      setMessage("Kurs atandı ✓");
+      setMessage("Course assigned successfully ✓");
     } catch (e: any) {
       setMessage(e.message);
     } finally {
@@ -72,14 +93,14 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleRemove = async (courseId: number) => {
+  const handleRemove = async (courseId: string) => {
     if (!selectedStudent) return;
     setLoading(true);
     try {
       await removeCourse(selectedStudent.id, courseId);
       const courses = await fetchStudentCourses(selectedStudent.id);
       setAssignedCourses(courses);
-      setMessage("Kurs kaldırıldı ✓");
+      setMessage("Course removed successfully ✓");
     } catch (e: any) {
       setMessage(e.message);
     } finally {
@@ -89,72 +110,161 @@ export default function AdminDashboardPage() {
 
   const handleLogout = () => {
     adminLogout();
-    window.location.href = "/";
+    onLogout();
   };
 
-  const isAssigned = (courseId: number) =>
+  const isAssigned = (courseId: string) =>
     assignedCourses.some((c) => c.id === courseId);
+
+  // Teacher'ın kursları
+  const teacherCourses = selectedTeacher
+    ? allCourses.filter((c) => c.teacher === selectedTeacher.username)
+    : [];
 
   return (
     <div style={styles.page}>
       <div style={styles.header}>
-        <h1 style={styles.headerTitle}>🛡 Admin Paneli</h1>
+        <h1 style={styles.headerTitle}>🛡 Admin Panel</h1>
         <button style={styles.logoutBtn} onClick={handleLogout}>
-          Çıkış Yap
+          Sign Out
         </button>
       </div>
 
       <div style={styles.body}>
+        {/* Left Panel */}
         <div style={styles.panel}>
-          <h3 style={styles.panelTitle}>Öğrenciler</h3>
-          {students.length === 0 && (
-            <p style={styles.empty}>Kayıtlı öğrenci yok</p>
-          )}
-          {students.map((s) => (
-            <div
-              key={s.id}
-              style={{
-                ...styles.listItem,
-                ...(selectedStudent?.id === s.id ? styles.listItemActive : {}),
+          <div style={styles.tabBar}>
+            <button
+              style={{ ...styles.tabBtn, ...(activeTab === "students" ? styles.tabBtnActive : {}) }}
+              onClick={() => {
+                setActiveTab("students");
+                setSelectedTeacher(null);
+                setMessage("");
               }}
-              onClick={() => selectStudent(s)}
             >
-              <span style={styles.studentName}>{s.username}</span>
-              <span style={styles.studentEmail}>{s.email}</span>
-            </div>
-          ))}
+              🎓 Students ({students.length})
+            </button>
+            <button
+              style={{ ...styles.tabBtn, ...(activeTab === "teachers" ? styles.tabBtnActive : {}) }}
+              onClick={() => {
+                setActiveTab("teachers");
+                setSelectedStudent(null);
+                setMessage("");
+              }}
+            >
+              🏫 Teachers ({teachers.length})
+            </button>
+          </div>
+
+          {activeTab === "students" && (
+            <>
+              {students.length === 0 && <p style={styles.empty}>No students found</p>}
+              {students.map((s) => (
+                <div
+                  key={s.id}
+                  style={{
+                    ...styles.listItem,
+                    ...(selectedStudent?.id === s.id ? styles.listItemActive : {}),
+                  }}
+                  onClick={() => selectStudent(s)}
+                >
+                  <span style={styles.personName}>{s.username}</span>
+                  <span style={styles.personSub}>{s.full_name}</span>
+                </div>
+              ))}
+            </>
+          )}
+
+          {activeTab === "teachers" && (
+            <>
+              {teachers.length === 0 && <p style={styles.empty}>No teachers found</p>}
+              {teachers.map((t) => (
+                <div
+                  key={t.id}
+                  style={{
+                    ...styles.listItem,
+                    ...(selectedTeacher?.id === t.id ? styles.listItemActive : {}),
+                  }}
+                  onClick={() => selectTeacher(t)}
+                >
+                  <span style={styles.personName}>{t.username}</span>
+                  <span style={styles.personSub}>{t.full_name}</span>
+                </div>
+              ))}
+            </>
+          )}
         </div>
 
+        {/* Right Panel */}
         <div style={styles.panel}>
-          {!selectedStudent ? (
+          {activeTab === "teachers" ? (
+            !selectedTeacher ? (
+              <div style={styles.placeholder}>
+                <p>← Select a teacher to view their courses</p>
+              </div>
+            ) : (
+              <>
+                <h3 style={styles.panelTitle}>
+                  🏫 {selectedTeacher.username} — Courses
+                </h3>
+                {teacherCourses.length === 0 ? (
+                  <p style={styles.empty}>This teacher has no courses yet</p>
+                ) : (
+                  teacherCourses.map((course) => (
+                    <div key={course.id} style={styles.courseRow}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                        <span style={styles.courseTitle}>{course.title}</span>
+                        <span style={styles.courseTeacher}>👤 {course.teacher}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </>
+            )
+          ) : !selectedStudent ? (
             <div style={styles.placeholder}>
-              <p>← Sol taraftan bir öğrenci seç</p>
+              <p>← Select a student from the left panel</p>
             </div>
           ) : (
             <>
               <h3 style={styles.panelTitle}>
-                {selectedStudent.username} — Kurs Atamaları
+                🎓 {selectedStudent.username} — Course Assignments
               </h3>
-              {message && <p style={styles.message}>{message}</p>}
+              {message && (
+                <p style={{
+                  ...styles.message,
+                  background: message.includes("✓") ? "#1a2e05" : "#2d1515",
+                  color: message.includes("✓") ? "#a3e635" : "#f87171",
+                }}>
+                  {message}
+                </p>
+              )}
               {allCourses.length === 0 && (
-                <p style={styles.empty}>Kurs bulunamadı</p>
+                <p style={styles.empty}>No courses found</p>
               )}
               {allCourses.map((course) => {
                 const assigned = isAssigned(course.id);
                 return (
-                  <div key={course.id} style={styles.courseRow}>
-                    <span style={styles.courseTitle}>{course.title}</span>
+                  <div key={course.id} style={{
+                    ...styles.courseRow,
+                    ...(assigned ? { borderColor: "#6366f1", background: "#0f0f1a" } : {}),
+                  }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                      <span style={styles.courseTitle}>{course.title}</span>
+                      <span style={styles.courseTeacher}>👤 {course.teacher}</span>
+                    </div>
                     <button
                       style={{
                         ...styles.actionBtn,
                         background: assigned ? "#ef4444" : "#22c55e",
+                        opacity: loading ? 0.6 : 1,
                       }}
                       onClick={() =>
                         assigned ? handleRemove(course.id) : handleAssign(course.id)
                       }
                       disabled={loading}
                     >
-                      {assigned ? "Kaldır" : "Ata"}
+                      {assigned ? "Remove" : "Assign"}
                     </button>
                   </div>
                 );
@@ -214,6 +324,27 @@ const styles: Record<string, React.CSSProperties> = {
     overflowY: "auto",
     maxHeight: "calc(100vh - 120px)",
   },
+  tabBar: {
+    display: "flex",
+    gap: "0.5rem",
+    marginBottom: "0.5rem",
+  },
+  tabBtn: {
+    flex: 1,
+    padding: "0.5rem",
+    borderRadius: "8px",
+    border: "1px solid #334155",
+    background: "#0f172a",
+    color: "#64748b",
+    cursor: "pointer",
+    fontSize: "0.8rem",
+    fontWeight: 600,
+  },
+  tabBtnActive: {
+    background: "#1e1b4b",
+    border: "1px solid #6366f1",
+    color: "#a5b4fc",
+  },
   panelTitle: {
     fontSize: "1rem",
     fontWeight: 700,
@@ -236,11 +367,11 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid #6366f1",
     background: "#1e1b4b",
   },
-  studentName: {
+  personName: {
     fontWeight: 600,
     fontSize: "0.95rem",
   },
-  studentEmail: {
+  personSub: {
     fontSize: "0.75rem",
     color: "#64748b",
     marginTop: "2px",
@@ -253,10 +384,16 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "8px",
     background: "#0f172a",
     border: "1px solid #334155",
+    transition: "all 0.15s",
   },
   courseTitle: {
     fontSize: "0.9rem",
-    fontWeight: 500,
+    fontWeight: 600,
+    color: "#f1f5f9",
+  },
+  courseTeacher: {
+    fontSize: "0.75rem",
+    color: "#64748b",
   },
   actionBtn: {
     padding: "0.4rem 0.9rem",
@@ -266,6 +403,8 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     fontSize: "0.825rem",
     fontWeight: 600,
+    minWidth: "75px",
+    transition: "opacity 0.15s",
   },
   placeholder: {
     flex: 1,
@@ -280,10 +419,8 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "0.875rem",
   },
   message: {
-    color: "#a3e635",
     fontSize: "0.875rem",
-    padding: "0.5rem",
-    background: "#1a2e05",
+    padding: "0.5rem 0.75rem",
     borderRadius: "6px",
   },
 };

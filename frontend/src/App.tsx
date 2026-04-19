@@ -7,11 +7,13 @@ import AuthPage from "./pages/AuthPage";
 import DashboardPage from "./pages/DashboardPage";
 import ChatPage from "./pages/ChatPage";
 import TeacherPage from "./pages/TeacherPage";
+import AdminDashboardPage from "./pages/AdminDashboardPage";
 
 import "./styles/theme.css";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [chatMap, setChatMap] = useState<ChatMap>({});
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [streaming, setStreaming] = useState(false);
@@ -19,14 +21,64 @@ export default function App() {
   const [teachingTone, setTeachingTone] = useState<TeachingTone>("Professional Tutor");
 
   useEffect(() => {
+    if (isAdmin) return;
     const t = tokenStore.get();
     if (!t) return;
-
     chatsApi
       .getAll()
       .then((data) => setChatMap(data))
       .catch(() => tokenStore.clear());
   }, []);
+
+  useEffect(() => {
+    const starter = sessionStorage.getItem("starter_message");
+
+    if (activeChatId && starter) {
+      sessionStorage.removeItem("starter_message");
+
+      let i = 0;
+
+      setChatMap(prev => ({
+        ...prev,
+        [activeChatId]: {
+          ...prev[activeChatId],
+          messages: [{ role: "assistant", content: "" }]
+        }
+      }));
+
+      const interval = setInterval(() => {
+        i += 4;
+
+        setChatMap(prev => {
+          const c = prev[activeChatId];
+          const msgs = [...c.messages];
+          msgs[0] = {
+            role: "assistant",
+            content: starter.slice(0, i)
+          };
+
+          return {
+            ...prev,
+            [activeChatId]: { ...c, messages: msgs }
+          };
+        });
+
+        if (i >= starter.length) clearInterval(interval);
+      }, 18);
+    }
+  }, [activeChatId]);
+
+  useEffect(() => {
+    if (!activeChatId) return;
+
+    const activeChat = chatMap[activeChatId];
+    if (!activeChat) return;
+
+    if (activeChat.mode) setTeachingMode(activeChat.mode);
+    if (activeChat.tone) setTeachingTone(activeChat.tone);
+  }, [activeChatId, chatMap]);
+
+  if (isAdmin) return <AdminDashboardPage onLogout={() => setIsAdmin(false)} />;
 
   async function loadChats() {
     try {
@@ -64,7 +116,6 @@ export default function App() {
     setChatMap((prev) => {
       const current = prev[chat_id];
       const prevMessages = current?.messages ?? [];
-
       return {
         ...prev,
         [chat_id]: {
@@ -89,25 +140,23 @@ export default function App() {
           const current = prev[chat_id];
           const msgs = [...(current?.messages ?? [])];
           const last = msgs[msgs.length - 1];
-
           if (last?.role === "assistant") {
-            msgs[msgs.length - 1] = {
-              ...last,
-              content: (last.content ?? "") + delta,
-            };
+            msgs[msgs.length - 1] = { ...last, content: (last.content ?? "") + delta };
           }
-
-          return {
-            ...prev,
-            [chat_id]: {
-              ...current,
-              messages: msgs,
-            },
-          };
+          return { ...prev, [chat_id]: { ...current, messages: msgs } };
         });
       }
     } catch (e) {
       console.error("Stream error:", e);
+      setChatMap((prev) => {
+        const current = prev[chat_id];
+        const msgs = [...(current?.messages ?? [])];
+        const last = msgs[msgs.length - 1];
+        if (last?.role === "assistant" && !(last.content ?? "").trim()) {
+          msgs[msgs.length - 1] = { ...last, content: "An error occurred while streaming the response." };
+        }
+        return { ...prev, [chat_id]: { ...current, messages: msgs } };
+      });
     } finally {
       setStreaming(false);
       await loadChats();
@@ -120,18 +169,8 @@ export default function App() {
     setChatMap((prev) => {
       const current = prev[chat_id];
       const msgs = [...(current?.messages ?? [])];
-
-      if (msgs.at(-1)?.role === "assistant") {
-        msgs.pop();
-      }
-
-      return {
-        ...prev,
-        [chat_id]: {
-          ...current,
-          messages: [...msgs, { role: "assistant", content: "" }],
-        },
-      };
+      if (msgs.at(-1)?.role === "assistant") msgs.pop();
+      return { ...prev, [chat_id]: { ...current, messages: [...msgs, { role: "assistant", content: "" }] } };
     });
 
     try {
@@ -142,41 +181,36 @@ export default function App() {
           const current = prev[chat_id];
           const msgs = [...(current?.messages ?? [])];
           const last = msgs[msgs.length - 1];
-
           if (last?.role === "assistant") {
-            msgs[msgs.length - 1] = {
-              ...last,
-              content: (last.content ?? "") + delta,
-            };
+            msgs[msgs.length - 1] = { ...last, content: (last.content ?? "") + delta };
           }
-
-          return {
-            ...prev,
-            [chat_id]: {
-              ...current,
-              messages: msgs,
-            },
-          };
+          return { ...prev, [chat_id]: { ...current, messages: msgs } };
         });
       }
     } catch (e) {
       console.error("Regenerate error:", e);
+      setChatMap((prev) => {
+        const current = prev[chat_id];
+        const msgs = [...(current?.messages ?? [])];
+        const last = msgs[msgs.length - 1];
+        if (last?.role === "assistant" && !(last.content ?? "").trim()) {
+          msgs[msgs.length - 1] = { ...last, content: "An error occurred while regenerating the response." };
+        }
+        return { ...prev, [chat_id]: { ...current, messages: msgs } };
+      });
     } finally {
       setStreaming(false);
       await loadChats();
     }
   }
 
-async function handleModeChange(mode: TeachingMode) {
+  async function handleModeChange(mode: TeachingMode) {
     setTeachingMode(mode);
     if (activeChatId) {
       const token = tokenStore.get();
       await fetch(`/api/chats/${activeChatId}/settings`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ mode }),
       });
       await loadChats();
@@ -189,10 +223,7 @@ async function handleModeChange(mode: TeachingMode) {
       const token = tokenStore.get();
       await fetch(`/api/chats/${activeChatId}/settings`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ tone }),
       });
       await loadChats();
@@ -200,7 +231,7 @@ async function handleModeChange(mode: TeachingMode) {
   }
 
   if (!user) {
-    return <AuthPage onLogin={handleLogin} />;
+    return <AuthPage onLogin={handleLogin} onAdminLogin={() => setIsAdmin(true)} />;
   }
 
   const activeChat = activeChatId ? chatMap[activeChatId] : null;

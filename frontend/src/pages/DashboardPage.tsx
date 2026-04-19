@@ -35,7 +35,7 @@ export default function DashboardPage({
 
   useEffect(() => {
     coursesApi
-      .getAll()
+     .getAssigned()
       .then(setCourseMap)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));

@@ -179,9 +179,30 @@ def send_message(
     if rag is not None:
         try:
             context = rag.query_context(question=body.content, course_id=chat.course_id)
+            if not context.strip():
+                def blocked_stream():
+                    msg = "This question is outside the uploaded lesson materials."
+                    yield f"data: {json.dumps({'delta': msg})}\n\n"
+                    yield f"data: {json.dumps({'done': True})}\n\n"
+
+                return StreamingResponse(blocked_stream(), media_type="text/event-stream")
         except Exception:
             context = ""
+    if not context.strip():
+        blocked_reply = (
+            "This question is outside the uploaded lesson materials. "
+            "Please ask something related to the course content."
+        )
 
+        assistant_message = Message(
+            chat_id=chat.id,
+            sender="assistant",
+            content=blocked_reply,
+        )
+        db.add(assistant_message)
+        db.commit()
+
+        return {"role": "assistant", "content": blocked_reply}
     if chat.title == "New Chat":
         chat.title = body.content[:40]
         db.commit()

@@ -2,16 +2,17 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
 from services.admin_manager import (
-    authenticate_admin, get_all_students, get_all_courses,
+    authenticate_admin, get_all_students, get_all_teachers, get_all_courses,
     assign_course_to_student, remove_course_from_student,
     get_student_courses
 )
 from schemas.admin import AdminLogin, AssignCourseRequest, RemoveCourseRequest
 import jwt, os
 from datetime import datetime, timedelta
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-
+security = HTTPBearer()
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key")
 
 def create_token(admin_id: int):
@@ -28,11 +29,10 @@ def verify_admin_token(token: str):
         if payload.get("role") != "admin":
             raise HTTPException(status_code=403, detail="Admin değil")
         return payload
-    except:
+    except HTTPException:
+        raise
+    except Exception:
         raise HTTPException(status_code=401, detail="Geçersiz token")
-
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-security = HTTPBearer()
 
 def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(security)):
     return verify_admin_token(credentials.credentials)
@@ -48,17 +48,21 @@ def admin_login(data: AdminLogin, db: Session = Depends(get_db)):
 @router.get("/students")
 def list_students(db: Session = Depends(get_db), admin=Depends(get_current_admin)):
     students = get_all_students(db)
-    return [{"id": s.id, "username": s.username, "email": s.email} for s in students]
+    return [{"id": s.id, "username": s.username, "full_name": getattr(s, 'full_name', s.username)} for s in students]
+
+@router.get("/teachers")
+def list_teachers(db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    teachers = get_all_teachers(db)
+    return [{"id": t.id, "username": t.username, "full_name": getattr(t, 'full_name', t.username)} for t in teachers]
 
 @router.get("/courses")
 def list_courses(db: Session = Depends(get_db), admin=Depends(get_current_admin)):
     courses = get_all_courses(db)
-    return [{"id": c.course_id, "title": c.course_name} for c in courses]
-
+    return [{"id": c.course_id, "title": c.course_name, "teacher": c.teacher_username} for c in courses]
 @router.get("/students/{student_id}/courses")
 def student_courses(student_id: int, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
     courses = get_student_courses(db, student_id)
-    return [{"id": c.course_id, "title": c.course_name} for c in courses]
+    return [{"id": c.course_id, "title": c.course_name, "teacher": c.teacher_username} for c in courses]
 
 @router.post("/assign")
 def assign(data: AssignCourseRequest, db: Session = Depends(get_db), admin=Depends(get_current_admin)):

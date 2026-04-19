@@ -7,7 +7,7 @@ import type {
   Material,
 } from "../types";
 
-const BASE = "http://127.0.0.1:8011/api";
+const BASE = "http://127.0.0.1:8000/api";
 
 export type Lesson = {
   lesson_id: string;
@@ -134,7 +134,7 @@ export const courses = {
   getAll: () => request<Record<string, Course>>("/courses/"),
 
   getMine: () => request<Record<string, Course>>("/courses/mine"),
-
+getAssigned: () => request<Record<string, Course>>("/courses/assigned"),
   create: (course_name: string) =>
     request<{ course_id: string }>("/courses/", {
       method: "POST",
@@ -300,4 +300,73 @@ export const chats = {
 
   regenerateStream: (chat_id: string) =>
     streamRequest(`/chats/${chat_id}/regenerate`, {}),
+};
+
+// ===== ADMIN =====
+const ADMIN_TOKEN_KEY = "admin_token";
+
+export const adminLogin = async (username: string, password: string) => {
+  const res = await fetch(`${BASE}/admin/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+  if (!res.ok) throw new Error("Hatalı kullanıcı adı veya şifre");
+  const data = await res.json();
+  localStorage.setItem(ADMIN_TOKEN_KEY, data.access_token);
+  return data;
+};
+
+export const adminLogout = () => localStorage.removeItem(ADMIN_TOKEN_KEY);
+export const getAdminToken = () => localStorage.getItem(ADMIN_TOKEN_KEY);
+
+const adminHeaders = () => ({
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${getAdminToken()}`,
+});
+
+export const fetchAllStudents = async () => {
+  const res = await fetch(`${BASE}/admin/students`, { headers: adminHeaders() });
+  if (!res.ok) throw new Error("Öğrenciler alınamadı");
+  return res.json();
+};
+
+export const fetchAllTeachers = async () => {
+  const res = await fetch(`${BASE}/admin/teachers`, { headers: adminHeaders() });
+  if (!res.ok) throw new Error("Öğretmenler alınamadı");
+  return res.json();
+};
+
+export const fetchAllCourses = async () => {
+  const res = await fetch(`${BASE}/admin/courses`, { headers: adminHeaders() });
+  if (!res.ok) throw new Error("Kurslar alınamadı");
+  return res.json();
+};
+
+export const fetchStudentCourses = async (studentId: number) => {
+  const res = await fetch(`${BASE}/admin/students/${studentId}/courses`, {
+    headers: adminHeaders(),
+  });
+  if (!res.ok) throw new Error("Öğrenci kursları alınamadı");
+  return res.json();
+};
+
+export const assignCourse = async (studentId: number, courseId: string) => {
+  const res = await fetch(`${BASE}/admin/assign`, {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify({ student_id: studentId, course_id: courseId }),
+  });
+  if (!res.ok) throw new Error("Atama başarısız");
+  return res.json();
+};
+
+export const removeCourse = async (studentId: number, courseId: string) => {
+  const res = await fetch(`${BASE}/admin/remove`, {
+    method: "DELETE",
+    headers: adminHeaders(),
+    body: JSON.stringify({ student_id: studentId, course_id: courseId }),
+  });
+  if (!res.ok) throw new Error("Kaldırma başarısız");
+  return res.json();
 };

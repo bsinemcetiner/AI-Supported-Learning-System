@@ -45,7 +45,7 @@ export default function AuthPage({ onLogin, onAdminLogin }: AuthPageProps) {
     setError(""); setSuccess(""); setLoading(true);
     try {
       await authApi.signup(fullName.trim(), signupUser.trim(), signupPass, role);
-      setSuccess(`Account created! You can now log in.`);
+      setSuccess("Account created! You can now log in.");
       setTab("login");
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
@@ -207,7 +207,7 @@ export default function AuthPage({ onLogin, onAdminLogin }: AuthPageProps) {
               opacity: 0.6,
             }}
           >
-            🛡 Admin Girişi
+            🛡 Admin Login
           </button>
         </div>
       </div>
@@ -234,9 +234,9 @@ export default function AuthPage({ onLogin, onAdminLogin }: AuthPageProps) {
           >
             <div style={{ textAlign: "center", marginBottom: "1.25rem" }}>
               <div style={{ fontSize: "2rem", marginBottom: 8 }}>🛡</div>
-              <h2 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: 4 }}>Admin Girişi</h2>
+              <h2 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: 4 }}>Admin Login</h2>
               <p style={{ fontSize: "0.82rem", color: "var(--text-soft)" }}>
-                Sadece yetkili admin erişebilir.
+                Only authorized admins can access this panel.
               </p>
             </div>
 
@@ -245,7 +245,7 @@ export default function AuthPage({ onLogin, onAdminLogin }: AuthPageProps) {
                 <div className="alert alert-error">{adminError}</div>
               )}
               <div>
-                <label className="label">Kullanıcı Adı</label>
+                <label className="label">Username</label>
                 <input
                   className="input"
                   placeholder="admin"
@@ -255,7 +255,7 @@ export default function AuthPage({ onLogin, onAdminLogin }: AuthPageProps) {
                 />
               </div>
               <div>
-                <label className="label">Şifre</label>
+                <label className="label">Password</label>
                 <input
                   className="input"
                   type="password"
@@ -271,7 +271,7 @@ export default function AuthPage({ onLogin, onAdminLogin }: AuthPageProps) {
                 disabled={adminLoading}
                 style={{ width: "100%", padding: "0.7rem", marginTop: 4 }}
               >
-                {adminLoading ? "Giriş yapılıyor…" : "Giriş Yap →"}
+                {adminLoading ? "Signing in…" : "Sign In →"}
               </button>
               <button
                 type="button"
@@ -282,7 +282,7 @@ export default function AuthPage({ onLogin, onAdminLogin }: AuthPageProps) {
                   cursor: "pointer", textAlign: "center",
                 }}
               >
-                İptal
+                Cancel
               </button>
             </form>
           </div>

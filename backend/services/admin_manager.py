@@ -33,6 +33,9 @@ def create_admin(db: Session, username: str, password: str):
 def get_all_students(db: Session):
     return db.query(User).filter(User.role == "student").all()
 
+def get_all_teachers(db: Session):
+    return db.query(User).filter(User.role == "teacher").all()
+
 def get_all_courses(db: Session):
     return db.query(Course).all()
 
