@@ -20,7 +20,11 @@ function getCourseImage(courseName: string): string {
 
 type CourseTab = "lessons" | "materials";
 
-export default function DashboardPage({ onOpenChat, teachingMode, teachingTone }: DashboardPageProps) {
+export default function DashboardPage({
+  onOpenChat,
+  teachingMode,
+  teachingTone,
+}: DashboardPageProps) {
   const [courseMap, setCourseMap] = useState<Record<string, Course>>({});
   const [lessonsMap, setLessonsMap] = useState<Record<string, Record<string, Lesson>>>({});
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
@@ -30,7 +34,8 @@ export default function DashboardPage({ onOpenChat, teachingMode, teachingTone }
   const [error, setError] = useState("");
 
   useEffect(() => {
-    coursesApi.getAll()
+    coursesApi
+      .getAll()
       .then(setCourseMap)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -39,20 +44,37 @@ export default function DashboardPage({ onOpenChat, teachingMode, teachingTone }
   async function openCourse(courseId: string) {
     setSelectedCourseId(courseId);
     setActiveTab("lessons");
+
     if (lessonsMap[courseId]) return;
+
     setLessonLoading(true);
     try {
       const data = await lessonsApi.getByCourse(courseId);
       setLessonsMap((prev) => ({ ...prev, [courseId]: data }));
-    } catch (e: any) { setError(e.message); }
-    finally { setLessonLoading(false); }
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLessonLoading(false);
+    }
   }
 
   async function startLessonChat(lessonId: string) {
     try {
-      const { chat_id } = await lessonsApi.startChat(lessonId, teachingMode, teachingTone);
-      onOpenChat(chat_id);
-    } catch (e: any) { setError(e.message); }
+      const data = await lessonsApi.startChat(
+        lessonId,
+        teachingMode,
+        teachingTone
+      );
+
+      sessionStorage.setItem(
+        "starter_message",
+        data.starter_message || ""
+      );
+
+      onOpenChat(data.chat_id);
+    } catch (e: any) {
+      setError(e.message);
+    }
   }
 
   async function startMaterialsChat(courseId: string) {
@@ -64,7 +86,9 @@ export default function DashboardPage({ onOpenChat, teachingMode, teachingTone }
         tone: teachingTone,
       });
       onOpenChat(chat_id);
-    } catch (e: any) { setError(e.message); }
+    } catch (e: any) {
+      setError(e.message);
+    }
   }
 
   if (loading) {
@@ -76,7 +100,13 @@ export default function DashboardPage({ onOpenChat, teachingMode, teachingTone }
     );
   }
 
-  if (error) return <div className="alert alert-error" style={{ margin: "2rem" }}>{error}</div>;
+  if (error) {
+    return (
+      <div className="alert alert-error" style={{ margin: "2rem" }}>
+        {error}
+      </div>
+    );
+  }
 
   const courseList = Object.entries(courseMap);
 
@@ -87,14 +117,25 @@ export default function DashboardPage({ onOpenChat, teachingMode, teachingTone }
 
     return (
       <div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: "1.5rem" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: 16,
+            marginBottom: "1.5rem",
+          }}
+        >
           <div>
             <div className="title-accent" />
-            <h1 style={{ fontSize: "1.8rem", marginBottom: 4 }}>{selectedCourse?.course_name}</h1>
+            <h1 style={{ fontSize: "1.8rem", marginBottom: 4 }}>
+              {selectedCourse?.course_name}
+            </h1>
             <p style={{ color: "var(--text-soft)", fontSize: "0.88rem" }}>
               Choose how you want to study this course.
             </p>
           </div>
+
           <button className="btn btn-ghost" onClick={() => setSelectedCourseId(null)}>
             ← Back
           </button>
@@ -118,9 +159,13 @@ export default function DashboardPage({ onOpenChat, teachingMode, teachingTone }
         {activeTab === "lessons" && (
           <>
             {lessonLoading ? (
-              <div style={{ padding: "1rem 0", color: "var(--text-soft)" }}>Loading lessons…</div>
+              <div style={{ padding: "1rem 0", color: "var(--text-soft)" }}>
+                Loading lessons…
+              </div>
             ) : lessonList.length === 0 ? (
-              <div className="alert alert-warning">No published lessons yet for this course.</div>
+              <div className="alert alert-warning">
+                No published lessons yet for this course.
+              </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 {lessonList.map((lesson) => (
@@ -152,6 +197,7 @@ export default function DashboardPage({ onOpenChat, teachingMode, teachingTone }
                         📄 {lesson.original_filename}
                       </div>
                     </div>
+
                     <button
                       className="btn btn-primary btn-sm"
                       onClick={() => startLessonChat(lesson.lesson_id)}
@@ -171,20 +217,39 @@ export default function DashboardPage({ onOpenChat, teachingMode, teachingTone }
               <div className="alert alert-warning">No materials uploaded yet.</div>
             ) : (
               <>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1.25rem" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.5rem",
+                    marginBottom: "1.25rem",
+                  }}
+                >
                   {materials.map((m) => (
                     <div
                       key={m.file_hash}
                       className="card"
-                      style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.7rem 1rem" }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.75rem",
+                        padding: "0.7rem 1rem",
+                      }}
                     >
                       <span style={{ fontSize: "1rem" }}>📄</span>
-                      <span style={{ fontSize: "0.875rem", color: "var(--text-mid)", flex: 1 }}>
+                      <span
+                        style={{
+                          fontSize: "0.875rem",
+                          color: "var(--text-mid)",
+                          flex: 1,
+                        }}
+                      >
                         {m.original_filename}
                       </span>
                     </div>
                   ))}
                 </div>
+
                 <div
                   className="card"
                   style={{
@@ -205,7 +270,11 @@ export default function DashboardPage({ onOpenChat, teachingMode, teachingTone }
                       Ask questions about any uploaded course document.
                     </div>
                   </div>
-                  <button className="btn btn-primary btn-sm" onClick={() => startMaterialsChat(selectedCourseId!)}>
+
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => startMaterialsChat(selectedCourseId)}
+                  >
                     💬 Start Chat
                   </button>
                 </div>
@@ -226,9 +295,17 @@ export default function DashboardPage({ onOpenChat, teachingMode, teachingTone }
       </p>
 
       {courseList.length === 0 ? (
-        <div className="alert alert-warning">No courses available yet. Ask a teacher to create one.</div>
+        <div className="alert alert-warning">
+          No courses available yet. Ask a teacher to create one.
+        </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "1rem" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+            gap: "1rem",
+          }}
+        >
           {courseList.map(([id, course]) => (
             <CourseCard key={id} course={course} onOpen={() => openCourse(id)} />
           ))}
@@ -248,7 +325,13 @@ function CourseCard({ course, onOpen }: { course: Course; onOpen: () => void }) 
   return (
     <div
       className="card"
-      style={{ overflow: "hidden", display: "flex", flexDirection: "column", cursor: "pointer", transition: "all 0.2s" }}
+      style={{
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        cursor: "pointer",
+        transition: "all 0.2s",
+      }}
       onClick={onOpen}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = "translateY(-3px)";
@@ -267,21 +350,25 @@ function CourseCard({ course, onOpen }: { course: Course; onOpen: () => void }) 
           style={{ width: "100%", height: 130, objectFit: "cover", display: "block" }}
         />
       ) : (
-        <div style={{
-          height: 130,
-          background: "var(--orange-lt)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: "2.2rem",
-          borderBottom: "1.5px solid var(--orange-md)",
-        }}>
+        <div
+          style={{
+            height: 130,
+            background: "var(--orange-lt)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "2.2rem",
+            borderBottom: "1.5px solid var(--orange-md)",
+          }}
+        >
           📚
         </div>
       )}
 
       <div style={{ padding: "0.85rem 1rem", flex: 1 }}>
-        <div style={{ fontWeight: 700, fontSize: "0.95rem", marginBottom: 3 }}>{course.course_name}</div>
+        <div style={{ fontWeight: 700, fontSize: "0.95rem", marginBottom: 3 }}>
+          {course.course_name}
+        </div>
         <div style={{ fontSize: "0.76rem", color: "var(--text-soft)", marginBottom: 10 }}>
           👤 {course.teacher_username}
         </div>
@@ -289,14 +376,32 @@ function CourseCard({ course, onOpen }: { course: Course; onOpen: () => void }) 
         {shown.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
             {shown.map((m) => (
-              <div key={m.file_hash} style={{ fontSize: "0.73rem", color: "var(--text-soft)", display: "flex", alignItems: "center", gap: 4 }}>
-                <span>📄</span> {m.original_filename.length > 28 ? m.original_filename.slice(0, 28) + "…" : m.original_filename}
+              <div
+                key={m.file_hash}
+                style={{
+                  fontSize: "0.73rem",
+                  color: "var(--text-soft)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <span>📄</span>
+                {m.original_filename.length > 28
+                  ? m.original_filename.slice(0, 28) + "…"
+                  : m.original_filename}
               </div>
             ))}
-            {extra > 0 && <div style={{ fontSize: "0.7rem", color: "var(--orange)", fontWeight: 600 }}>+{extra} more</div>}
+            {extra > 0 && (
+              <div style={{ fontSize: "0.7rem", color: "var(--orange)", fontWeight: 600 }}>
+                +{extra} more
+              </div>
+            )}
           </div>
         ) : (
-          <div style={{ fontSize: "0.73rem", color: "var(--text-muted)" }}>No materials yet</div>
+          <div style={{ fontSize: "0.73rem", color: "var(--text-muted)" }}>
+            No materials yet
+          </div>
         )}
       </div>
 

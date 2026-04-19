@@ -5,3 +5,5 @@ from .material import Material
 from .course_material import CourseMaterial
 from .chat import Chat
 from .message import Message
+from .admin import Admin
+from .student_course import StudentCourseAssignment

@@ -596,17 +596,12 @@ def start_lesson_chat(
     db.commit()
     db.refresh(chat)
 
-    msg = Message(
-        chat_id=chat.id,
-        sender="assistant",
-        content=approved_text
-    )
 
-    db.add(msg)
-    db.commit()
+
 
     return {
         "chat_id": str(chat.id),
         "lesson_id": lesson_id,
         "week_title": lesson.get("week_title"),
+        "starter_message": approved_text
     }

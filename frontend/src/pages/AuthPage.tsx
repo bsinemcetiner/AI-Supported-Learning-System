@@ -1,15 +1,16 @@
 import { useState } from "react";
 import type { User } from "../types";
-import { auth as authApi, token as tokenStore } from "../services/api";
+import { auth as authApi, token as tokenStore, adminLogin } from "../services/api";
 
 interface AuthPageProps {
   onLogin: (user: User) => void;
+  onAdminLogin: () => void;
 }
 
 type Tab = "login" | "signup";
 type Role = "student" | "teacher";
 
-export default function AuthPage({ onLogin }: AuthPageProps) {
+export default function AuthPage({ onLogin, onAdminLogin }: AuthPageProps) {
   const [tab, setTab]     = useState<Tab>("login");
   const [role, setRole]   = useState<Role>("student");
   const [error, setError] = useState("");
@@ -21,6 +22,12 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
   const [fullName, setFullName]   = useState("");
   const [signupUser, setSignupUser] = useState("");
   const [signupPass, setSignupPass] = useState("");
+
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [adminUser, setAdminUser] = useState("");
+  const [adminPass, setAdminPass] = useState("");
+  const [adminError, setAdminError] = useState("");
+  const [adminLoading, setAdminLoading] = useState(false);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -44,6 +51,20 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
     finally { setLoading(false); }
   }
 
+  async function handleAdminLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setAdminError(""); setAdminLoading(true);
+    try {
+      await adminLogin(adminUser.trim(), adminPass);
+      setShowAdminModal(false);
+      onAdminLogin();
+    } catch (e: any) {
+      setAdminError(e.message);
+    } finally {
+      setAdminLoading(false);
+    }
+  }
+
   return (
     <div style={{
       minHeight: "100vh",
@@ -55,7 +76,6 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
     }}>
       <div style={{ width: "100%", maxWidth: 420 }}>
 
-        {/* Logo / Hero */}
         <div style={{ textAlign: "center", marginBottom: "2rem" }}>
           <div style={{
             width: 56, height: 56,
@@ -71,10 +91,7 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
           </p>
         </div>
 
-        {/* Card */}
         <div className="card" style={{ padding: "1.75rem" }}>
-
-          {/* Tabs */}
           <div className="tab-bar" style={{ marginBottom: "1.25rem" }}>
             {(["login", "signup"] as Tab[]).map((t) => (
               <button
@@ -123,7 +140,6 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
                 </p>
               </div>
 
-              {/* Role seçimi */}
               <div>
                 <label className="label">I am a...</label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -177,7 +193,101 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
             </form>
           )}
         </div>
+
+        <div style={{ textAlign: "center", marginTop: "1.25rem" }}>
+          <button
+            onClick={() => { setShowAdminModal(true); setAdminError(""); }}
+            style={{
+              background: "none",
+              border: "none",
+              color: "var(--text-soft)",
+              fontSize: "0.8rem",
+              cursor: "pointer",
+              textDecoration: "underline",
+              opacity: 0.6,
+            }}
+          >
+            🛡 Admin Girişi
+          </button>
+        </div>
       </div>
+
+      {showAdminModal && (
+        <div style={{
+          position: "fixed", inset: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 1000,
+        }}
+          onClick={() => setShowAdminModal(false)}
+        >
+          <div
+            style={{
+              background: "var(--bg2, #fff)",
+              borderRadius: "var(--r-lg, 16px)",
+              padding: "2rem",
+              width: "100%",
+              maxWidth: 360,
+              boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ textAlign: "center", marginBottom: "1.25rem" }}>
+              <div style={{ fontSize: "2rem", marginBottom: 8 }}>🛡</div>
+              <h2 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: 4 }}>Admin Girişi</h2>
+              <p style={{ fontSize: "0.82rem", color: "var(--text-soft)" }}>
+                Sadece yetkili admin erişebilir.
+              </p>
+            </div>
+
+            <form onSubmit={handleAdminLogin} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {adminError && (
+                <div className="alert alert-error">{adminError}</div>
+              )}
+              <div>
+                <label className="label">Kullanıcı Adı</label>
+                <input
+                  className="input"
+                  placeholder="admin"
+                  value={adminUser}
+                  onChange={(e) => setAdminUser(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">Şifre</label>
+                <input
+                  className="input"
+                  type="password"
+                  placeholder="••••••••"
+                  value={adminPass}
+                  onChange={(e) => setAdminPass(e.target.value)}
+                  required
+                />
+              </div>
+              <button
+                className="btn btn-primary"
+                type="submit"
+                disabled={adminLoading}
+                style={{ width: "100%", padding: "0.7rem", marginTop: 4 }}
+              >
+                {adminLoading ? "Giriş yapılıyor…" : "Giriş Yap →"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAdminModal(false)}
+                style={{
+                  background: "none", border: "none",
+                  color: "var(--text-soft)", fontSize: "0.82rem",
+                  cursor: "pointer", textAlign: "center",
+                }}
+              >
+                İptal
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
