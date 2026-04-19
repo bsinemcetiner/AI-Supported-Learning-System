@@ -28,6 +28,17 @@ export type Lesson = {
   is_published: boolean;
 };
 
+export type Section = {
+  section_index: number;
+  title: string;
+  page_start: number;
+  page_end: number;
+  text_preview: string;
+  summary: string;
+  draft: string;
+  approved: boolean;
+};
+
 export const token = {
   get: () => localStorage.getItem("token"),
   set: (t: string) => localStorage.setItem("token", t),
@@ -188,6 +199,8 @@ export const lessons = {
       week_title: string;
       filename: string;
       message: string;
+      page_count: number;
+      section_count: number;
     }>;
   },
 
@@ -200,8 +213,29 @@ export const lessons = {
   getOne: (lesson_id: string) =>
     request<Lesson>(`/lessons/${lesson_id}`),
 
-  previewStream: (lesson_id: string) =>
-    streamRequest(`/lessons/${lesson_id}/preview`, {}),
+  getSections: (lesson_id: string) =>
+    request<{ sections: Section[]; total: number }>(`/lessons/${lesson_id}/sections`),
+
+  generateSectionStream: (lesson_id: string, section_index: number) =>
+    streamRequest(`/lessons/${lesson_id}/sections/${section_index}/generate`, {}),
+
+  approveSection: (lesson_id: string, section_index: number) =>
+    request<{ message: string; section_index: number; lesson_id: string }>(
+      `/lessons/${lesson_id}/sections/${section_index}/approve`,
+      { method: "PATCH" }
+    ),
+
+  unapproveSection: (lesson_id: string, section_index: number) =>
+    request<{ message: string; section_index: number }>(
+      `/lessons/${lesson_id}/sections/${section_index}/unapprove`,
+      { method: "PATCH" }
+    ),
+
+  publishSections: (lesson_id: string) =>
+    request<{ message: string; lesson_id: string; section_count: number }>(
+      `/lessons/${lesson_id}/publish-sections`,
+      { method: "PATCH" }
+    ),
 
   saveFeedback: (lesson_id: string, feedback: string, custom_prompt?: string) =>
     request<{ message: string; lesson_id: string }>(`/lessons/${lesson_id}/feedback`, {
@@ -224,9 +258,7 @@ export const lessons = {
   approve: (lesson_id: string) =>
     request<{ message: string; lesson_id: string; is_published: boolean }>(
       `/lessons/${lesson_id}/approve`,
-      {
-        method: "PATCH",
-      }
+      { method: "PATCH" }
     ),
 
   startChat: (lesson_id: string, mode: TeachingMode, tone: TeachingTone) =>

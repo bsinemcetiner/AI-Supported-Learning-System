@@ -25,16 +25,23 @@ from services.lesson_manager import (
 from services.rag_manager import RAGManager
 from models import Chat, Message, User
 from services import ai_engine
+from groq import Groq
 
 router = APIRouter(prefix="/lessons", tags=["lessons"])
 rag = RAGManager()
 
 LESSON_MATERIALS_DIR = "lesson_materials"
+SECTIONS_DIR = "lesson_sections"
 
 
-def _ensure_lesson_dir():
-    if not os.path.exists(LESSON_MATERIALS_DIR):
-        os.makedirs(LESSON_MATERIALS_DIR)
+def _ensure_dirs():
+    for d in [LESSON_MATERIALS_DIR, SECTIONS_DIR]:
+        if not os.path.exists(d):
+            os.makedirs(d)
+
+
+def _safe_id(lesson_id: str) -> str:
+    return lesson_id.replace("::", "__").replace("/", "_").replace(" ", "_").replace(":", "_")
 
 
 def _read_pdf_bytes(file_bytes: bytes) -> str:
@@ -47,7 +54,154 @@ def _read_pdf_bytes(file_bytes: bytes) -> str:
         return ""
 
 
-def _build_spoken_preview_prompt(preview_question: str) -> str:
+def _read_pdf_pages(file_bytes: bytes) -> list:
+    try:
+        reader = PdfReader(io.BytesIO(file_bytes))
+        pages = []
+        for page in reader.pages:
+            text = page.extract_text()
+            if text and text.strip():
+                pages.append(text.strip())
+        return pages
+    except Exception:
+        return []
+
+
+def _get_sections_path(lesson_id: str) -> str:
+    safe_id = _safe_id(lesson_id)
+    return os.path.join(SECTIONS_DIR, f"{safe_id}_sections.json")
+
+
+def _load_sections(lesson_id: str) -> list:
+    path = _get_sections_path(lesson_id)
+    if not os.path.exists(path):
+        return []
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _save_sections(lesson_id: str, sections: list):
+    _ensure_dirs()
+    path = _get_sections_path(lesson_id)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(sections, f, ensure_ascii=False)
+
+
+def _split_pages_into_sections(pages: list) -> list:
+    if not pages:
+        return []
+
+    total = len(pages)
+    if total <= 5:
+        pages_per_section = total
+    elif total <= 15:
+        pages_per_section = 3
+    elif total <= 40:
+        pages_per_section = 5
+    else:
+        pages_per_section = 8
+
+    sections = []
+    i = 0
+    section_num = 1
+
+    while i < total:
+        end = min(i + pages_per_section, total)
+        section_pages = pages[i:end]
+        combined_text = "\n\n".join(section_pages)
+
+        first_lines = section_pages[0].split("\n")[:3]
+        title_guess = next((line.strip() for line in first_lines if len(line.strip()) > 3), f"Section {section_num}")
+
+        sections.append({
+            "section_index": section_num - 1,
+            "title": title_guess[:60],
+            "page_start": i + 1,
+            "page_end": end,
+            "text": combined_text,
+            "summary": "",
+            "draft": "",
+            "approved": False,
+        })
+
+        i = end
+        section_num += 1
+
+    return sections
+
+
+def _generate_section_titles_with_ai(pages: list) -> list:
+    api_key = os.getenv("GROQ_API_KEY", "").strip()
+    if not api_key:
+        return _split_pages_into_sections(pages)
+
+    page_summaries = []
+    for i, page in enumerate(pages):
+        first_line = page.split("\n")[0].strip()[:100]
+        page_summaries.append(f"Page {i+1}: {first_line}")
+
+    prompt = f"""You are analyzing a lecture PDF with {len(pages)} pages.
+Here are the first lines of each page:
+
+{chr(10).join(page_summaries)}
+
+Group these pages into logical sections based on topic changes.
+Return ONLY a JSON array, no other text. Format:
+[
+  {{"section_index": 0, "title": "Introduction & Overview", "page_start": 1, "page_end": 3, "summary": "Brief 1-sentence summary"}},
+  {{"section_index": 1, "title": "Core Concepts", "page_start": 4, "page_end": 8, "summary": "Brief 1-sentence summary"}}
+]
+
+Rules:
+- Group 2-8 pages per section
+- Title must be concise (max 6 words)
+- Summary must be 1 sentence max
+- Return valid JSON only, nothing else"""
+
+    try:
+        client = Groq(api_key=api_key)
+        response = client.chat.completions.create(
+            model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2,
+            max_tokens=1000,
+        )
+        raw = response.choices[0].message.content or ""
+        raw = raw.strip()
+        if "```" in raw:
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        raw = raw.strip()
+
+        ai_sections = json.loads(raw)
+
+        sections = []
+        for sec in ai_sections:
+            start = sec["page_start"] - 1
+            end = sec["page_end"]
+            section_pages = pages[start:end]
+            combined_text = "\n\n".join(section_pages)
+
+            sections.append({
+                "section_index": sec["section_index"],
+                "title": sec["title"],
+                "page_start": sec["page_start"],
+                "page_end": sec["page_end"],
+                "text": combined_text,
+                "summary": sec.get("summary", ""),
+                "draft": "",
+                "approved": False,
+            })
+
+        return sections
+
+    except Exception as e:
+        print(f"AI section split failed: {e}, falling back to simple split")
+        return _split_pages_into_sections(pages)
+
+
+def _build_section_prompt(preview_question: str) -> str:
     return f"""
 {preview_question}
 
@@ -57,7 +211,7 @@ Important:
 - Use natural, connected paragraphs.
 - Avoid bullet points unless absolutely necessary.
 - Explain the topic like a teacher speaking directly to a student.
-- Use smooth transitions such as "Now", "Let's move on", "At this point", when appropriate.
+- Use smooth transitions such as "Now", "Let's move on", "At this point".
 - Keep it clear, detailed, and human-like.
 """.strip()
 
@@ -70,7 +224,7 @@ async def upload_lesson(
     current_user: dict = Depends(require_teacher),
     db: Session = Depends(get_db),
 ):
-    _ensure_lesson_dir()
+    _ensure_dirs()
     content = await file.read()
     text = _read_pdf_bytes(content)
 
@@ -85,6 +239,11 @@ async def upload_lesson(
     with open(stored_path, "w", encoding="utf-8") as f:
         f.write(text)
 
+    pages = _read_pdf_pages(content)
+    pages_path = stored_path.replace(".txt", "_pages.json")
+    with open(pages_path, "w", encoding="utf-8") as f:
+        json.dump(pages, f, ensure_ascii=False)
+
     ok, msg, lesson_id = create_lesson(
         db=db,
         course_id=course_id,
@@ -98,18 +257,26 @@ async def upload_lesson(
     if not ok:
         raise HTTPException(status_code=409, detail=msg)
 
-    rag.add_document(
-        text=text,
-        source_name=file.filename,
-        course_id=course_id,
-        teacher_username=current_user["username"],
-    )
+    sections = _generate_section_titles_with_ai(pages)
+    _save_sections(lesson_id, sections)
+
+    try:
+        rag.add_document(
+            text=text,
+            source_name=file.filename,
+            course_id=course_id,
+            teacher_username=current_user["username"],
+        )
+    except Exception:
+        pass
 
     return {
         "lesson_id": lesson_id,
         "week_title": week_title,
         "filename": file.filename,
         "message": msg,
+        "page_count": len(pages),
+        "section_count": len(sections),
     }
 
 
@@ -148,8 +315,8 @@ def get_lesson(
     return lesson
 
 
-@router.post("/{lesson_id}/preview")
-def preview_lesson(
+@router.get("/{lesson_id}/sections")
+def get_sections(
     lesson_id: str,
     current_user: dict = Depends(require_teacher),
     db: Session = Depends(get_db),
@@ -158,21 +325,46 @@ def preview_lesson(
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
 
-    stored_path = lesson.get("stored_path", "")
-    lesson_text = ""
-    if stored_path and os.path.exists(stored_path):
-        with open(stored_path, "r", encoding="utf-8") as f:
-            lesson_text = f.read()
+    sections = _load_sections(lesson_id)
+
+    result = []
+    for sec in sections:
+        s = dict(sec)
+        s["text_preview"] = s.get("text", "")[:200]
+        s.pop("text", None)
+        result.append(s)
+
+    return {"sections": result, "total": len(result)}
+
+
+@router.post("/{lesson_id}/sections/{section_index}/generate")
+def generate_section(
+    lesson_id: str,
+    section_index: int,
+    current_user: dict = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    lesson = get_lesson_by_id(db, lesson_id)
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+
+    sections = _load_sections(lesson_id)
+
+    if section_index < 0 or section_index >= len(sections):
+        raise HTTPException(status_code=400, detail=f"Section index {section_index} out of range")
+
+    section = sections[section_index]
+    section_text = section.get("text", "")
 
     raw_preview_question = lesson.get(
         "preview_question",
-        "Teach this lesson as a natural spoken teaching script."
+        "Teach this lesson section as a natural spoken teaching script."
     )
-    preview_question = _build_spoken_preview_prompt(raw_preview_question)
+    preview_question = _build_section_prompt(raw_preview_question)
     custom_prompt = lesson.get("custom_prompt", "")
     feedback_history = lesson.get("teacher_feedback_history", [])
 
-    messages = [{"role": "user", "content": preview_question}]
+    messages = [{"role": "user", "content": f"Please teach: {section.get('title', 'this section')}"}]
 
     def event_stream():
         full_reply = ""
@@ -180,10 +372,10 @@ def preview_lesson(
 
         for cumulative in ai_engine.stream_ai_response(
             messages=messages,
-            context=lesson_text,
+            context=section_text,
             teaching_style="Professional Tutor",
             mode="direct",
-            custom_prompt=custom_prompt,
+            custom_prompt=preview_question + "\n\n" + custom_prompt,
             feedback_history=feedback_history,
         ):
             delta = cumulative[len(last_text):]
@@ -191,12 +383,93 @@ def preview_lesson(
             full_reply += delta
 
             if delta:
-                yield f"data: {json.dumps({'delta': delta})}\n\n"
+                yield f"data: {json.dumps({'delta': delta, 'section_index': section_index})}\n\n"
 
-        save_draft_explanation(db, lesson_id, full_reply)
-        yield f"data: {json.dumps({'done': True})}\n\n"
+        sections[section_index]["draft"] = full_reply
+        sections[section_index]["approved"] = False
+        _save_sections(lesson_id, sections)
+
+        yield f"data: {json.dumps({'done': True, 'section_index': section_index})}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+@router.patch("/{lesson_id}/sections/{section_index}/approve")
+def approve_section(
+    lesson_id: str,
+    section_index: int,
+    current_user: dict = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    lesson = get_lesson_by_id(db, lesson_id)
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+
+    sections = _load_sections(lesson_id)
+
+    if section_index < 0 or section_index >= len(sections):
+        raise HTTPException(status_code=400, detail=f"Section index {section_index} out of range")
+
+    draft = sections[section_index].get("draft", "")
+    if not draft.strip():
+        raise HTTPException(status_code=400, detail="No draft to approve. Generate first.")
+
+    sections[section_index]["approved"] = True
+    _save_sections(lesson_id, sections)
+
+    return {
+        "message": f"Section {section_index + 1} approved.",
+        "section_index": section_index,
+        "lesson_id": lesson_id,
+    }
+
+
+@router.patch("/{lesson_id}/sections/{section_index}/unapprove")
+def unapprove_section(
+    lesson_id: str,
+    section_index: int,
+    current_user: dict = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    sections = _load_sections(lesson_id)
+    if section_index < 0 or section_index >= len(sections):
+        raise HTTPException(status_code=400, detail="Invalid section index")
+
+    sections[section_index]["approved"] = False
+    sections[section_index]["draft"] = ""
+    _save_sections(lesson_id, sections)
+
+    return {"message": f"Section {section_index + 1} unapproved.", "section_index": section_index}
+
+
+@router.patch("/{lesson_id}/publish-sections")
+def publish_sections(
+    lesson_id: str,
+    current_user: dict = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    lesson = get_lesson_by_id(db, lesson_id)
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+
+    sections = _load_sections(lesson_id)
+    approved = [s for s in sections if s.get("approved") and s.get("draft", "").strip()]
+
+    if not approved:
+        raise HTTPException(status_code=400, detail="No approved sections. Approve at least one section first.")
+
+    combined = "\n\n---\n\n".join([
+        f"## {s['title']}\n\n{s['draft']}" for s in approved
+    ])
+
+    save_draft_explanation(db, lesson_id, combined)
+    approve_lesson_explanation(db, lesson_id)
+
+    return {
+        "message": f"{len(approved)} sections published.",
+        "lesson_id": lesson_id,
+        "section_count": len(approved),
+    }
 
 
 class FeedbackRequest(BaseModel):
@@ -306,7 +579,6 @@ def start_lesson_chat(
         )
 
     username = current_user["username"]
-
     user = db.query(User).filter(User.username == username).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

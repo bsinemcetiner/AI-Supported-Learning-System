@@ -20,11 +20,7 @@ function getCourseImage(courseName: string): string {
 
 type CourseTab = "lessons" | "materials";
 
-export default function DashboardPage({
-  onOpenChat,
-  teachingMode,
-  teachingTone,
-}: DashboardPageProps) {
+export default function DashboardPage({ onOpenChat, teachingMode, teachingTone }: DashboardPageProps) {
   const [courseMap, setCourseMap] = useState<Record<string, Course>>({});
   const [lessonsMap, setLessonsMap] = useState<Record<string, Record<string, Lesson>>>({});
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
@@ -34,8 +30,7 @@ export default function DashboardPage({
   const [error, setError] = useState("");
 
   useEffect(() => {
-    coursesApi
-      .getAll()
+    coursesApi.getAll()
       .then(setCourseMap)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -44,27 +39,20 @@ export default function DashboardPage({
   async function openCourse(courseId: string) {
     setSelectedCourseId(courseId);
     setActiveTab("lessons");
-
     if (lessonsMap[courseId]) return;
-
     setLessonLoading(true);
     try {
       const data = await lessonsApi.getByCourse(courseId);
       setLessonsMap((prev) => ({ ...prev, [courseId]: data }));
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLessonLoading(false);
-    }
+    } catch (e: any) { setError(e.message); }
+    finally { setLessonLoading(false); }
   }
 
   async function startLessonChat(lessonId: string) {
     try {
       const { chat_id } = await lessonsApi.startChat(lessonId, teachingMode, teachingTone);
       onOpenChat(chat_id);
-    } catch (e: any) {
-      setError(e.message);
-    }
+    } catch (e: any) { setError(e.message); }
   }
 
   async function startMaterialsChat(courseId: string) {
@@ -76,22 +64,19 @@ export default function DashboardPage({
         tone: teachingTone,
       });
       onOpenChat(chat_id);
-    } catch (e: any) {
-      setError(e.message);
-    }
+    } catch (e: any) { setError(e.message); }
   }
 
   if (loading) {
-    return <div style={{ padding: "3rem", color: "var(--text-soft)" }}>Loading courses…</div>;
-  }
-
-  if (error) {
     return (
-      <div className="alert alert-error" style={{ margin: "2rem" }}>
-        {error}
+      <div style={{ padding: "3rem", textAlign: "center", color: "var(--text-soft)" }}>
+        <div style={{ fontSize: "2rem", marginBottom: 12 }}>📚</div>
+        <p>Loading courses…</p>
       </div>
     );
   }
+
+  if (error) return <div className="alert alert-error" style={{ margin: "2rem" }}>{error}</div>;
 
   const courseList = Object.entries(courseMap);
 
@@ -102,56 +87,34 @@ export default function DashboardPage({
 
     return (
       <div>
-        <div className="title-accent" />
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: "1.5rem" }}>
           <div>
-            <h1 style={{ fontSize: "2rem", marginBottom: "0.35rem" }}>📘 {selectedCourse?.course_name}</h1>
-            <p style={{ color: "var(--text-soft)", marginBottom: "1.25rem" }}>
+            <div className="title-accent" />
+            <h1 style={{ fontSize: "1.8rem", marginBottom: 4 }}>{selectedCourse?.course_name}</h1>
+            <p style={{ color: "var(--text-soft)", fontSize: "0.88rem" }}>
               Choose how you want to study this course.
             </p>
           </div>
           <button className="btn btn-ghost" onClick={() => setSelectedCourseId(null)}>
-            ← Back to Courses
+            ← Back
           </button>
         </div>
 
-        {/* Tabs */}
-        <div style={{
-          display: "flex",
-          background: "var(--card)",
-          border: "1.5px solid var(--line)",
-          borderRadius: "var(--r-md)",
-          padding: 4,
-          gap: 2,
-          marginBottom: "1.5rem",
-        }}>
+        <div className="tab-bar">
           {([
             { key: "lessons", label: "📖 Lessons" },
             { key: "materials", label: "📁 Materials" },
           ] as { key: CourseTab; label: string }[]).map((t) => (
             <button
               key={t.key}
+              className={`tab-btn ${activeTab === t.key ? "active" : ""}`}
               onClick={() => setActiveTab(t.key)}
-              style={{
-                flex: 1,
-                padding: "0.4rem 1rem",
-                borderRadius: "var(--r-sm)",
-                border: "none",
-                cursor: "pointer",
-                fontWeight: 600,
-                fontSize: "0.88rem",
-                transition: "all 0.18s",
-                background: activeTab === t.key ? "var(--orange)" : "transparent",
-                color: activeTab === t.key ? "#fff" : "var(--text-soft)",
-                boxShadow: activeTab === t.key ? "0 3px 14px rgba(232,81,10,0.28)" : "none",
-              }}
             >
               {t.label}
             </button>
           ))}
         </div>
 
-        {/* Lessons Tab */}
         {activeTab === "lessons" && (
           <>
             {lessonLoading ? (
@@ -159,7 +122,7 @@ export default function DashboardPage({
             ) : lessonList.length === 0 ? (
               <div className="alert alert-warning">No published lessons yet for this course.</div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 {lessonList.map((lesson) => (
                   <div
                     key={lesson.lesson_id}
@@ -169,23 +132,31 @@ export default function DashboardPage({
                       alignItems: "center",
                       justifyContent: "space-between",
                       gap: "1rem",
-                      padding: "1rem 1.1rem",
+                      padding: "1rem 1.25rem",
+                      transition: "all 0.2s",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = "var(--shadow-md)";
+                      e.currentTarget.style.transform = "translateY(-1px)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = "var(--shadow-sm)";
+                      e.currentTarget.style.transform = "translateY(0)";
                     }}
                   >
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 4 }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.95rem", marginBottom: 3 }}>
                         {lesson.week_title}
                       </div>
-                      <div style={{ fontSize: "0.82rem", color: "var(--text-soft)" }}>
+                      <div style={{ fontSize: "0.78rem", color: "var(--text-soft)" }}>
                         📄 {lesson.original_filename}
                       </div>
                     </div>
                     <button
-                      className="btn btn-primary"
-                      style={{ whiteSpace: "nowrap" }}
+                      className="btn btn-primary btn-sm"
                       onClick={() => startLessonChat(lesson.lesson_id)}
                     >
-                      ▶ Start Lesson
+                      ▶ Start
                     </button>
                   </div>
                 ))}
@@ -194,37 +165,30 @@ export default function DashboardPage({
           </>
         )}
 
-        {/* Materials Tab */}
         {activeTab === "materials" && (
           <>
             {materials.length === 0 ? (
-              <div className="alert alert-warning">No materials uploaded yet for this course.</div>
+              <div className="alert alert-warning">No materials uploaded yet.</div>
             ) : (
               <>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginBottom: "1.5rem" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1.25rem" }}>
                   {materials.map((m) => (
                     <div
                       key={m.file_hash}
                       className="card"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.75rem",
-                        padding: "0.75rem 1rem",
-                      }}
+                      style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.7rem 1rem" }}
                     >
-                      <span style={{ fontSize: "1.2rem" }}>📄</span>
-                      <span style={{ fontSize: "0.88rem", color: "var(--text-mid)", flex: 1 }}>
+                      <span style={{ fontSize: "1rem" }}>📄</span>
+                      <span style={{ fontSize: "0.875rem", color: "var(--text-mid)", flex: 1 }}>
                         {m.original_filename}
                       </span>
                     </div>
                   ))}
                 </div>
-
                 <div
                   className="card"
                   style={{
-                    padding: "1.25rem 1.5rem",
+                    padding: "1.1rem 1.25rem",
                     background: "var(--orange-lt)",
                     border: "1.5px solid var(--orange-md)",
                     display: "flex",
@@ -234,18 +198,14 @@ export default function DashboardPage({
                   }}
                 >
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: "0.95rem", marginBottom: 4 }}>
+                    <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: 3 }}>
                       Chat with all materials
                     </div>
-                    <div style={{ fontSize: "0.82rem", color: "var(--text-mid)" }}>
-                      Ask questions about any of the uploaded course documents.
+                    <div style={{ fontSize: "0.8rem", color: "var(--text-mid)" }}>
+                      Ask questions about any uploaded course document.
                     </div>
                   </div>
-                  <button
-                    className="btn btn-primary"
-                    style={{ whiteSpace: "nowrap" }}
-                    onClick={() => startMaterialsChat(selectedCourseId)}
-                  >
+                  <button className="btn btn-primary btn-sm" onClick={() => startMaterialsChat(selectedCourseId!)}>
                     💬 Start Chat
                   </button>
                 </div>
@@ -260,15 +220,15 @@ export default function DashboardPage({
   return (
     <div>
       <div className="title-accent" />
-      <h1 style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📘 Start Learning</h1>
-      <p style={{ color: "var(--text-soft)", marginBottom: "2rem" }}>
-        Pick a course and open its weekly lessons.
+      <h1 style={{ fontSize: "1.8rem", marginBottom: 6 }}>Start Learning</h1>
+      <p style={{ color: "var(--text-soft)", marginBottom: "1.75rem", fontSize: "0.9rem" }}>
+        Pick a course and explore its lessons.
       </p>
 
       {courseList.length === 0 ? (
-        <div className="alert alert-warning">No courses available yet. Ask a teacher to create a course.</div>
+        <div className="alert alert-warning">No courses available yet. Ask a teacher to create one.</div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "1.25rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "1rem" }}>
           {courseList.map(([id, course]) => (
             <CourseCard key={id} course={course} onOpen={() => openCourse(id)} />
           ))}
@@ -280,73 +240,70 @@ export default function DashboardPage({
 
 function CourseCard({ course, onOpen }: { course: Course; onOpen: () => void }) {
   const materials = course.materials ?? [];
-  const shown = materials.slice(-3);
+  const shown = materials.slice(0, 3);
   const extra = materials.length - shown.length;
   const imgSrc = getCourseImage(course.course_name);
   const [imgError, setImgError] = useState(false);
 
   return (
-    <div className="card" style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}>
+    <div
+      className="card"
+      style={{ overflow: "hidden", display: "flex", flexDirection: "column", cursor: "pointer", transition: "all 0.2s" }}
+      onClick={onOpen}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "translateY(-3px)";
+        e.currentTarget.style.boxShadow = "var(--shadow-hover)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.boxShadow = "var(--shadow-sm)";
+      }}
+    >
       {imgSrc && !imgError ? (
         <img
           src={imgSrc}
           alt={course.course_name}
           onError={() => setImgError(true)}
-          style={{ width: "100%", height: 140, objectFit: "cover", display: "block" }}
+          style={{ width: "100%", height: 130, objectFit: "cover", display: "block" }}
         />
       ) : (
-        <div
-          style={{
-            height: 140,
-            background: "linear-gradient(135deg, var(--orange-lt), var(--orange-md))",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "2.5rem",
-          }}
-        >
+        <div style={{
+          height: 130,
+          background: "var(--orange-lt)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "2.2rem",
+          borderBottom: "1.5px solid var(--orange-md)",
+        }}>
           📚
         </div>
       )}
 
-      <div style={{ padding: "0.9rem 1rem", flex: 1 }}>
-        <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 2 }}>{course.course_name}</div>
-        <div style={{ fontSize: "0.78rem", color: "var(--text-soft)", marginBottom: 10 }}>
+      <div style={{ padding: "0.85rem 1rem", flex: 1 }}>
+        <div style={{ fontWeight: 700, fontSize: "0.95rem", marginBottom: 3 }}>{course.course_name}</div>
+        <div style={{ fontSize: "0.76rem", color: "var(--text-soft)", marginBottom: 10 }}>
           👤 {course.teacher_username}
         </div>
 
         {shown.length > 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
             {shown.map((m) => (
-              <div
-                key={m.file_hash}
-                style={{
-                  fontSize: "0.75rem",
-                  color: "var(--text-soft)",
-                  padding: "0.15rem 0",
-                  borderBottom: "1px solid var(--bg3)",
-                }}
-              >
-                📄 {m.original_filename}
+              <div key={m.file_hash} style={{ fontSize: "0.73rem", color: "var(--text-soft)", display: "flex", alignItems: "center", gap: 4 }}>
+                <span>📄</span> {m.original_filename.length > 28 ? m.original_filename.slice(0, 28) + "…" : m.original_filename}
               </div>
             ))}
-            {extra > 0 && (
-              <div style={{ fontSize: "0.72rem", color: "var(--orange)", fontWeight: 600 }}>
-                + {extra} more
-              </div>
-            )}
+            {extra > 0 && <div style={{ fontSize: "0.7rem", color: "var(--orange)", fontWeight: 600 }}>+{extra} more</div>}
           </div>
         ) : (
-          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: 8 }}>
-            No materials yet
-          </div>
+          <div style={{ fontSize: "0.73rem", color: "var(--text-muted)" }}>No materials yet</div>
         )}
       </div>
 
       <div style={{ padding: "0 1rem 1rem" }}>
-        <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }} onClick={onOpen}>
-          📂 Open Course
-        </button>
+        <div className="btn btn-primary" style={{ width: "100%", padding: "0.5rem" }}>
+          Open Course →
+        </div>
       </div>
     </div>
   );

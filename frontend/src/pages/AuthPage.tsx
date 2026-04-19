@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { User } from "../types";
+import { auth as authApi, token as tokenStore } from "../services/api";
 
 interface AuthPageProps {
   onLogin: (user: User) => void;
@@ -8,24 +9,18 @@ interface AuthPageProps {
 type Tab = "login" | "signup";
 type Role = "student" | "teacher";
 
-// Küçük API çağrıları — api.ts'den import da edilebilir
-import { auth as authApi, token as tokenStore } from "../services/api";
-
 export default function AuthPage({ onLogin }: AuthPageProps) {
-  const [tab, setTab]         = useState<Tab>("login");
-  const [role, setRole]       = useState<Role>("student");
-  const [error, setError]     = useState("");
+  const [tab, setTab]     = useState<Tab>("login");
+  const [role, setRole]   = useState<Role>("student");
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Login state
   const [loginUser, setLoginUser] = useState("");
   const [loginPass, setLoginPass] = useState("");
-
-  // Signup state
-  const [fullName,     setFullName]     = useState("");
-  const [signupUser,   setSignupUser]   = useState("");
-  const [signupPass,   setSignupPass]   = useState("");
+  const [fullName, setFullName]   = useState("");
+  const [signupUser, setSignupUser] = useState("");
+  const [signupPass, setSignupPass] = useState("");
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -34,11 +29,8 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
       const res = await authApi.login(loginUser.trim(), loginPass);
       tokenStore.set(res.access_token);
       onLogin(res.user);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
   }
 
   async function handleSignup(e: React.FormEvent) {
@@ -46,133 +38,145 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
     setError(""); setSuccess(""); setLoading(true);
     try {
       await authApi.signup(fullName.trim(), signupUser.trim(), signupPass, role);
-      setSuccess(`Account created as ${role}! You can now log in.`);
+      setSuccess(`Account created! You can now log in.`);
       setTab("login");
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column", alignItems: "center" }}>
-      {/* Hero */}
-      <div style={{ textAlign: "center", padding: "44px 0 28px" }}>
-        <span className="badge badge-orange" style={{ marginBottom: 16 }}>✦ Welcome</span>
-        <h1 style={{ fontSize: "2.5rem", color: "var(--text)", marginBottom: 10 }}>Learning Assistant</h1>
-        <p style={{ color: "var(--text-soft)", maxWidth: 340, margin: "0 auto" }}>
-          Sign in to continue, or create a new account as a student or teacher.
-        </p>
-      </div>
+    <div style={{
+      minHeight: "100vh",
+      background: "var(--bg)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "2rem 1rem",
+    }}>
+      <div style={{ width: "100%", maxWidth: 420 }}>
 
-      {/* Card */}
-      <div className="card" style={{ width: "100%", maxWidth: 440, padding: "0 2rem 2.5rem" }}>
-
-        {/* Tabs */}
-        <div style={{ display: "flex", borderBottom: "1.5px solid var(--line)", marginBottom: "1.5rem" }}>
-          {(["login", "signup"] as Tab[]).map((t) => (
-            <button
-              key={t}
-              onClick={() => { setTab(t); setError(""); setSuccess(""); }}
-              style={{
-                flex: 1, padding: "10px 0", background: "transparent", border: "none",
-                borderBottom: tab === t ? "2.5px solid var(--orange)" : "2.5px solid transparent",
-                color: tab === t ? "var(--text)" : "var(--text-soft)",
-                fontWeight: 600, fontSize: 14, cursor: "pointer",
-                marginBottom: -1.5, transition: "color 0.15s",
-              }}
-            >
-              {t === "login" ? "Login" : "Sign Up"}
-            </button>
-          ))}
+        {/* Logo / Hero */}
+        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+          <div style={{
+            width: 56, height: 56,
+            background: "var(--orange)",
+            borderRadius: "var(--r-lg)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: "1.6rem", margin: "0 auto 1rem",
+            boxShadow: "var(--shadow-orange)",
+          }}>🎓</div>
+          <h1 style={{ fontSize: "1.8rem", marginBottom: 6 }}>Learning Assistant</h1>
+          <p style={{ color: "var(--text-soft)", fontSize: "0.9rem" }}>
+            AI-powered personalized learning platform
+          </p>
         </div>
 
-        {error   && <div className="alert alert-error"   style={{ marginBottom: 12 }}>{error}</div>}
-        {success && <div className="alert alert-success" style={{ marginBottom: 12 }}>{success}</div>}
+        {/* Card */}
+        <div className="card" style={{ padding: "1.75rem" }}>
 
-        {tab === "login" ? (
-          <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ fontFamily: "'Fraunces', serif", fontSize: "1.15rem", fontWeight: 600 }}>
-              Welcome back 👋
-            </div>
-            <p style={{ fontSize: 13, color: "var(--text-soft)", marginTop: -8 }}>
-              Enter your credentials to continue learning.
-            </p>
+          {/* Tabs */}
+          <div className="tab-bar" style={{ marginBottom: "1.25rem" }}>
+            {(["login", "signup"] as Tab[]).map((t) => (
+              <button
+                key={t}
+                className={`tab-btn ${tab === t ? "active" : ""}`}
+                onClick={() => { setTab(t); setError(""); setSuccess(""); }}
+              >
+                {t === "login" ? "Sign In" : "Sign Up"}
+              </button>
+            ))}
+          </div>
 
-            <div>
-              <label className="label">Username</label>
-              <input className="input" placeholder="your_username" value={loginUser} onChange={(e) => setLoginUser(e.target.value)} required />
-            </div>
-            <div>
-              <label className="label">Password</label>
-              <input className="input" type="password" placeholder="••••••••" value={loginPass} onChange={(e) => setLoginPass(e.target.value)} required />
-            </div>
+          {error   && <div className="alert alert-error"   style={{ marginBottom: 14 }}>{error}</div>}
+          {success && <div className="alert alert-success" style={{ marginBottom: 14 }}>{success}</div>}
 
-            <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: "100%", justifyContent: "center", padding: "0.75rem", marginTop: 4 }}>
-              {loading ? "Signing in…" : "Sign In →"}
-            </button>
-            <p style={{ textAlign: "center", fontSize: 12.5, color: "var(--text-muted)" }}>
-              Don't have an account? Switch to Sign Up ↑
-            </p>
-          </form>
-        ) : (
-          <form onSubmit={handleSignup} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ fontFamily: "'Fraunces', serif", fontSize: "1.15rem", fontWeight: 600 }}>
-              Create your account
-            </div>
-            <p style={{ fontSize: 13, color: "var(--text-soft)", marginTop: -8 }}>
-              Join as a student or teacher and start learning.
-            </p>
-
-            {/* Rol seçimi */}
-            <div>
-              <span className="label">I am a...</span>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                {(["student", "teacher"] as Role[]).map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => setRole(r)}
-                    style={{
-                      padding: "14px 16px", borderRadius: 16, textAlign: "left",
-                      border: `1.5px solid ${role === r ? "var(--orange)" : "var(--line)"}`,
-                      background: role === r ? "var(--orange-lt)" : "#FDFAF7",
-                      color: role === r ? "var(--orange)" : "var(--text)",
-                      fontWeight: 700, fontSize: 14, cursor: "pointer",
-                      transition: "all 0.15s",
-                    }}
-                  >
-                    {r === "student" ? "🎓  Student\n" : "🏫  Teacher\n"}
-                    <span style={{ fontWeight: 400, fontSize: 12, color: "inherit", opacity: 0.8 }}>
-                      {r === "student" ? "Learn & explore" : "Create & teach"}
-                    </span>
-                  </button>
-                ))}
+          {tab === "login" ? (
+            <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <p style={{ fontFamily: "'Fraunces', serif", fontSize: "1.1rem", fontWeight: 600, marginBottom: 4 }}>
+                  Welcome back 👋
+                </p>
+                <p style={{ fontSize: "0.83rem", color: "var(--text-soft)" }}>
+                  Enter your credentials to continue.
+                </p>
               </div>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--orange)", marginTop: 8, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                ✓ Continuing as {role === "student" ? "Student" : "Teacher"}
-              </p>
-            </div>
+              <div>
+                <label className="label">Username</label>
+                <input className="input" placeholder="your_username" value={loginUser} onChange={(e) => setLoginUser(e.target.value)} required />
+              </div>
+              <div>
+                <label className="label">Password</label>
+                <input className="input" type="password" placeholder="••••••••" value={loginPass} onChange={(e) => setLoginPass(e.target.value)} required />
+              </div>
+              <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: "100%", padding: "0.7rem", marginTop: 4 }}>
+                {loading ? "Signing in…" : "Sign In →"}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleSignup} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <p style={{ fontFamily: "'Fraunces', serif", fontSize: "1.1rem", fontWeight: 600, marginBottom: 4 }}>
+                  Create your account
+                </p>
+                <p style={{ fontSize: "0.83rem", color: "var(--text-soft)" }}>
+                  Join as a student or teacher.
+                </p>
+              </div>
 
-            <div>
-              <label className="label">Full Name</label>
-              <input className="input" placeholder="Ada Lovelace" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
-            </div>
-            <div>
-              <label className="label">Username</label>
-              <input className="input" placeholder="ada_loves_math" value={signupUser} onChange={(e) => setSignupUser(e.target.value)} required />
-            </div>
-            <div>
-              <label className="label">Password</label>
-              <input className="input" type="password" placeholder="••••••••" value={signupPass} onChange={(e) => setSignupPass(e.target.value)} required />
-            </div>
+              {/* Role seçimi */}
+              <div>
+                <label className="label">I am a...</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  {(["student", "teacher"] as Role[]).map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setRole(r)}
+                      style={{
+                        padding: "12px 14px",
+                        borderRadius: "var(--r-md)",
+                        textAlign: "left",
+                        border: `1.5px solid ${role === r ? "var(--orange)" : "var(--line)"}`,
+                        background: role === r ? "var(--orange-lt)" : "var(--bg2)",
+                        color: role === r ? "var(--orange)" : "var(--text-mid)",
+                        fontWeight: 700,
+                        fontSize: "0.875rem",
+                        cursor: "pointer",
+                        transition: "all 0.15s",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      <div style={{ fontSize: "1.1rem", marginBottom: 2 }}>
+                        {r === "student" ? "🎓" : "🏫"}
+                      </div>
+                      <div>{r === "student" ? "Student" : "Teacher"}</div>
+                      <div style={{ fontWeight: 400, fontSize: "0.75rem", opacity: 0.8, marginTop: 1 }}>
+                        {r === "student" ? "Learn & explore" : "Create & teach"}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-            <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: "100%", justifyContent: "center", padding: "0.75rem", marginTop: 4 }}>
-              {loading ? "Creating…" : `Create ${role === "student" ? "Student" : "Teacher"} Account →`}
-            </button>
-          </form>
-        )}
+              <div>
+                <label className="label">Full Name</label>
+                <input className="input" placeholder="Ada Lovelace" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+              </div>
+              <div>
+                <label className="label">Username</label>
+                <input className="input" placeholder="ada_loves_math" value={signupUser} onChange={(e) => setSignupUser(e.target.value)} required />
+              </div>
+              <div>
+                <label className="label">Password</label>
+                <input className="input" type="password" placeholder="••••••••" value={signupPass} onChange={(e) => setSignupPass(e.target.value)} required />
+              </div>
+
+              <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: "100%", padding: "0.7rem", marginTop: 4 }}>
+                {loading ? "Creating…" : `Create ${role === "student" ? "Student" : "Teacher"} Account →`}
+              </button>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );
