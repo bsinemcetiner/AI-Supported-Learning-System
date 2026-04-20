@@ -123,10 +123,30 @@ export const auth = {
       body: JSON.stringify({ username, password }),
     }),
 
-  signup: (full_name: string, username: string, password: string, role: string) =>
+  signup: (
+    full_name: string,
+    username: string,
+    password: string,
+    role: string,
+    email?: string
+  ) =>
     request<{ message: string }>("/auth/signup", {
       method: "POST",
-      body: JSON.stringify({ full_name, username, password, role }),
+      body: JSON.stringify({ full_name, username, password, role, email }),
+    }),
+
+  // Email'e OTP doğrulama kodu gönder
+  sendOtp: (email: string) =>
+    request<{ message: string; role: string }>("/auth/send-otp", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
+  // Gelen OTP kodunu doğrula
+  verifyOtp: (email: string, otp: string) =>
+    request<{ message: string; verified: boolean }>("/auth/verify-otp", {
+      method: "POST",
+      body: JSON.stringify({ email, otp }),
     }),
 };
 
@@ -134,7 +154,9 @@ export const courses = {
   getAll: () => request<Record<string, Course>>("/courses/"),
 
   getMine: () => request<Record<string, Course>>("/courses/mine"),
-getAssigned: () => request<Record<string, Course>>("/courses/assigned"),
+
+  getAssigned: () => request<Record<string, Course>>("/courses/assigned"),
+
   create: (course_name: string) =>
     request<{ course_id: string }>("/courses/", {
       method: "POST",
