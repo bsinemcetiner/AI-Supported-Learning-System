@@ -1,7 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel
-from pypdf import PdfReader
-import io
 
 from sqlalchemy.orm import Session
 
@@ -16,19 +14,10 @@ from services.course_manager import (
     delete_material_from_course,
 )
 from services.rag_manager import RAGManager
+from services.ocr_service import ocr_service
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 rag = RAGManager()
-
-
-def _read_pdf_bytes(file_bytes: bytes) -> str:
-    try:
-        reader = PdfReader(io.BytesIO(file_bytes))
-        return "\n".join(
-            p.extract_text() for p in reader.pages if p.extract_text()
-        ).strip()
-    except Exception:
-        return ""
 
 
 class CreateCourseRequest(BaseModel):
@@ -92,6 +81,8 @@ def list_assigned_courses(
             ],
         }
     return result
+
+
 # ── GET /courses/mine ── öğretmenin kendi kursları
 @router.get("/mine")
 def list_my_courses(
@@ -114,7 +105,7 @@ def create_new_course(
     return {"course_id": message}
 
 
-# ── POST /courses/{course_id}/materials ── PDF yükle
+# ── POST /courses/{course_id}/materials ── materyal yükle
 @router.post("/{course_id}/materials", status_code=201)
 async def upload_material(
     course_id: str,
@@ -123,10 +114,10 @@ async def upload_material(
     db: Session = Depends(get_db)
 ):
     content = await file.read()
-    text = _read_pdf_bytes(content)
+    text = ocr_service.extract_text(content, file.filename)
 
     if not text:
-        raise HTTPException(status_code=422, detail=f"{file.filename}: could not extract text")
+        raise HTTPException(status_code=422, detail=f"{file.filename}: metin çıkarılamadı")
 
     add_ok, add_msg = add_material_to_course(
         db=db,
@@ -180,3 +171,60 @@ def delete_material(
         )
 
     return {"message": msg}
+# ── POST /courses/{course_id}/enroll ── öğrenci kaydol
+@router.post("/{course_id}/enroll", status_code=201)
+def enroll_course(
+    course_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    from models.student_course import StudentCourseAssignment
+    from models.user import User
+
+    username = current_user["username"] if isinstance(current_user, dict) else current_user.username
+    role = current_user["role"] if isinstance(current_user, dict) else current_user.role
+
+    if role != "student":
+        raise HTTPException(status_code=403, detail="Sadece öğrenciler kayıt olabilir")
+
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+
+    existing = db.query(StudentCourseAssignment).filter_by(
+        student_id=user.id, course_id=course_id
+    ).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Zaten kayıtlısın")
+
+    assignment = StudentCourseAssignment(student_id=user.id, course_id=course_id)
+    db.add(assignment)
+    db.commit()
+    return {"message": "Kayıt başarılı", "course_id": course_id}
+
+
+# ── DELETE /courses/{course_id}/unenroll ── öğrenci ayrıl
+@router.delete("/{course_id}/unenroll")
+def unenroll_course(
+    course_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    from models.student_course import StudentCourseAssignment
+    from models.user import User
+
+    username = current_user["username"] if isinstance(current_user, dict) else current_user.username
+
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+
+    assignment = db.query(StudentCourseAssignment).filter_by(
+        student_id=user.id, course_id=course_id
+    ).first()
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Kayıt bulunamadı")
+
+    db.delete(assignment)
+    db.commit()
+    return {"message": "Kayıt silindi", "course_id": course_id}
