@@ -156,7 +156,15 @@ export const courses = {
   getMine: () => request<Record<string, Course>>("/courses/mine"),
 
   getAssigned: () => request<Record<string, Course>>("/courses/assigned"),
+enroll: (course_id: string) =>
+  request<{ message: string; course_id: string }>(`/courses/${course_id}/enroll`, {
+    method: "POST",
+  }),
 
+unenroll: (course_id: string) =>
+  request<{ message: string; course_id: string }>(`/courses/${course_id}/unenroll`, {
+    method: "DELETE",
+  }),
   create: (course_name: string) =>
     request<{ course_id: string }>("/courses/", {
       method: "POST",
