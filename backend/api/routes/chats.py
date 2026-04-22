@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
+from services.lesson_manager import get_lesson_by_id, get_student_visible_explanation
 from pydantic import BaseModel
 from typing import Optional
 import json
@@ -15,9 +16,18 @@ from services import ai_engine
 router = APIRouter(prefix="/chats", tags=["chats"])
 rag = RAGManager()
 
-def _get_lesson_ai_params(lesson_id: Optional[int]) -> dict:
-    return {"custom_prompt": "", "feedback_history": []}
+def _get_lesson_ai_params(db: Session, lesson_id: Optional[str]) -> dict:
+    if not lesson_id:
+        return {"custom_prompt": "", "feedback_history": []}
 
+    lesson = get_lesson_by_id(db, lesson_id)
+    if not lesson:
+        return {"custom_prompt": "", "feedback_history": []}
+
+    return {
+        "custom_prompt": lesson.get("custom_prompt", "") or "",
+        "feedback_history": lesson.get("teacher_feedback_history", []) or [],
+    }
 
 def _serialize_chat(chat: Chat) -> dict:
     return {
@@ -66,7 +76,7 @@ def list_chats(
 
 class CreateChatRequest(BaseModel):
     course_id: Optional[str] = None
-    lesson_id: Optional[int] = None
+    lesson_id: Optional[str] = None
     title: str = "New Chat"
     mode: str = "direct"
     tone: str = "Professional Tutor"
@@ -163,7 +173,7 @@ def send_message(
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
 
-    lesson_params = _get_lesson_ai_params(chat.lesson_id)
+    lesson_params = _get_lesson_ai_params(db, chat.lesson_id)
 
     user_message = Message(
         chat_id=chat.id,
@@ -175,24 +185,19 @@ def send_message(
 
     db.refresh(chat)
 
-    context = ""
-    if rag is not None:
-        try:
-            context = rag.query_context(question=body.content, course_id=chat.course_id)
-            if not context.strip():
-                def blocked_stream():
-                    msg = "This question is outside the uploaded lesson materials."
-                    yield f"data: {json.dumps({'delta': msg})}\n\n"
-                    yield f"data: {json.dumps({'done': True})}\n\n"
-
-                return StreamingResponse(blocked_stream(), media_type="text/event-stream")
-        except Exception:
-            context = ""
+    context = _get_chat_context(db, chat, body.content)
     if not context.strip():
         blocked_reply = (
             "This question is outside the uploaded lesson materials. "
             "Please ask something related to the course content."
         )
+
+        if body.stream:
+            def blocked_stream():
+                yield f"data: {json.dumps({'delta': blocked_reply})}\n\n"
+                yield f"data: {json.dumps({'done': True})}\n\n"
+
+            return StreamingResponse(blocked_stream(), media_type="text/event-stream")
 
         assistant_message = Message(
             chat_id=chat.id,
@@ -302,14 +307,8 @@ def regenerate(
 
     db.refresh(chat)
 
-    context = ""
-    if rag is not None:
-        try:
-            context = rag.query_context(question=last_user_msg, course_id=chat.course_id)
-        except Exception:
-            context = ""
-
-    lesson_params = _get_lesson_ai_params(chat.lesson_id)
+    context = _get_chat_context(db, chat, last_user_msg)
+    lesson_params = _get_lesson_ai_params(db, chat.lesson_id)
 
     def event_stream():
         full_reply = ""
@@ -377,3 +376,28 @@ def update_settings(
 
     db.commit()
     return {"message": "Settings updated"}
+
+def _get_chat_context(db: Session, chat: Chat, question: str) -> str:
+    if chat.lesson_id:
+        approved_text = (get_student_visible_explanation(db, chat.lesson_id) or "").strip()
+        if approved_text:
+            return approved_text
+
+        lesson = get_lesson_by_id(db, chat.lesson_id)
+        if lesson:
+            try:
+                return rag.query_context(
+                    question=question,
+                    course_id=chat.course_id,
+                    source_name=lesson.get("original_filename"),
+                )
+            except Exception:
+                return ""
+
+    if rag is not None:
+        try:
+            return rag.query_context(question=question, course_id=chat.course_id)
+        except Exception:
+            return ""
+
+    return ""

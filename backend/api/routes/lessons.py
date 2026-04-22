@@ -583,6 +583,37 @@ def start_lesson_chat(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    existing_chat = (
+        db.query(Chat)
+        .filter(Chat.user_id == user.id, Chat.lesson_id == lesson_id)
+        .order_by(Chat.created_at.desc())
+        .first()
+    )
+
+    if existing_chat:
+        existing_chat.mode = body.mode
+        existing_chat.tone = body.tone
+        db.commit()
+        db.refresh(existing_chat)
+
+        has_messages = db.query(Message).filter(Message.chat_id == existing_chat.id).count() > 0
+
+        if not has_messages:
+            starter_message = Message(
+                chat_id=existing_chat.id,
+                sender="assistant",
+                content=approved_text,
+            )
+            db.add(starter_message)
+            db.commit()
+
+        return {
+            "chat_id": str(existing_chat.id),
+            "lesson_id": lesson_id,
+            "week_title": lesson.get("week_title"),
+            "starter_message": ""
+        }
+
     chat = Chat(
         title=lesson.get("week_title", "Lesson Chat"),
         user_id=user.id,
@@ -596,12 +627,17 @@ def start_lesson_chat(
     db.commit()
     db.refresh(chat)
 
-
-
+    starter_message = Message(
+        chat_id=chat.id,
+        sender="assistant",
+        content=approved_text,
+    )
+    db.add(starter_message)
+    db.commit()
 
     return {
         "chat_id": str(chat.id),
         "lesson_id": lesson_id,
         "week_title": lesson.get("week_title"),
-        "starter_message": approved_text
+        "starter_message": ""
     }

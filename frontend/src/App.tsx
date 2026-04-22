@@ -38,28 +38,28 @@ export default function App() {
 
       let i = 0;
 
-      setChatMap(prev => ({
+      setChatMap((prev) => ({
         ...prev,
         [activeChatId]: {
           ...prev[activeChatId],
-          messages: [{ role: "assistant", content: "" }]
-        }
+          messages: [{ role: "assistant", content: "" }],
+        },
       }));
 
       const interval = setInterval(() => {
         i += 4;
 
-        setChatMap(prev => {
+        setChatMap((prev) => {
           const c = prev[activeChatId];
           const msgs = [...c.messages];
           msgs[0] = {
             role: "assistant",
-            content: starter.slice(0, i)
+            content: starter.slice(0, i),
           };
 
           return {
             ...prev,
-            [activeChatId]: { ...c, messages: msgs }
+            [activeChatId]: { ...c, messages: msgs },
           };
         });
 
@@ -141,7 +141,10 @@ export default function App() {
           const msgs = [...(current?.messages ?? [])];
           const last = msgs[msgs.length - 1];
           if (last?.role === "assistant") {
-            msgs[msgs.length - 1] = { ...last, content: (last.content ?? "") + delta };
+            msgs[msgs.length - 1] = {
+              ...last,
+              content: (last.content ?? "") + delta,
+            };
           }
           return { ...prev, [chat_id]: { ...current, messages: msgs } };
         });
@@ -153,7 +156,10 @@ export default function App() {
         const msgs = [...(current?.messages ?? [])];
         const last = msgs[msgs.length - 1];
         if (last?.role === "assistant" && !(last.content ?? "").trim()) {
-          msgs[msgs.length - 1] = { ...last, content: "An error occurred while streaming the response." };
+          msgs[msgs.length - 1] = {
+            ...last,
+            content: "An error occurred while streaming the response.",
+          };
         }
         return { ...prev, [chat_id]: { ...current, messages: msgs } };
       });
@@ -170,7 +176,13 @@ export default function App() {
       const current = prev[chat_id];
       const msgs = [...(current?.messages ?? [])];
       if (msgs.at(-1)?.role === "assistant") msgs.pop();
-      return { ...prev, [chat_id]: { ...current, messages: [...msgs, { role: "assistant", content: "" }] } };
+      return {
+        ...prev,
+        [chat_id]: {
+          ...current,
+          messages: [...msgs, { role: "assistant", content: "" }],
+        },
+      };
     });
 
     try {
@@ -182,7 +194,10 @@ export default function App() {
           const msgs = [...(current?.messages ?? [])];
           const last = msgs[msgs.length - 1];
           if (last?.role === "assistant") {
-            msgs[msgs.length - 1] = { ...last, content: (last.content ?? "") + delta };
+            msgs[msgs.length - 1] = {
+              ...last,
+              content: (last.content ?? "") + delta,
+            };
           }
           return { ...prev, [chat_id]: { ...current, messages: msgs } };
         });
@@ -194,7 +209,10 @@ export default function App() {
         const msgs = [...(current?.messages ?? [])];
         const last = msgs[msgs.length - 1];
         if (last?.role === "assistant" && !(last.content ?? "").trim()) {
-          msgs[msgs.length - 1] = { ...last, content: "An error occurred while regenerating the response." };
+          msgs[msgs.length - 1] = {
+            ...last,
+            content: "An error occurred while regenerating the response.",
+          };
         }
         return { ...prev, [chat_id]: { ...current, messages: msgs } };
       });
@@ -206,26 +224,44 @@ export default function App() {
 
   async function handleModeChange(mode: TeachingMode) {
     setTeachingMode(mode);
-    if (activeChatId) {
-      const token = tokenStore.get();
-      await fetch(`/api/chats/${activeChatId}/settings`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ mode }),
-      });
+
+    if (!activeChatId) return;
+
+    setChatMap((prev) => ({
+      ...prev,
+      [activeChatId]: {
+        ...prev[activeChatId],
+        mode,
+      },
+    }));
+
+    try {
+      await chatsApi.updateSettings(activeChatId, { mode });
+    } catch (e) {
+      console.error("Mode update error:", e);
+    } finally {
       await loadChats();
     }
   }
 
   async function handleToneChange(tone: TeachingTone) {
     setTeachingTone(tone);
-    if (activeChatId) {
-      const token = tokenStore.get();
-      await fetch(`/api/chats/${activeChatId}/settings`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ tone }),
-      });
+
+    if (!activeChatId) return;
+
+    setChatMap((prev) => ({
+      ...prev,
+      [activeChatId]: {
+        ...prev[activeChatId],
+        tone,
+      },
+    }));
+
+    try {
+      await chatsApi.updateSettings(activeChatId, { tone });
+    } catch (e) {
+      console.error("Tone update error:", e);
+    } finally {
       await loadChats();
     }
   }

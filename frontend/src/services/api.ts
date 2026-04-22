@@ -7,7 +7,7 @@ import type {
   Material,
 } from "../types";
 
-const BASE = "http://127.0.0.1:8000/api";
+const BASE = "http://127.0.0.1:8011/api";
 
 export type Lesson = {
   lesson_id: string;
@@ -323,6 +323,15 @@ export const chats = {
     request<{ message: string }>(`/chats/${chat_id}/rename`, {
       method: "PATCH",
       body: JSON.stringify({ title }),
+    }),
+
+  updateSettings: (
+    chat_id: string,
+    opts: { mode?: TeachingMode; tone?: TeachingTone }
+  ) =>
+    request<{ message: string }>(`/chats/${chat_id}/settings`, {
+      method: "PATCH",
+      body: JSON.stringify(opts),
     }),
 
   sendStream: (chat_id: string, content: string) =>

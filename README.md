@@ -104,8 +104,3 @@ Frontend will usually run at:
 ```text
 http://localhost:5173
 ```
-
-## Notes
-- Users, courses, lessons, and materials are stored in PostgreSQL.
-- Make sure the backend and frontend are using the same active backend port.
-- pgAdmin can be used to inspect tables and verify inserted data.
