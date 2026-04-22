@@ -61,6 +61,17 @@ export default function Sidebar({
       </div>
 
       <div className="divider" />
+          <p className="section-label">Navigation</p>
+
+          <button
+            className="btn btn-ghost"
+            style={{ width: "100%", marginBottom: 10 }}
+            onClick={onNewChat}
+          >
+            🏠 Home Page
+          </button>
+
+      <div className="divider" />
 
       {user.role === "student" && (
         <>
@@ -85,11 +96,8 @@ export default function Sidebar({
           </select>
 
           <div className="divider" />
-          <p className="section-label">Your Chats</p>
 
-          <button className="btn btn-ghost" style={{ width: "100%", marginBottom: 8 }} onClick={onNewChat}>
-            ➕ New Chat
-          </button>
+          <p className="section-label" style={{ marginTop: 4 }}>Your Chats</p>
 
           <input
             className="input"

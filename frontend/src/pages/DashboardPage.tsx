@@ -4,9 +4,11 @@ import type { Course, TeachingMode, TeachingTone } from "../types";
 import type { Lesson } from "../services/api";
 
 interface DashboardPageProps {
-  onOpenChat: (chatId: string) => void;
+  onOpenChat: (chatId: string, courseId?: string) => void;
   teachingMode: TeachingMode;
   teachingTone: TeachingTone;
+  selectedCourseId: string | null;
+  onSelectedCourseChange: (courseId: string | null) => void;
 }
 
 function getCourseImage(courseName: string): string {
@@ -25,11 +27,12 @@ export default function DashboardPage({
   onOpenChat,
   teachingMode,
   teachingTone,
+  selectedCourseId,
+  onSelectedCourseChange,
 }: DashboardPageProps) {
   const [courseMap, setCourseMap] = useState<Record<string, Course>>({});
   const [allCourses, setAllCourses] = useState<Record<string, Course>>({});
   const [lessonsMap, setLessonsMap] = useState<Record<string, Record<string, Lesson>>>({});
-  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<CourseTab>("lessons");
   const [dashTab, setDashTab] = useState<DashTab>("enrolled");
   const [loading, setLoading] = useState(true);
@@ -45,6 +48,28 @@ export default function DashboardPage({
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+  async function hydrateSelectedCourse() {
+    if (!selectedCourseId) return;
+
+    setActiveTab("lessons");
+
+    if (lessonsMap[selectedCourseId]) return;
+
+    setLessonLoading(true);
+    try {
+      const data = await lessonsApi.getByCourse(selectedCourseId);
+      setLessonsMap((prev) => ({ ...prev, [selectedCourseId]: data }));
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLessonLoading(false);
+    }
+  }
+
+  hydrateSelectedCourse();
+}, [selectedCourseId, lessonsMap]);
 
   async function loadAllCourses() {
     if (Object.keys(allCourses).length > 0) return;
@@ -83,7 +108,7 @@ export default function DashboardPage({
       await coursesApi.unenroll(courseId);
       const updated = await coursesApi.getAssigned();
       setCourseMap(updated);
-      if (selectedCourseId === courseId) setSelectedCourseId(null);
+      if (selectedCourseId === courseId) onSelectedCourseChange(null);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -92,7 +117,7 @@ export default function DashboardPage({
   }
 
   async function openCourse(courseId: string) {
-    setSelectedCourseId(courseId);
+    onSelectedCourseChange(courseId);
     setActiveTab("lessons");
     if (lessonsMap[courseId]) return;
     setLessonLoading(true);
@@ -110,7 +135,7 @@ export default function DashboardPage({
     try {
       const data = await lessonsApi.startChat(lessonId, teachingMode, teachingTone);
       sessionStorage.setItem("starter_message", data.starter_message || "");
-      onOpenChat(data.chat_id);
+      onOpenChat(data.chat_id, selectedCourseId ?? undefined);
     } catch (e: any) {
       setError(e.message);
     }
@@ -124,7 +149,7 @@ export default function DashboardPage({
         mode: teachingMode,
         tone: teachingTone,
       });
-      onOpenChat(chat_id);
+      onOpenChat(chat_id, selectedCourseId ?? undefined);
     } catch (e: any) {
       setError(e.message);
     }
@@ -175,7 +200,7 @@ export default function DashboardPage({
             >
               {enrollingId === selectedCourseId ? "Leaving…" : "Leave Course"}
             </button>
-            <button className="btn btn-ghost" onClick={() => setSelectedCourseId(null)}>
+            <button className="btn btn-ghost" onClick={() => onSelectedCourseChange(null)}>
               ← Back
             </button>
           </div>

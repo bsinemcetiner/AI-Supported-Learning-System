@@ -16,6 +16,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [chatMap, setChatMap] = useState<ChatMap>({});
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [dashboardCourseId, setDashboardCourseId] = useState<string | null>(null);
   const [streaming, setStreaming] = useState(false);
   const [teachingMode, setTeachingMode] = useState<TeachingMode>("direct");
   const [teachingTone, setTeachingTone] = useState<TeachingTone>("Professional Tutor");
@@ -99,10 +100,17 @@ export default function App() {
     setActiveChatId(null);
   }
 
-  async function handleOpenChat(chatId: string) {
-    await loadChats();
-    setActiveChatId(chatId);
+async function handleOpenChat(chatId: string, courseId?: string) {
+  await loadChats();
+
+  if (courseId) {
+    setDashboardCourseId(courseId);
+  } else if (chatMap[chatId]?.course_id) {
+    setDashboardCourseId(chatMap[chatId].course_id);
   }
+
+  setActiveChatId(chatId);
+}
 
   async function handleDeleteChat(chat_id: string) {
     await chatsApi.delete(chat_id);
@@ -278,8 +286,14 @@ export default function App() {
         user={user}
         chatMap={chatMap}
         activeChatId={activeChatId}
-        onSelectChat={setActiveChatId}
-        onNewChat={() => setActiveChatId(null)}
+        onSelectChat={(id) => {
+          setDashboardCourseId(chatMap[id]?.course_id ?? null);
+          setActiveChatId(id);
+        }}
+        onNewChat={() => {
+          setDashboardCourseId(null);
+          setActiveChatId(null);
+        }}
         onDeleteChat={handleDeleteChat}
         onLogout={handleLogout}
         teachingMode={teachingMode}
@@ -299,7 +313,10 @@ export default function App() {
           streaming={streaming}
           onSend={(content) => handleSendMessage(activeChatId, content)}
           onRegenerate={() => handleRegenerate(activeChatId)}
-          onBack={() => setActiveChatId(null)}
+          onBack={() => {
+              setDashboardCourseId(activeChat?.course_id ?? null);
+              setActiveChatId(null);
+          }}
         />
       ) : (
         <div className="main-content">
@@ -307,6 +324,8 @@ export default function App() {
             teachingMode={teachingMode}
             teachingTone={teachingTone}
             onOpenChat={handleOpenChat}
+            selectedCourseId={dashboardCourseId}
+            onSelectedCourseChange={setDashboardCourseId}
           />
         </div>
       )}
