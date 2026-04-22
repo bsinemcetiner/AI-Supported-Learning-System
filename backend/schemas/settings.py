@@ -1,9 +1,10 @@
 from pydantic import BaseModel
+from typing import Optional
 
 class MeResponse(BaseModel):
     full_name: str
     username: str
-    email: str | None = None
+    email: Optional[str] = None
     role: str
 
 class UpdateProfileRequest(BaseModel):

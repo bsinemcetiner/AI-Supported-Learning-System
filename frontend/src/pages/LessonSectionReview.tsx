@@ -20,9 +20,7 @@ export function LessonSectionReview({
   const [publishing, setPublishing] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    loadSections();
-  }, [lesson.lesson_id]);
+  useEffect(() => { loadSections(); }, [lesson.lesson_id]);
 
   async function loadSections() {
     try {
@@ -50,207 +48,143 @@ export function LessonSectionReview({
 
   const approvedCount = sections.filter((s) => s.approved).length;
   const draftCount = sections.filter((s) => !!s.draft?.trim()).length;
-  const pendingCount = totalSections - approvedCount;
+  const pendingCount = totalSections - approvedCount - (draftCount - approvedCount > 0 ? draftCount - approvedCount : 0);
   const allApproved = totalSections > 0 && approvedCount === totalSections;
   const progressPct = totalSections > 0 ? Math.round((approvedCount / totalSections) * 100) : 0;
 
-  function getLessonStatusText() {
-    if (totalSections === 0) return "No sections found yet.";
-    if (approvedCount === 0 && draftCount === 0) return "Start by opening a section and generating a preview.";
-    if (approvedCount === 0 && draftCount > 0) return "Some drafts are ready. Review them and approve the good ones.";
-    if (approvedCount > 0 && !allApproved) return "Some sections are approved. You can keep reviewing or publish approved ones now.";
-    if (allApproved) return "All sections are approved. Ready to publish.";
-    return "Review in progress.";
+  function getStatusText() {
+    if (totalSections === 0) return null;
+    if (approvedCount === 0 && draftCount === 0) return { icon: "⏱", text: "Start by opening a section and generating a preview.", color: "#92400e", bg: "#fef3c7", border: "#fde68a" };
+    if (approvedCount === 0 && draftCount > 0) return { icon: "✨", text: "Some drafts are ready. Review them and approve the good ones.", color: "#1e40af", bg: "#eff6ff", border: "#bfdbfe" };
+    if (approvedCount > 0 && !allApproved) return { icon: "⏱", text: "Some sections are approved. You can keep reviewing or publish approved ones now.", color: "#92400e", bg: "#fff7ed", border: "#fed7aa" };
+    if (allApproved) return { icon: "✅", text: "All sections are approved. Ready to publish!", color: "#065f46", bg: "#ecfdf5", border: "#6ee7b7" };
+    return null;
   }
 
   if (!loaded) {
     return (
-      <div
-        style={{
-          background: "var(--card)",
-          border: "1px solid var(--line)",
-          borderRadius: "var(--r-lg)",
-          padding: "1rem 1.25rem",
-        }}
-      >
-        <div style={{ fontWeight: 700 }}>{lesson.week_title}</div>
-        <div style={{ fontSize: "0.8rem", color: "var(--text-soft)", marginTop: 4 }}>Loading sections...</div>
+      <div style={{ background: "#fff", borderRadius: 20, border: "1px solid rgba(0,0,0,0.07)", padding: "1.25rem 1.5rem", boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
+        <div style={{ fontWeight: 700, fontSize: "1rem", color: "#111827" }}>{lesson.week_title}</div>
+        <div style={{ fontSize: "0.85rem", color: "#9ca3af", marginTop: 4 }}>Loading sections...</div>
       </div>
     );
   }
 
-  return (
-    <div
-      style={{
-        background: "var(--card)",
-        border: "1px solid var(--line)",
-        borderRadius: "var(--r-lg)",
-        overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          padding: "14px 18px",
-          borderBottom: "1px solid var(--line)",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          flexWrap: "wrap",
-          gap: 12,
-        }}
-      >
-        <div style={{ flex: 1, minWidth: 260 }}>
-          <p style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text)", margin: "0 0 2px" }}>
-            {lesson.week_title}
-          </p>
-          <p style={{ fontSize: "0.78rem", color: "var(--text-soft)", margin: 0 }}>
-            📄 {lesson.original_filename}
-          </p>
+  const status = getStatusText();
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
-            <div
-              style={{
-                flex: 1,
-                maxWidth: 240,
-                height: 8,
-                background: "var(--bg3)",
-                borderRadius: 99,
-                overflow: "hidden",
-              }}
-            >
-              <div
-                style={{
-                  height: "100%",
-                  width: `${progressPct}%`,
-                  background: allApproved ? "#1D9E75" : approvedCount > 0 ? "#E8510A" : "#d8d0c6",
-                  borderRadius: 99,
-                  transition: "width 0.4s ease",
-                }}
-              />
+  // İkon kutusu için renkler
+  const iconGradient = "linear-gradient(135deg, #fb923c, #ec4899)";
+
+  return (
+    <div style={{ background: "#fff", borderRadius: 20, border: "1px solid rgba(0,0,0,0.07)", boxShadow: "0 4px 20px rgba(0,0,0,0.06)", overflow: "hidden", fontFamily: "inherit" }}>
+
+      {/* Header */}
+      <div style={{ padding: "1.25rem 1.5rem", borderBottom: "1px solid rgba(0,0,0,0.06)", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 14 }}>
+        <div style={{ flex: 1, minWidth: 260 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: iconGradient, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
             </div>
-            <span style={{ fontSize: "0.75rem", color: "var(--text-soft)", whiteSpace: "nowrap" }}>
+            <div>
+              <p style={{ fontSize: "1rem", fontWeight: 700, color: "#111827", margin: 0, lineHeight: 1.3 }}>{lesson.week_title}</p>
+              <p style={{ fontSize: "0.8rem", color: "#9ca3af", margin: 0, marginTop: 2 }}>📄 {lesson.original_filename}</p>
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ flex: 1, maxWidth: 260, height: 7, background: "#f3f4f6", borderRadius: 99, overflow: "hidden" }}>
+              <div style={{
+                height: "100%",
+                width: `${progressPct}%`,
+                background: allApproved ? "linear-gradient(90deg, #10b981, #059669)" : approvedCount > 0 ? "linear-gradient(90deg, #f97316, #ec4899)" : "#e5e7eb",
+                borderRadius: 99,
+                transition: "width 0.4s ease",
+              }} />
+            </div>
+            <span style={{ fontSize: "0.8rem", color: "#6b7280", whiteSpace: "nowrap", fontWeight: 500 }}>
               {approvedCount}/{totalSections} approved
             </span>
           </div>
-
-          <div
-            style={{
-              marginTop: 10,
-              fontSize: "0.8rem",
-              color: "var(--text-mid)",
-              background: "var(--bg2)",
-              borderRadius: "var(--r-sm)",
-              padding: "0.55rem 0.7rem",
-            }}
-          >
-            {getLessonStatusText()}
-          </div>
         </div>
 
+        {/* Publish button */}
         <button
           onClick={handlePublish}
           disabled={publishing || approvedCount === 0}
           style={{
-            background: approvedCount === 0 ? "var(--bg2)" : allApproved ? "#1D9E75" : "var(--orange)",
-            color: approvedCount === 0 ? "var(--text-soft)" : "#fff",
-            border: "none",
-            borderRadius: "var(--r-md)",
-            padding: "10px 18px",
-            fontSize: "0.85rem",
-            fontWeight: 700,
+            background: approvedCount === 0 ? "#f3f4f6" : allApproved ? "linear-gradient(135deg, #10b981, #059669)" : "linear-gradient(135deg, #f97316, #ec4899)",
+            color: approvedCount === 0 ? "#9ca3af" : "#fff",
+            border: "none", borderRadius: 14,
+            padding: "11px 22px",
+            fontSize: "0.9rem", fontWeight: 700,
             cursor: approvedCount === 0 ? "not-allowed" : "pointer",
             whiteSpace: "nowrap",
             transition: "all 0.2s",
             fontFamily: "inherit",
-            minWidth: 180,
+            boxShadow: approvedCount === 0 ? "none" : "0 4px 16px rgba(249,115,22,0.3)",
+            display: "flex", alignItems: "center", gap: 8,
           }}
         >
-          {publishing
-            ? "Publishing..."
-            : approvedCount === 0
-            ? "Approve first"
-            : `🚀 Publish ${approvedCount} Section${approvedCount > 1 ? "s" : ""}`}
+          {publishing ? (
+            "Publishing..."
+          ) : approvedCount === 0 ? (
+            "Approve first"
+          ) : (
+            <>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+              Publish {approvedCount} Section{approvedCount > 1 ? "s" : ""}
+            </>
+          )}
         </button>
       </div>
 
-      <div
-        style={{
-          padding: "12px 18px",
-          borderBottom: "1px solid var(--line)",
-          display: "flex",
-          gap: 10,
-          flexWrap: "wrap",
-        }}
-      >
-        <div
-          style={{
-            background: "var(--bg2)",
-            borderRadius: "999px",
-            padding: "6px 12px",
-            fontSize: "0.76rem",
-            color: "var(--text-mid)",
-            fontWeight: 600,
-          }}
-        >
-          Total: {totalSections}
+      {/* Status message */}
+      {status && (
+        <div style={{ padding: "0.75rem 1.5rem", background: status.bg, borderBottom: `1px solid ${status.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: "0.9rem" }}>{status.icon}</span>
+          <span style={{ fontSize: "0.85rem", color: status.color, fontWeight: 500 }}>{status.text}</span>
         </div>
-        <div
-          style={{
-            background: "#eef7f2",
-            borderRadius: "999px",
-            padding: "6px 12px",
-            fontSize: "0.76rem",
-            color: "#0f6e56",
-            fontWeight: 600,
-          }}
-        >
-          Approved: {approvedCount}
-        </div>
-        <div
-          style={{
-            background: "#edf4fb",
-            borderRadius: "999px",
-            padding: "6px 12px",
-            fontSize: "0.76rem",
-            color: "#24527a",
-            fontWeight: 600,
-          }}
-        >
-          Draft ready: {draftCount}
-        </div>
-        <div
-          style={{
-            background: "#faf3e8",
-            borderRadius: "999px",
-            padding: "6px 12px",
-            fontSize: "0.76rem",
-            color: "#8a5a18",
-            fontWeight: 600,
-          }}
-        >
-          Still pending: {pendingCount}
-        </div>
+      )}
+
+      {/* Stats pills */}
+      <div style={{ padding: "0.9rem 1.5rem", borderBottom: "1px solid rgba(0,0,0,0.05)", display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {[
+          { label: `Total: ${totalSections}`, bg: "#f3f4f6", color: "#374151", border: "#e5e7eb" },
+          { label: `Approved: ${approvedCount}`, bg: "#ecfdf5", color: "#065f46", border: "#6ee7b7", icon: "✓" },
+          { label: `Draft ready: ${draftCount}`, bg: "#eff6ff", color: "#1e40af", border: "#bfdbfe", icon: "✨" },
+          { label: `Still pending: ${totalSections - approvedCount - draftCount + approvedCount}`, bg: "#fef3c7", color: "#92400e", border: "#fde68a", icon: "⏱" },
+        ].map((pill) => (
+          <span key={pill.label} style={{
+            background: pill.bg, color: pill.color,
+            border: `1px solid ${pill.border}`,
+            borderRadius: 99, padding: "5px 13px",
+            fontSize: "0.8rem", fontWeight: 600,
+          }}>
+            {pill.label}
+          </span>
+        ))}
       </div>
 
-      <div
-        style={{
-          padding: "14px 18px",
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-          gap: 12,
-        }}
-      >
+      {/* Section cards */}
+      <div style={{ padding: "1.25rem 1.5rem", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
         {sections.map((section, index) => {
           const hasDraft = !!section.draft?.trim();
           const isApproved = section.approved;
           const isReady = hasDraft && !isApproved;
 
-          const borderColor = isApproved ? "#5DCAA5" : isReady ? "#85B7EB" : "var(--line)";
-          const bgColor = isApproved ? "#E1F5EE" : "var(--card)";
-          const badgeBg = isApproved ? "#E1F5EE" : isReady ? "#E6F1FB" : "var(--bg3)";
-          const badgeColor = isApproved ? "#085041" : isReady ? "#0C447C" : "var(--text-soft)";
-          const badgeText = isApproved ? "Approved" : isReady ? "Ready to review" : "Needs preview";
-          const hintColor = isApproved ? "#0F6E56" : "var(--orange)";
+          const borderColor = isApproved ? "#10b981" : isReady ? "#60a5fa" : "rgba(0,0,0,0.07)";
+          const bgColor = isApproved ? "#f0fdf4" : "#fff";
+          const badgeBg = isApproved ? "#dcfce7" : isReady ? "#dbeafe" : "#f3f4f6";
+          const badgeColor = isApproved ? "#166534" : isReady ? "#1e40af" : "#6b7280";
+          const badgeText = isApproved ? "Approved" : isReady ? "Draft ready" : "Needs preview";
+          const hintText = isApproved ? "Review content →" : isReady ? "Approve or improve →" : "Generate preview →";
+          const hintColor = isApproved ? "#10b981" : "#f97316";
 
           return (
             <div
@@ -258,66 +192,59 @@ export function LessonSectionReview({
               onClick={() => onOpenSection(lesson, index)}
               style={{
                 background: bgColor,
-                border: `1px solid ${borderColor}`,
-                borderRadius: "var(--r-md)",
-                padding: "14px 16px",
+                border: `1.5px solid ${borderColor}`,
+                borderRadius: 16,
+                padding: "1rem 1.1rem",
                 cursor: "pointer",
-                transition: "transform 0.15s, border-color 0.15s",
-                display: "flex",
-                flexDirection: "column",
-                gap: 7,
+                transition: "transform 0.15s, box-shadow 0.15s, border-color 0.15s",
+                display: "flex", flexDirection: "column", gap: 7,
+                position: "relative",
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.borderColor = "var(--orange)";
+                e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,0.09)";
+                if (!isApproved) e.currentTarget.style.borderColor = "#f97316";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "none";
                 e.currentTarget.style.borderColor = borderColor;
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: "0.7rem", color: "var(--text-soft)", fontWeight: 600 }}>
+              {/* Approved checkmark */}
+              {isApproved && (
+                <div style={{ position: "absolute", top: 10, right: 10, width: 22, height: 22, borderRadius: "50%", background: "#10b981", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+              )}
+
+              {/* Header */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: "0.72rem", color: "#9ca3af", fontWeight: 600 }}>
                   Section {index + 1} · p.{section.page_start}–{section.page_end}
                 </span>
-                <span
-                  style={{
-                    fontSize: "0.68rem",
-                    fontWeight: 600,
-                    borderRadius: 99,
-                    padding: "2px 8px",
-                    background: badgeBg,
-                    color: badgeColor,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {badgeText}
-                </span>
+                {!isApproved && (
+                  <span style={{ fontSize: "0.68rem", fontWeight: 700, borderRadius: 99, padding: "2px 9px", background: badgeBg, color: badgeColor, whiteSpace: "nowrap" }}>
+                    {badgeText}
+                  </span>
+                )}
               </div>
 
-              <p style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text)", margin: 0, lineHeight: 1.3 }}>
+              {/* Title */}
+              <p style={{ fontSize: "1rem", fontWeight: 700, color: "#111827", margin: 0, lineHeight: 1.3 }}>
                 {section.title}
               </p>
 
+              {/* Summary */}
               {section.summary && (
-                <p style={{ fontSize: "0.76rem", color: "var(--text-soft)", margin: 0, lineHeight: 1.5 }}>
-                  {section.summary}
+                <p style={{ fontSize: "0.8rem", color: "#6b7280", margin: 0, lineHeight: 1.55 }}>
+                  {section.summary.length > 70 ? section.summary.slice(0, 70) + "..." : section.summary}
                 </p>
               )}
 
-              <div
-                style={{
-                  marginTop: 4,
-                  fontSize: "0.72rem",
-                  color: hintColor,
-                  fontWeight: 700,
-                }}
-              >
-                {isApproved
-                  ? "Open to review approved content →"
-                  : isReady
-                  ? "Open to approve or improve →"
-                  : "Open to generate preview →"}
+              {/* Hint */}
+              <div style={{ marginTop: 4, fontSize: "0.78rem", color: hintColor, fontWeight: 700 }}>
+                {hintText}
               </div>
             </div>
           );
