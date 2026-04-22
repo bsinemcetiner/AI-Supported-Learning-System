@@ -8,6 +8,7 @@ from api.routes.lessons import router as lessons_router
 from api.routes.admin import router as admin_router
 
 from database import Base, engine
+from api.routes.settings import router as settings_router
 from models import User, Course, Lesson, Chat, Message, Material, CourseMaterial
 
 from dotenv import load_dotenv
@@ -36,5 +37,6 @@ app.include_router(courses_router, prefix="/api")
 app.include_router(chats_router, prefix="/api")
 app.include_router(lessons_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
+app.include_router(settings_router, prefix="/api")
 
 Base.metadata.create_all(bind=engine)

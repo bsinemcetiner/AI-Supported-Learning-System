@@ -409,3 +409,25 @@ export const removeCourse = async (studentId: number, courseId: string) => {
   if (!res.ok) throw new Error("Kaldırma başarısız");
   return res.json();
 };
+
+export const settings = {
+  getMe: () =>
+    request<{
+      full_name: string;
+      username: string;
+      email?: string | null;
+      role: string;
+    }>("/settings/me"),
+
+  updateProfile: (full_name: string) =>
+    request<{ message: string }>("/settings/profile", {
+      method: "PATCH",
+      body: JSON.stringify({ full_name }),
+    }),
+
+  changePassword: (current_password: string, new_password: string) =>
+    request<{ message: string }>("/settings/password", {
+      method: "PATCH",
+      body: JSON.stringify({ current_password, new_password }),
+    }),
+};

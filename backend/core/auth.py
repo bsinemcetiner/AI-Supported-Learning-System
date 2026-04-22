@@ -1,3 +1,4 @@
+import hashlib
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -7,8 +8,15 @@ from fastapi.security import OAuth2PasswordBearer
 
 from core.config import settings
 
+
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(raw_password: str, hashed_password: str) -> bool:
+    return hash_password(raw_password) == hashed_password
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()

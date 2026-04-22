@@ -8,6 +8,7 @@ import DashboardPage from "./pages/DashboardPage";
 import ChatPage from "./pages/ChatPage";
 import TeacherPage from "./pages/TeacherPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
+import SettingsModal from "./components/settings/SettingsModal";
 
 import "./styles/theme.css";
 
@@ -18,6 +19,8 @@ export default function App() {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [dashboardCourseId, setDashboardCourseId] = useState<string | null>(null);
   const [streaming, setStreaming] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
   const [teachingMode, setTeachingMode] = useState<TeachingMode>("direct");
   const [teachingTone, setTeachingTone] = useState<TeachingTone>("Professional Tutor");
 
@@ -25,6 +28,7 @@ export default function App() {
     if (isAdmin) return;
     const t = tokenStore.get();
     if (!t) return;
+
     chatsApi
       .getAll()
       .then((data) => setChatMap(data))
@@ -79,7 +83,9 @@ export default function App() {
     if (activeChat.tone) setTeachingTone(activeChat.tone);
   }, [activeChatId, chatMap]);
 
-  if (isAdmin) return <AdminDashboardPage onLogout={() => setIsAdmin(false)} />;
+  if (isAdmin) {
+    return <AdminDashboardPage onLogout={() => setIsAdmin(false)} />;
+  }
 
   async function loadChats() {
     try {
@@ -98,19 +104,21 @@ export default function App() {
     setUser(null);
     setChatMap({});
     setActiveChatId(null);
+    setDashboardCourseId(null);
+    setSettingsOpen(false);
   }
 
-async function handleOpenChat(chatId: string, courseId?: string) {
-  await loadChats();
+  async function handleOpenChat(chatId: string, courseId?: string) {
+    await loadChats();
 
-  if (courseId) {
-    setDashboardCourseId(courseId);
-  } else if (chatMap[chatId]?.course_id) {
-    setDashboardCourseId(chatMap[chatId].course_id);
+    if (courseId) {
+      setDashboardCourseId(courseId);
+    } else if (chatMap[chatId]?.course_id) {
+      setDashboardCourseId(chatMap[chatId].course_id);
+    }
+
+    setActiveChatId(chatId);
   }
-
-  setActiveChatId(chatId);
-}
 
   async function handleDeleteChat(chat_id: string) {
     await chatsApi.delete(chat_id);
@@ -124,6 +132,7 @@ async function handleOpenChat(chatId: string, courseId?: string) {
     setChatMap((prev) => {
       const current = prev[chat_id];
       const prevMessages = current?.messages ?? [];
+
       return {
         ...prev,
         [chat_id]: {
@@ -148,28 +157,39 @@ async function handleOpenChat(chatId: string, courseId?: string) {
           const current = prev[chat_id];
           const msgs = [...(current?.messages ?? [])];
           const last = msgs[msgs.length - 1];
+
           if (last?.role === "assistant") {
             msgs[msgs.length - 1] = {
               ...last,
               content: (last.content ?? "") + delta,
             };
           }
-          return { ...prev, [chat_id]: { ...current, messages: msgs } };
+
+          return {
+            ...prev,
+            [chat_id]: { ...current, messages: msgs },
+          };
         });
       }
     } catch (e) {
       console.error("Stream error:", e);
+
       setChatMap((prev) => {
         const current = prev[chat_id];
         const msgs = [...(current?.messages ?? [])];
         const last = msgs[msgs.length - 1];
+
         if (last?.role === "assistant" && !(last.content ?? "").trim()) {
           msgs[msgs.length - 1] = {
             ...last,
             content: "An error occurred while streaming the response.",
           };
         }
-        return { ...prev, [chat_id]: { ...current, messages: msgs } };
+
+        return {
+          ...prev,
+          [chat_id]: { ...current, messages: msgs },
+        };
       });
     } finally {
       setStreaming(false);
@@ -183,7 +203,9 @@ async function handleOpenChat(chatId: string, courseId?: string) {
     setChatMap((prev) => {
       const current = prev[chat_id];
       const msgs = [...(current?.messages ?? [])];
+
       if (msgs.at(-1)?.role === "assistant") msgs.pop();
+
       return {
         ...prev,
         [chat_id]: {
@@ -201,28 +223,39 @@ async function handleOpenChat(chatId: string, courseId?: string) {
           const current = prev[chat_id];
           const msgs = [...(current?.messages ?? [])];
           const last = msgs[msgs.length - 1];
+
           if (last?.role === "assistant") {
             msgs[msgs.length - 1] = {
               ...last,
               content: (last.content ?? "") + delta,
             };
           }
-          return { ...prev, [chat_id]: { ...current, messages: msgs } };
+
+          return {
+            ...prev,
+            [chat_id]: { ...current, messages: msgs },
+          };
         });
       }
     } catch (e) {
       console.error("Regenerate error:", e);
+
       setChatMap((prev) => {
         const current = prev[chat_id];
         const msgs = [...(current?.messages ?? [])];
         const last = msgs[msgs.length - 1];
+
         if (last?.role === "assistant" && !(last.content ?? "").trim()) {
           msgs[msgs.length - 1] = {
             ...last,
             content: "An error occurred while regenerating the response.",
           };
         }
-        return { ...prev, [chat_id]: { ...current, messages: msgs } };
+
+        return {
+          ...prev,
+          [chat_id]: { ...current, messages: msgs },
+        };
       });
     } finally {
       setStreaming(false);
@@ -281,54 +314,66 @@ async function handleOpenChat(chatId: string, courseId?: string) {
   const activeChat = activeChatId ? chatMap[activeChatId] : null;
 
   return (
-    <div className="app-layout">
-      <Sidebar
-        user={user}
-        chatMap={chatMap}
-        activeChatId={activeChatId}
-        onSelectChat={(id) => {
-          setDashboardCourseId(chatMap[id]?.course_id ?? null);
-          setActiveChatId(id);
-        }}
-        onNewChat={() => {
-          setDashboardCourseId(null);
-          setActiveChatId(null);
-        }}
-        onDeleteChat={handleDeleteChat}
-        onLogout={handleLogout}
-        teachingMode={teachingMode}
-        teachingTone={teachingTone}
-        onModeChange={handleModeChange}
-        onToneChange={handleToneChange}
-      />
+    <>
+      <div className="app-layout">
+        <Sidebar
+          user={user}
+          chatMap={chatMap}
+          activeChatId={activeChatId}
+          onSelectChat={(id) => {
+            setDashboardCourseId(chatMap[id]?.course_id ?? null);
+            setActiveChatId(id);
+          }}
+          onNewChat={() => {
+            setDashboardCourseId(null);
+            setActiveChatId(null);
+          }}
+          onDeleteChat={handleDeleteChat}
+          onLogout={handleLogout}
+          onOpenSettings={() => setSettingsOpen(true)}
+          teachingMode={teachingMode}
+          teachingTone={teachingTone}
+          onModeChange={handleModeChange}
+          onToneChange={handleToneChange}
+        />
 
-      {user.role === "teacher" ? (
-        <div className="main-content">
-          <TeacherPage username={user.username} />
-        </div>
-      ) : activeChatId && activeChat ? (
-        <ChatPage
-          chatId={activeChatId}
-          chat={activeChat}
-          streaming={streaming}
-          onSend={(content) => handleSendMessage(activeChatId, content)}
-          onRegenerate={() => handleRegenerate(activeChatId)}
-          onBack={() => {
+        {user.role === "teacher" ? (
+          <div className="main-content">
+            <TeacherPage username={user.username} />
+          </div>
+        ) : activeChatId && activeChat ? (
+          <ChatPage
+            chatId={activeChatId}
+            chat={activeChat}
+            streaming={streaming}
+            onSend={(content) => handleSendMessage(activeChatId, content)}
+            onRegenerate={() => handleRegenerate(activeChatId)}
+            onBack={() => {
               setDashboardCourseId(activeChat?.course_id ?? null);
               setActiveChatId(null);
+            }}
+          />
+        ) : (
+          <div className="main-content">
+            <DashboardPage
+              teachingMode={teachingMode}
+              teachingTone={teachingTone}
+              onOpenChat={handleOpenChat}
+              selectedCourseId={dashboardCourseId}
+              onSelectedCourseChange={setDashboardCourseId}
+            />
+          </div>
+        )}
+      </div>
+
+      {settingsOpen && (
+        <SettingsModal
+          onClose={() => setSettingsOpen(false)}
+          onProfileUpdated={(fullName) => {
+            setUser((prev) => (prev ? { ...prev, full_name: fullName } : prev));
           }}
         />
-      ) : (
-        <div className="main-content">
-          <DashboardPage
-            teachingMode={teachingMode}
-            teachingTone={teachingTone}
-            onOpenChat={handleOpenChat}
-            selectedCourseId={dashboardCourseId}
-            onSelectedCourseChange={setDashboardCourseId}
-          />
-        </div>
       )}
-    </div>
+    </>
   );
 }
