@@ -318,7 +318,7 @@ def get_lesson(
 @router.get("/{lesson_id}/sections")
 def get_sections(
     lesson_id: str,
-    current_user: dict = Depends(require_teacher),
+    current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     lesson = get_lesson_by_id(db, lesson_id)
@@ -326,10 +326,14 @@ def get_sections(
         raise HTTPException(status_code=404, detail="Lesson not found")
 
     sections = _load_sections(lesson_id)
+    is_teacher = current_user.get("role") == "teacher"
 
     result = []
     for sec in sections:
         s = dict(sec)
+        # Student yalnızca approved section'ları görebilir
+        if not is_teacher and not s.get("approved", False):
+            continue
         s["text_preview"] = s.get("text", "")[:200]
         s.pop("text", None)
         result.append(s)
