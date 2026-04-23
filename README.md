@@ -97,6 +97,8 @@ Open a new terminal and go to the frontend folder, install dependencies, start t
 ```text
 cd frontend
 npm install
+npm install framer-motion
+npm install lucide-react
 npm run dev
 ```
 

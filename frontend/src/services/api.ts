@@ -135,14 +135,14 @@ export const auth = {
       body: JSON.stringify({ full_name, username, password, role, email }),
     }),
 
-  // Email'e OTP doğrulama kodu gönder
+  // Send OTP verification code to email
   sendOtp: (email: string) =>
     request<{ message: string; role: string }>("/auth/send-otp", {
       method: "POST",
       body: JSON.stringify({ email }),
     }),
 
-  // Gelen OTP kodunu doğrula
+  // Verify the incoming OTP code
   verifyOtp: (email: string, otp: string) =>
     request<{ message: string; verified: boolean }>("/auth/verify-otp", {
       method: "POST",
@@ -156,15 +156,17 @@ export const courses = {
   getMine: () => request<Record<string, Course>>("/courses/mine"),
 
   getAssigned: () => request<Record<string, Course>>("/courses/assigned"),
-enroll: (course_id: string) =>
-  request<{ message: string; course_id: string }>(`/courses/${course_id}/enroll`, {
-    method: "POST",
-  }),
 
-unenroll: (course_id: string) =>
-  request<{ message: string; course_id: string }>(`/courses/${course_id}/unenroll`, {
-    method: "DELETE",
-  }),
+  enroll: (course_id: string) =>
+    request<{ message: string; course_id: string }>(`/courses/${course_id}/enroll`, {
+      method: "POST",
+    }),
+
+  unenroll: (course_id: string) =>
+    request<{ message: string; course_id: string }>(`/courses/${course_id}/unenroll`, {
+      method: "DELETE",
+    }),
+
   create: (course_name: string) =>
     request<{ course_id: string }>("/courses/", {
       method: "POST",
@@ -350,7 +352,7 @@ export const adminLogin = async (username: string, password: string) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
   });
-  if (!res.ok) throw new Error("Hatalı kullanıcı adı veya şifre");
+  if (!res.ok) throw new Error("Invalid username or password");
   const data = await res.json();
   localStorage.setItem(ADMIN_TOKEN_KEY, data.access_token);
   return data;
@@ -366,19 +368,19 @@ const adminHeaders = () => ({
 
 export const fetchAllStudents = async () => {
   const res = await fetch(`${BASE}/admin/students`, { headers: adminHeaders() });
-  if (!res.ok) throw new Error("Öğrenciler alınamadı");
+  if (!res.ok) throw new Error("Failed to fetch students");
   return res.json();
 };
 
 export const fetchAllTeachers = async () => {
   const res = await fetch(`${BASE}/admin/teachers`, { headers: adminHeaders() });
-  if (!res.ok) throw new Error("Öğretmenler alınamadı");
+  if (!res.ok) throw new Error("Failed to fetch teachers");
   return res.json();
 };
 
 export const fetchAllCourses = async () => {
   const res = await fetch(`${BASE}/admin/courses`, { headers: adminHeaders() });
-  if (!res.ok) throw new Error("Kurslar alınamadı");
+  if (!res.ok) throw new Error("Failed to fetch courses");
   return res.json();
 };
 
@@ -386,7 +388,7 @@ export const fetchStudentCourses = async (studentId: number) => {
   const res = await fetch(`${BASE}/admin/students/${studentId}/courses`, {
     headers: adminHeaders(),
   });
-  if (!res.ok) throw new Error("Öğrenci kursları alınamadı");
+  if (!res.ok) throw new Error("Failed to fetch student courses");
   return res.json();
 };
 
@@ -396,7 +398,7 @@ export const assignCourse = async (studentId: number, courseId: string) => {
     headers: adminHeaders(),
     body: JSON.stringify({ student_id: studentId, course_id: courseId }),
   });
-  if (!res.ok) throw new Error("Atama başarısız");
+  if (!res.ok) throw new Error("Assignment failed");
   return res.json();
 };
 
@@ -406,7 +408,7 @@ export const removeCourse = async (studentId: number, courseId: string) => {
     headers: adminHeaders(),
     body: JSON.stringify({ student_id: studentId, course_id: courseId }),
   });
-  if (!res.ok) throw new Error("Kaldırma başarısız");
+  if (!res.ok) throw new Error("Removal failed");
   return res.json();
 };
 
