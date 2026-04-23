@@ -481,6 +481,10 @@ export default function TeacherPage({ username, onLogout }: { username: string; 
                 </div>
               </div>
             </div>
+
+            {/* Calendar */}
+            <TeacherCalendar darkMode={darkMode} cardBg={cardBg} textPrimary={textPrimary} textSecondary={textSecondary} borderColor={borderColor} />
+
           </motion.div>
         )}
 
@@ -661,6 +665,133 @@ export default function TeacherPage({ username, onLogout }: { username: string; 
           </motion.div>
         )}
 
+      </div>
+    </div>
+  );
+}
+
+// ── Teacher Calendar Component ────────────────────────────────────────────────
+function TeacherCalendar({ darkMode, cardBg, textPrimary, textSecondary, borderColor }: {
+  darkMode: boolean; cardBg: string; textPrimary: string; textSecondary: string; borderColor: string;
+}) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
+  const events = [
+    { id: "1", title: "CE350 Linux Utilities", date: new Date(2026, 3, 23), time: "09:00-10:30", color: "#3b82f6" },
+    { id: "2", title: "Assignment 2 Deadline", date: new Date(2026, 3, 25), time: "23:59", color: "#ef4444" },
+    { id: "3", title: "Midterm Exam", date: new Date(2026, 3, 28), time: "10:00-12:00", color: "#8b5cf6" },
+  ];
+
+  const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+  const daysInMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  const firstDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1).getDay();
+
+  const isToday = (day: number) => {
+    const t = new Date();
+    return day === t.getDate() && currentDate.getMonth() === t.getMonth() && currentDate.getFullYear() === t.getFullYear();
+  };
+
+  const getEvents = (day: number) => events.filter(e =>
+    e.date.getDate() === day && e.date.getMonth() === currentDate.getMonth() && e.date.getFullYear() === currentDate.getFullYear()
+  );
+
+  const days = [];
+  for (let i = 0; i < firstDay(currentDate); i++) days.push(<div key={`e${i}`} />);
+  for (let day = 1; day <= daysInMonth(currentDate); day++) {
+    const todayFlag = isToday(day);
+    const evts = getEvents(day);
+    days.push(
+      <button key={day} onClick={() => setSelectedDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day))}
+        style={{ aspectRatio: "1", borderRadius: 12, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: "0.85rem", fontWeight: 600, position: "relative", transition: "all 0.15s",
+          background: todayFlag ? "linear-gradient(135deg, #f97316, #ec4899)" : evts.length > 0 ? (darkMode ? "rgba(59,130,246,0.2)" : "#eff6ff") : "transparent",
+          color: todayFlag ? "#fff" : evts.length > 0 ? "#3b82f6" : textPrimary,
+          boxShadow: todayFlag ? "0 4px 12px rgba(249,115,22,0.35)" : "none",
+        }}
+        onMouseEnter={(e) => { if (!todayFlag) e.currentTarget.style.background = darkMode ? "rgba(255,255,255,0.08)" : "#f1f5f9"; }}
+        onMouseLeave={(e) => { if (!todayFlag) e.currentTarget.style.background = evts.length > 0 ? (darkMode ? "rgba(59,130,246,0.2)" : "#eff6ff") : "transparent"; }}
+      >
+        {day}
+        {evts.length > 0 && !todayFlag && (
+          <div style={{ position: "absolute", bottom: 3, left: "50%", transform: "translateX(-50%)", width: 5, height: 5, borderRadius: "50%", background: "#3b82f6" }} />
+        )}
+      </button>
+    );
+  }
+
+  const selectedEvents = selectedDate ? getEvents(selectedDate.getDate()) : [];
+
+  return (
+    <div style={{ background: cardBg, backdropFilter: "blur(20px)", borderRadius: 20, border: `1px solid ${borderColor}`, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", padding: "1.5rem", marginTop: "1.25rem" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ padding: 8, background: "linear-gradient(135deg, #f97316, #ec4899)", borderRadius: 11 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <h3 style={{ fontSize: "1rem", fontWeight: 700, color: textPrimary, margin: 0 }}>Calendar</h3>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))}
+            style={{ width: 32, height: 32, borderRadius: 10, border: `1px solid ${borderColor}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={textSecondary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div style={{ textAlign: "center", minWidth: 130 }}>
+            <p style={{ fontWeight: 700, fontSize: "0.9rem", color: textPrimary, margin: 0 }}>{monthNames[currentDate.getMonth()]}</p>
+            <p style={{ fontSize: "0.75rem", color: textSecondary, margin: 0 }}>{currentDate.getFullYear()}</p>
+          </div>
+          <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))}
+            style={{ width: 32, height: 32, borderRadius: 10, border: `1px solid ${borderColor}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={textSecondary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Day labels */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 6 }}>
+        {dayNames.map((d) => (
+          <div key={d} style={{ textAlign: "center", fontSize: "0.72rem", fontWeight: 700, color: textSecondary, padding: "4px 0" }}>{d}</div>
+        ))}
+      </div>
+
+      {/* Grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: "1.25rem" }}>
+        {days}
+      </div>
+
+      {/* Selected date events */}
+      {selectedDate && (
+        <div style={{ borderTop: `1px solid ${borderColor}`, paddingTop: "1rem", marginBottom: "1rem" }}>
+          <p style={{ fontSize: "0.8rem", fontWeight: 700, color: textSecondary, marginBottom: 10 }}>
+            Events on {selectedDate.toLocaleDateString()}
+          </p>
+          {selectedEvents.length > 0 ? selectedEvents.map((ev) => (
+            <div key={ev.id} style={{ padding: "10px 12px", borderRadius: 12, marginBottom: 6, borderLeft: `4px solid ${ev.color}`, background: darkMode ? "rgba(255,255,255,0.05)" : "#f8fafc" }}>
+              <p style={{ fontWeight: 600, color: textPrimary, fontSize: "0.85rem", margin: "0 0 3px" }}>{ev.title}</p>
+              <p style={{ fontSize: "0.75rem", color: textSecondary, margin: 0 }}>🕐 {ev.time}</p>
+            </div>
+          )) : (
+            <p style={{ fontSize: "0.82rem", color: textSecondary, textAlign: "center", padding: "1rem 0" }}>No events scheduled</p>
+          )}
+        </div>
+      )}
+
+      {/* Upcoming */}
+      <div style={{ borderTop: `1px solid ${borderColor}`, paddingTop: "1rem" }}>
+        <p style={{ fontSize: "0.8rem", fontWeight: 700, color: textSecondary, marginBottom: 10 }}>Upcoming Events</p>
+        {events.map((ev) => (
+          <div key={ev.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 12, marginBottom: 4, transition: "background 0.15s", cursor: "pointer" }}
+            onMouseEnter={(e) => e.currentTarget.style.background = darkMode ? "rgba(255,255,255,0.05)" : "#f8fafc"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: ev.color, flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <p style={{ fontWeight: 600, color: textPrimary, fontSize: "0.82rem", margin: "0 0 1px" }}>{ev.title}</p>
+              <p style={{ fontSize: "0.72rem", color: textSecondary, margin: 0 }}>{ev.date.toLocaleDateString()} · {ev.time}</p>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
