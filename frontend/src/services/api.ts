@@ -202,6 +202,11 @@ export const courses = {
 
   getMaterials: (course_id: string) =>
     request<Material[]>(`/courses/${course_id}/materials`),
+
+  getMaterialContent: (course_id: string, file_hash: string) =>
+    request<{ filename: string; content: string; file_hash: string }>(
+      `/courses/${course_id}/materials/${file_hash}/content`
+    ),
 };
 
 export const lessons = {
@@ -305,6 +310,7 @@ export const lessons = {
 
 export const chats = {
   getAll: () => request<ChatMap>("/chats/"),
+  list: () => request<ChatMap>("/chats/"),
 
   create: (opts: {
     course_id?: string;

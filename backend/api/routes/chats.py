@@ -377,6 +377,15 @@ def update_settings(
     db.commit()
     return {"message": "Settings updated"}
 
+def _get_materials_text_fallback(db: Session, course_id: str) -> str:
+    """Qdrant boş/çalışmıyorsa DB üzerinden materyal metnini doğrudan oku."""
+    from services.course_manager import get_course_materials_text
+    try:
+        return get_course_materials_text(db, course_id) or ""
+    except Exception:
+        return ""
+
+
 def _get_chat_context(db: Session, chat: Chat, question: str) -> str:
     if chat.lesson_id:
         approved_text = (get_student_visible_explanation(db, chat.lesson_id) or "").strip()
@@ -386,18 +395,41 @@ def _get_chat_context(db: Session, chat: Chat, question: str) -> str:
         lesson = get_lesson_by_id(db, chat.lesson_id)
         if lesson:
             try:
-                return rag.query_context(
+                ctx = rag.query_context(
                     question=question,
                     course_id=chat.course_id,
                     source_name=lesson.get("original_filename"),
                 )
+                if ctx and ctx.strip():
+                    return ctx
             except Exception:
-                return ""
+                pass
+            # RAG boş döndüyse lesson metnini disk'ten oku
+            lesson_path = lesson.get("stored_path") or ""
+            import os, json as _json
+            sections_dir = "lesson_sections"
+            safe_id = lesson.get("lesson_id", "").replace("::", "__").replace("/", "_").replace(" ", "_").replace(":", "_")
+            sections_path = os.path.join(sections_dir, f"{safe_id}_sections.json")
+            if os.path.exists(sections_path):
+                try:
+                    with open(sections_path, "r", encoding="utf-8") as f:
+                        sections = _json.load(f)
+                    return "\n\n".join(s.get("text", "") for s in sections)
+                except Exception:
+                    pass
+        return ""
 
-    if rag is not None:
-        try:
-            return rag.query_context(question=question, course_id=chat.course_id)
-        except Exception:
-            return ""
+    # Materyal chat'i (lesson_id yok, sadece course_id var)
+    if chat.course_id:
+        # Önce RAG'dan dene
+        if rag is not None:
+            try:
+                ctx = rag.query_context(question=question, course_id=chat.course_id)
+                if ctx and ctx.strip():
+                    return ctx
+            except Exception:
+                pass
+        # RAG boşsa veya çalışmıyorsa DB'den direkt materyalleri oku
+        return _get_materials_text_fallback(db, chat.course_id)
 
     return ""

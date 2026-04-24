@@ -63,10 +63,32 @@ export default function DashboardPage({
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [sections, setSections] = useState<Section[]>([]);
   const [sectionsLoading, setSectionsLoading] = useState(false);
+  const [streak, setStreak] = useState(0);
 
   useEffect(() => {
-    coursesApi.getAssigned().then(setCourseMap).catch((e) => setError(e.message)).finally(() => setLoading(false));
-  }, []);
+  coursesApi.getAssigned().then(setCourseMap).catch((e) => setError(e.message)).finally(() => setLoading(false));
+
+  // Streak hesapla
+  chatsApi.list().then((chatMap) => {
+    const dates = new Set<string>();
+    Object.values(chatMap).forEach((chat: any) => {
+      if (chat.created_at) dates.add(chat.created_at.slice(0, 10));
+      (chat.messages || []).forEach((m: any) => {
+        if (m.created_at) dates.add(m.created_at.slice(0, 10));
+      });
+    });
+    const sorted = Array.from(dates).sort().reverse();
+    let count = 0;
+    const today = new Date();
+    for (let i = 0; i < sorted.length; i++) {
+      const expected = new Date(today);
+      expected.setDate(today.getDate() - i);
+      if (sorted[i] === expected.toISOString().slice(0, 10)) count++;
+      else break;
+    }
+    setStreak(count);
+  }).catch(() => {});
+}, []);
 
   useEffect(() => {
     if (!selectedCourseId) return;
@@ -486,7 +508,7 @@ export default function DashboardPage({
         {[
           { label: "Enrolled Courses", value: enrolledList.length, grad: "linear-gradient(135deg, #3b82f6, #06b6d4)", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> },
           { label: "Lessons Completed", value: totalCompleted, grad: "linear-gradient(135deg, #10b981, #14b8a6)", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> },
-          { label: "Learning Streak", value: "7 days", grad: "linear-gradient(135deg, #f97316, #ec4899)", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> },
+          { label: "Learning Streak", value: streak > 0 ? `${streak} day${streak > 1 ? "s" : ""}` : "–", grad: "linear-gradient(135deg, #f97316, #ec4899)", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> },
         ].map((stat) => (
           <div key={stat.label} style={{ background: "#fff", borderRadius: 20, border: "1px solid #e2e8f0", padding: "1.25rem 1.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>

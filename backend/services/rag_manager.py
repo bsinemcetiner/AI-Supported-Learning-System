@@ -220,13 +220,24 @@ class RAGManager:
         query_filter = self._build_filter(course_id=course_id, source_name=source_name)
 
         try:
-            results = self.client.search(
-                collection_name=self.collection_name,
-                query_vector=query_vector,
-                query_filter=query_filter,
-                limit=n_results,
-                with_payload=True,
-            )
+            # Qdrant >= 1.7: use query_points; fallback to search for older versions
+            try:
+                response = self.client.query_points(
+                    collection_name=self.collection_name,
+                    query=query_vector,
+                    query_filter=query_filter,
+                    limit=n_results,
+                    with_payload=True,
+                )
+                results = response.points
+            except AttributeError:
+                results = self.client.search(
+                    collection_name=self.collection_name,
+                    query_vector=query_vector,
+                    query_filter=query_filter,
+                    limit=n_results,
+                    with_payload=True,
+                )
         except Exception as e:
             print(f"Query error: {e}")
             return ""
