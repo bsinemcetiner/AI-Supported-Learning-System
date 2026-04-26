@@ -47,10 +47,13 @@ export interface Chat {
   title: string;
   messages: Message[];
   course_id: string | null;
+  lesson_id?: string | null;
+  section_index?: number | null;
   mode: TeachingMode;
   tone: TeachingTone;
   uploaded_sources: string[];
   pdf_context?: string;
+  created_at?: string;
 }
 
 export type ChatMap = Record<string, Chat>;

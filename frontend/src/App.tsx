@@ -41,9 +41,14 @@ function StudentSidebar({
   onToneChange: (tone: TeachingTone) => void;
 }) {
   const TONES: TeachingTone[] = [
-    "Professional Tutor","Friendly Mentor","Simplified Explainer",
-    "Encouraging Coach","Funny YouTuber","Deep Scientist","Simplified",
-  ];
+  "Professional Tutor",
+  "Friendly Mentor",
+  "Simplified Explainer",
+  "Encouraging Coach",
+  "Funny YouTuber",
+  "Deep Scientist",
+  "Simplified (for kids)",
+];
   const MODES: { value: TeachingMode; label: string }[] = [
     { value: "direct",     label: "📖 Direct Explanation" },
     { value: "hint_first", label: "💡 Hint First" },
@@ -236,6 +241,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [chatMap, setChatMap] = useState<ChatMap>({});
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [animatedInitialChatId, setAnimatedInitialChatId] = useState<string | null>(null);
   const [dashboardCourseId, setDashboardCourseId] = useState<string | null>(null);
   const [streaming, setStreaming] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -250,24 +256,6 @@ export default function App() {
     chatsApi.getAll().then(setChatMap).catch(() => tokenStore.clear());
   }, []);
 
-  useEffect(() => {
-    const starter = sessionStorage.getItem("starter_message");
-    if (activeChatId && starter) {
-      sessionStorage.removeItem("starter_message");
-      let i = 0;
-      setChatMap((prev) => ({ ...prev, [activeChatId]: { ...prev[activeChatId], messages: [{ role: "assistant", content: "" }] } }));
-      const interval = setInterval(() => {
-        i += 4;
-        setChatMap((prev) => {
-          const c = prev[activeChatId];
-          const msgs = [...c.messages];
-          msgs[0] = { role: "assistant", content: starter.slice(0, i) };
-          return { ...prev, [activeChatId]: { ...c, messages: msgs } };
-        });
-        if (i >= starter.length) clearInterval(interval);
-      }, 18);
-    }
-  }, [activeChatId]);
 
   useEffect(() => {
     if (!activeChatId) return;
@@ -297,7 +285,11 @@ export default function App() {
     setActiveChatId(null); setDashboardCourseId(null); setSettingsOpen(false);
   }
 
-  async function handleOpenChat(chatId: string, courseId?: string) {
+  async function handleOpenChat(
+  chatId: string,
+  courseId?: string,
+  animateInitialMessage: boolean = false
+) {
   const freshChats = await loadChats();
   const resolvedCourseId = courseId ?? freshChats?.[chatId]?.course_id ?? null;
 
@@ -305,8 +297,9 @@ export default function App() {
     setDashboardCourseId(resolvedCourseId);
   }
 
+  setAnimatedInitialChatId(animateInitialMessage ? chatId : null);
   setActiveChatId(chatId);
-  }
+}
 
   async function handleDeleteChat(chatId: string) {
   const ok = window.confirm("Delete this chat?");
@@ -375,20 +368,52 @@ export default function App() {
   }
 
   async function handleModeChange(mode: TeachingMode) {
-    setTeachingMode(mode);
-    if (!activeChatId) return;
-    setChatMap((prev) => ({ ...prev, [activeChatId]: { ...prev[activeChatId], mode } }));
-    try { await chatsApi.updateSettings(activeChatId, { mode }); } catch (e) { console.error(e); }
-    finally { await loadChats(); }
+  setTeachingMode(mode);
+
+  if (!activeChatId) return;
+
+  const currentChat = chatMap[activeChatId];
+  if (!currentChat) return;
+
+  setChatMap((prev) => ({
+    ...prev,
+    [activeChatId]: {
+      ...prev[activeChatId],
+      mode,
+    },
+  }));
+
+  try {
+    await chatsApi.updateSettings(activeChatId, { mode });
+    await loadChats();
+  } catch (e) {
+    console.error(e);
   }
+}
 
   async function handleToneChange(tone: TeachingTone) {
-    setTeachingTone(tone);
-    if (!activeChatId) return;
-    setChatMap((prev) => ({ ...prev, [activeChatId]: { ...prev[activeChatId], tone } }));
-    try { await chatsApi.updateSettings(activeChatId, { tone }); } catch (e) { console.error(e); }
-    finally { await loadChats(); }
+  setTeachingTone(tone);
+
+  if (!activeChatId) return;
+
+  const currentChat = chatMap[activeChatId];
+  if (!currentChat) return;
+
+  setChatMap((prev) => ({
+    ...prev,
+    [activeChatId]: {
+      ...prev[activeChatId],
+      tone,
+    },
+  }));
+
+  try {
+    await chatsApi.updateSettings(activeChatId, { tone });
+    await loadChats();
+  } catch (e) {
+    console.error(e);
   }
+}
 
   if (!user) return <AuthPage onLogin={handleLogin} onAdminLogin={() => setIsAdmin(true)} />;
 
@@ -468,6 +493,7 @@ export default function App() {
               chatId={activeChatId}
               chat={activeChat}
               streaming={streaming}
+              animateInitialMessage={animatedInitialChatId === activeChatId}
               onSend={(c) => handleSendMessage(activeChatId, c)}
               onRegenerate={() => handleRegenerate(activeChatId)}
               onBack={() => setActiveChatId(null)}

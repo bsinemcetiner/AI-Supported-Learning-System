@@ -289,12 +289,14 @@ export const chats = {
   getStreak: () => request<{ streak: number }>("/chats/streak"),
 
   create: (opts: {
-    course_id?: string;
-    lesson_id?: string;
-    title?: string;
-    mode?: TeachingMode;
-    tone?: TeachingTone;
-  }) =>
+  course_id?: string;
+  lesson_id?: string;
+  section_index?: number | null;
+  title?: string;
+  mode?: TeachingMode;
+  tone?: TeachingTone;
+  starter_message?: string;
+}) =>
     request<{ chat_id: string }>("/chats/", {
       method: "POST",
       body: JSON.stringify(opts),

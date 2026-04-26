@@ -4,7 +4,7 @@ import type { Course, TeachingMode, TeachingTone } from "../types";
 import type { Lesson, Section } from "../services/api";
 
 interface DashboardPageProps {
-  onOpenChat: (chatId: string, courseId?: string) => void;
+  onOpenChat: (chatId: string, courseId?: string, animateInitialMessage?: boolean) => void;
   teachingMode: TeachingMode;
   teachingTone: TeachingTone;
   selectedCourseId: string | null;
@@ -139,21 +139,59 @@ export default function DashboardPage({
     finally { setSectionsLoading(false); }
   }
 
-  async function startSectionChat(lesson: Lesson, sectionIndex: number) {
-    try {
-      const data = await lessonsApi.startChat(lesson.lesson_id, teachingMode, teachingTone);
-      sessionStorage.setItem("starter_message", data.starter_message || "");
-      onOpenChat(data.chat_id, selectedCourseId ?? undefined);
-    } catch (e: any) { setError(e.message); }
-  }
+  async function startSectionChat(lesson: Lesson, section: Section) {
+  try {
+    const starterMessage =
+      section.draft?.trim() ||
+      section.summary?.trim() ||
+      "";
 
-  async function startLessonChat(lessonId: string) {
-    try {
-      const data = await lessonsApi.startChat(lessonId, teachingMode, teachingTone);
-      sessionStorage.setItem("starter_message", data.starter_message || "");
-      onOpenChat(data.chat_id, selectedCourseId ?? undefined);
-    } catch (e: any) { setError(e.message); }
+    const { chat_id } = await chatsApi.create({
+      course_id: lesson.course_id,
+      lesson_id: lesson.lesson_id,
+      section_index: section.section_index,
+      title: `${lesson.week_title} - ${section.title}`,
+      mode: teachingMode,
+      tone: teachingTone,
+      starter_message: starterMessage,
+    });
+
+    sessionStorage.setItem("animate_chat_id", chat_id);
+
+    onOpenChat(chat_id, selectedCourseId ?? undefined, true);
+  } catch (e: any) {
+    setError(e.message);
   }
+}
+
+async function startLessonChat(lesson: Lesson) {
+  try {
+    const starterMessage = sections
+      .map((s, i) => {
+        const text = s.draft?.trim() || s.summary?.trim() || "";
+        if (!text) return "";
+        return `## ${i + 1}. ${s.title}\n\n${text}`;
+      })
+      .filter(Boolean)
+      .join("\n\n---\n\n");
+
+    const { chat_id } = await chatsApi.create({
+      course_id: lesson.course_id,
+      lesson_id: lesson.lesson_id,
+      section_index: null,
+      title: `${lesson.week_title} - Full Lesson`,
+      mode: teachingMode,
+      tone: teachingTone,
+      starter_message: starterMessage,
+    });
+
+    sessionStorage.setItem("animate_chat_id", chat_id);
+
+    onOpenChat(chat_id, selectedCourseId ?? undefined, true);
+  } catch (e: any) {
+    setError(e.message);
+  }
+}
 
   async function startMaterialsChat(courseId: string) {
     try {
@@ -217,7 +255,7 @@ export default function DashboardPage({
             </p>
             {sections.map((section, idx) => (
               <div key={idx}
-                onClick={() => startSectionChat(selectedLesson, idx)}
+                onClick={() => startSectionChat(selectedLesson, section)}
                 style={{ background: "#fff", borderRadius: 18, border: "2px solid #e2e8f0", padding: "1.1rem 1.25rem", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", transition: "all 0.15s", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#fdba74"; e.currentTarget.style.boxShadow = "0 4px 16px rgba(249,115,22,0.1)"; e.currentTarget.style.transform = "translateX(4px)"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.04)"; e.currentTarget.style.transform = "translateX(0)"; }}>
@@ -243,7 +281,7 @@ export default function DashboardPage({
 
             {/* Chat with full lesson */}
             <div style={{ marginTop: 8, background: "linear-gradient(135deg, #fff7ed, #fdf2f8)", borderRadius: 18, border: "2px solid #fed7aa", padding: "1.1rem 1.25rem", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", transition: "all 0.15s" }}
-              onClick={() => startLessonChat(selectedLesson.lesson_id)}
+              onClick={() => startLessonChat(selectedLesson)}
               onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 4px 16px rgba(249,115,22,0.15)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "none"; }}>
               <div style={{ width: 44, height: 44, borderRadius: 14, background: "linear-gradient(135deg, #f97316, #ec4899)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 4px 12px rgba(249,115,22,0.3)" }}>

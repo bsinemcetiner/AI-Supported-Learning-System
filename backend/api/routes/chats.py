@@ -35,6 +35,7 @@ def _serialize_chat(chat: Chat) -> dict:
         "title": chat.title,
         "course_id": chat.course_id,
         "lesson_id": chat.lesson_id,
+        "section_index": chat.section_index,
         "mode": chat.mode,
         "tone": chat.tone,
         "created_at": chat.created_at.isoformat() if chat.created_at else None,
@@ -77,9 +78,11 @@ def list_chats(
 class CreateChatRequest(BaseModel):
     course_id: Optional[str] = None
     lesson_id: Optional[str] = None
+    section_index: Optional[int] = None
     title: str = "New Chat"
     mode: str = "direct"
     tone: str = "Professional Tutor"
+    starter_message: Optional[str] = None
 
 
 @router.post("/", status_code=201)
@@ -95,11 +98,23 @@ def create_chat(
         user_id=db_user.id,
         course_id=body.course_id,
         lesson_id=body.lesson_id,
+        section_index=body.section_index,
         mode=body.mode,
         tone=body.tone,
     )
 
     db.add(chat)
+    db.flush()
+
+    starter = (body.starter_message or "").strip()
+    if starter:
+        starter_msg = Message(
+            chat_id=chat.id,
+            sender="assistant",
+            content=starter,
+        )
+        db.add(starter_msg)
+
     db.commit()
     db.refresh(chat)
 
@@ -378,7 +393,7 @@ def update_settings(
     return {"message": "Settings updated"}
 
 def _get_materials_text_fallback(db: Session, course_id: str) -> str:
-    """Qdrant boş/çalışmıyorsa DB üzerinden materyal metnini doğrudan oku."""
+    """If Qdrant is empty/not working, read the material text directly from the DB"""
     from services.course_manager import get_course_materials_text
     try:
         return get_course_materials_text(db, course_id) or ""
@@ -388,40 +403,99 @@ def _get_materials_text_fallback(db: Session, course_id: str) -> str:
 
 def _get_chat_context(db: Session, chat: Chat, question: str) -> str:
     if chat.lesson_id:
-        approved_text = (get_student_visible_explanation(db, chat.lesson_id) or "").strip()
-        if approved_text:
-            return approved_text
-
         lesson = get_lesson_by_id(db, chat.lesson_id)
-        if lesson:
-            try:
-                ctx = rag.query_context(
-                    question=question,
-                    course_id=chat.course_id,
-                    source_name=lesson.get("original_filename"),
-                )
-                if ctx and ctx.strip():
-                    return ctx
-            except Exception:
-                pass
-            # RAG boş döndüyse lesson metnini disk'ten oku
-            lesson_path = lesson.get("stored_path") or ""
-            import os, json as _json
-            sections_dir = "lesson_sections"
-            safe_id = lesson.get("lesson_id", "").replace("::", "__").replace("/", "_").replace(" ", "_").replace(":", "_")
-            sections_path = os.path.join(sections_dir, f"{safe_id}_sections.json")
+        if not lesson:
+            return ""
+
+        import os
+        import json as _json
+
+        safe_id = (
+            lesson.get("lesson_id", "")
+            .replace("::", "__")
+            .replace("/", "_")
+            .replace(" ", "_")
+            .replace(":", "_")
+        )
+
+        sections_path = os.path.join("lesson_sections", f"{safe_id}_sections.json")
+
+
+        if chat.section_index is not None:
             if os.path.exists(sections_path):
                 try:
                     with open(sections_path, "r", encoding="utf-8") as f:
                         sections = _json.load(f)
-                    return "\n\n".join(s.get("text", "") for s in sections)
+
+                    if 0 <= chat.section_index < len(sections):
+                        section = sections[chat.section_index]
+
+                        section_title = section.get("title", f"Section {chat.section_index + 1}")
+                        page_start = section.get("page_start", "")
+                        page_end = section.get("page_end", "")
+
+                        section_text = (
+                            section.get("draft", "")
+                            or section.get("approved_text", "")
+                            or section.get("text", "")
+                            or section.get("text_preview", "")
+                            or section.get("summary", "")
+                        ).strip()
+
+                        if section_text:
+                            return f"""
+Lesson: {lesson.get("week_title", "")}
+Section: {section_title}
+Pages: {page_start}-{page_end}
+
+Only answer based on this section. Do not use other parts of the lesson unless the student explicitly asks for a general comparison.
+
+Section content:
+{section_text}
+""".strip()
+
                 except Exception:
                     pass
+
+            return ""
+
+
+        approved_text = (get_student_visible_explanation(db, chat.lesson_id) or "").strip()
+        if approved_text:
+            return approved_text
+
+        try:
+            ctx = rag.query_context(
+                question=question,
+                course_id=chat.course_id,
+                source_name=lesson.get("original_filename"),
+            )
+            if ctx and ctx.strip():
+                return ctx
+        except Exception:
+            pass
+
+        if os.path.exists(sections_path):
+            try:
+                with open(sections_path, "r", encoding="utf-8") as f:
+                    sections = _json.load(f)
+
+                return "\n\n".join(
+                    (
+                        s.get("draft", "")
+                        or s.get("approved_text", "")
+                        or s.get("text", "")
+                        or s.get("text_preview", "")
+                        or s.get("summary", "")
+                    )
+                    for s in sections
+                ).strip()
+            except Exception:
+                pass
+
         return ""
 
-    # Materyal chat'i (lesson_id yok, sadece course_id var)
     if chat.course_id:
-        # Önce RAG'dan dene
         if rag is not None:
             try:
                 ctx = rag.query_context(question=question, course_id=chat.course_id)
@@ -429,7 +503,6 @@ def _get_chat_context(db: Session, chat: Chat, question: str) -> str:
                     return ctx
             except Exception:
                 pass
-        # RAG boşsa veya çalışmıyorsa DB'den direkt materyalleri oku
         return _get_materials_text_fallback(db, chat.course_id)
 
     return ""
