@@ -123,30 +123,10 @@ export const auth = {
       body: JSON.stringify({ username, password }),
     }),
 
-  signup: (
-    full_name: string,
-    username: string,
-    password: string,
-    role: string,
-    email?: string
-  ) =>
+  signup: (full_name: string, username: string, password: string, role: string) =>
     request<{ message: string }>("/auth/signup", {
       method: "POST",
-      body: JSON.stringify({ full_name, username, password, role, email }),
-    }),
-
-  // Send OTP verification code to email
-  sendOtp: (email: string) =>
-    request<{ message: string; role: string }>("/auth/send-otp", {
-      method: "POST",
-      body: JSON.stringify({ email }),
-    }),
-
-  // Verify the incoming OTP code
-  verifyOtp: (email: string, otp: string) =>
-    request<{ message: string; verified: boolean }>("/auth/verify-otp", {
-      method: "POST",
-      body: JSON.stringify({ email, otp }),
+      body: JSON.stringify({ full_name, username, password, role }),
     }),
 };
 
@@ -202,11 +182,6 @@ export const courses = {
 
   getMaterials: (course_id: string) =>
     request<Material[]>(`/courses/${course_id}/materials`),
-
-  getMaterialContent: (course_id: string, file_hash: string) =>
-    request<{ filename: string; content: string; file_hash: string }>(
-      `/courses/${course_id}/materials/${file_hash}/content`
-    ),
 };
 
 export const lessons = {
@@ -310,7 +285,8 @@ export const lessons = {
 
 export const chats = {
   getAll: () => request<ChatMap>("/chats/"),
-  list: () => request<ChatMap>("/chats/"),
+
+  getStreak: () => request<{ streak: number }>("/chats/streak"),
 
   create: (opts: {
     course_id?: string;
@@ -365,6 +341,7 @@ export const adminLogin = async (username: string, password: string) => {
 };
 
 export const adminLogout = () => localStorage.removeItem(ADMIN_TOKEN_KEY);
+
 export const getAdminToken = () => localStorage.getItem(ADMIN_TOKEN_KEY);
 
 const adminHeaders = () => ({
@@ -374,19 +351,19 @@ const adminHeaders = () => ({
 
 export const fetchAllStudents = async () => {
   const res = await fetch(`${BASE}/admin/students`, { headers: adminHeaders() });
-  if (!res.ok) throw new Error("Failed to fetch students");
+  if (!res.ok) throw new Error("Could not fetch students");
   return res.json();
 };
 
 export const fetchAllTeachers = async () => {
   const res = await fetch(`${BASE}/admin/teachers`, { headers: adminHeaders() });
-  if (!res.ok) throw new Error("Failed to fetch teachers");
+  if (!res.ok) throw new Error("Could not fetch teachers");
   return res.json();
 };
 
 export const fetchAllCourses = async () => {
   const res = await fetch(`${BASE}/admin/courses`, { headers: adminHeaders() });
-  if (!res.ok) throw new Error("Failed to fetch courses");
+  if (!res.ok) throw new Error("Could not fetch courses");
   return res.json();
 };
 
@@ -394,11 +371,11 @@ export const fetchStudentCourses = async (studentId: number) => {
   const res = await fetch(`${BASE}/admin/students/${studentId}/courses`, {
     headers: adminHeaders(),
   });
-  if (!res.ok) throw new Error("Failed to fetch student courses");
+  if (!res.ok) throw new Error("Could not fetch student courses");
   return res.json();
 };
 
-export const assignCourse = async (studentId: number, courseId: string) => {
+export const assignCourse = async (studentId: number, courseId: number) => {
   const res = await fetch(`${BASE}/admin/assign`, {
     method: "POST",
     headers: adminHeaders(),
@@ -408,13 +385,13 @@ export const assignCourse = async (studentId: number, courseId: string) => {
   return res.json();
 };
 
-export const removeCourse = async (studentId: number, courseId: string) => {
+export const removeCourse = async (studentId: number, courseId: number) => {
   const res = await fetch(`${BASE}/admin/remove`, {
     method: "DELETE",
     headers: adminHeaders(),
     body: JSON.stringify({ student_id: studentId, course_id: courseId }),
   });
-  if (!res.ok) throw new Error("Removal failed");
+  if (!res.ok) throw new Error("Remove failed");
   return res.json();
 };
 

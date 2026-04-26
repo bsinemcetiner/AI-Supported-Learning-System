@@ -58,42 +58,34 @@ export default function DashboardPage({
   const [lessonLoading, setLessonLoading] = useState(false);
   const [enrollingId, setEnrollingId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [viewingPdf, setViewingPdf] = useState<string | null>(null);
+  const [streak, setStreak] = useState<number>(0);
+
+  useEffect(() => {
+    chatsApi.getStreak().then((r) => setStreak(r.streak)).catch(() => {});
+  }, []);
 
   // Section view state
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [sections, setSections] = useState<Section[]>([]);
   const [sectionsLoading, setSectionsLoading] = useState(false);
-  const [streak, setStreak] = useState(0);
 
   useEffect(() => {
-  coursesApi.getAssigned().then(setCourseMap).catch((e) => setError(e.message)).finally(() => setLoading(false));
+    coursesApi.getAssigned().then(setCourseMap).catch((e) => setError(e.message)).finally(() => setLoading(false));
+  }, []);
 
-  // Streak hesapla
-  chatsApi.list().then((chatMap) => {
-    const dates = new Set<string>();
-    Object.values(chatMap).forEach((chat: any) => {
-      if (chat.created_at) dates.add(chat.created_at.slice(0, 10));
-      (chat.messages || []).forEach((m: any) => {
-        if (m.created_at) dates.add(m.created_at.slice(0, 10));
-      });
+  useEffect(() => {
+    Object.keys(courseMap).forEach((courseId) => {
+      if (!lessonsMap[courseId]) {
+        lessonsApi.getByCourse(courseId)
+          .then((data) => setLessonsMap((prev) => ({ ...prev, [courseId]: data })))
+          .catch(() => {});
+      }
     });
-    const sorted = Array.from(dates).sort().reverse();
-    let count = 0;
-    const today = new Date();
-    for (let i = 0; i < sorted.length; i++) {
-      const expected = new Date(today);
-      expected.setDate(today.getDate() - i);
-      if (sorted[i] === expected.toISOString().slice(0, 10)) count++;
-      else break;
-    }
-    setStreak(count);
-  }).catch(() => {});
-}, []);
+  }, [courseMap]);
 
   useEffect(() => {
-    if (!selectedCourseId) return;
-    setActiveTab("lessons");
-    if (lessonsMap[selectedCourseId]) return;
+    if (!selectedCourseId || lessonsMap[selectedCourseId]) return;
     setLessonLoading(true);
     lessonsApi.getByCourse(selectedCourseId)
       .then((data) => setLessonsMap((prev) => ({ ...prev, [selectedCourseId]: data })))
@@ -390,9 +382,34 @@ export default function DashboardPage({
               <>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
                   {materials.map((m) => (
-                    <div key={m.file_hash} style={{ background: "#fff", borderRadius: 14, border: "1px solid #e2e8f0", padding: "0.85rem 1.1rem", display: "flex", alignItems: "center", gap: 12 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 10, background: "#fff7ed", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem" }}>📄</div>
-                      <span style={{ fontSize: "0.88rem", color: "#374151", fontWeight: 500 }}>{m.original_filename}</span>
+                    <div key={m.file_hash}>
+                      <div
+                        onClick={() => setViewingPdf(viewingPdf === m.file_hash ? null : m.file_hash)}
+                        style={{ background: "#fff", borderRadius: 14, border: `2px solid ${viewingPdf === m.file_hash ? "#f97316" : "#e2e8f0"}`, padding: "0.9rem 1.1rem", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", transition: "all 0.15s" }}
+                        onMouseEnter={(e) => { if (viewingPdf !== m.file_hash) e.currentTarget.style.borderColor = "#fdba74"; }}
+                        onMouseLeave={(e) => { if (viewingPdf !== m.file_hash) e.currentTarget.style.borderColor = "#e2e8f0"; }}
+                      >
+                        <div style={{ width: 40, height: 40, borderRadius: 12, background: viewingPdf === m.file_hash ? "linear-gradient(135deg, #f97316, #ec4899)" : "#fff7ed", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", flexShrink: 0, transition: "all 0.15s" }}>
+                          {viewingPdf === m.file_hash ? "📖" : "📄"}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontSize: "0.9rem", color: "#374151", fontWeight: 600, margin: "0 0 2px" }}>{m.original_filename}</p>
+                          <p style={{ fontSize: "0.72rem", color: "#9ca3af", margin: 0 }}>Click to {viewingPdf === m.file_hash ? "close" : "view"}</p>
+                        </div>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                          style={{ transform: viewingPdf === m.file_hash ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
+                          <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                      </div>
+
+                      {/* PDF Viewer */}
+                      {viewingPdf === m.file_hash && (
+                        <PdfViewer
+                          courseId={selectedCourseId!}
+                          fileHash={m.file_hash}
+                          filename={m.original_filename}
+                        />
+                      )}
                     </div>
                   ))}
                 </div>
@@ -426,7 +443,8 @@ export default function DashboardPage({
   // ── Main Dashboard ──
   const enrolledList = Object.entries(courseMap);
   const enrolledIds = new Set(Object.keys(courseMap));
-  const totalCompleted = enrolledList.reduce((a) => a + 2, 0);
+  const totalLessons = Object.values(lessonsMap).reduce((a, m) => a + Object.keys(m).length, 0);
+  const totalMaterials = enrolledList.reduce((a, [, course]) => a + (course.materials?.length ?? 0), 0);
 
   if (dashView === "browse") {
     if (Object.keys(allCourses).length === 0 && !browseLoading) loadAllCourses();
@@ -504,11 +522,12 @@ export default function DashboardPage({
       </div>
 
       {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: "2rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 14, marginBottom: "2rem" }}>
         {[
           { label: "Enrolled Courses", value: enrolledList.length, grad: "linear-gradient(135deg, #3b82f6, #06b6d4)", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> },
-          { label: "Lessons Completed", value: totalCompleted, grad: "linear-gradient(135deg, #10b981, #14b8a6)", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> },
-          { label: "Learning Streak", value: streak > 0 ? `${streak} day${streak > 1 ? "s" : ""}` : "–", grad: "linear-gradient(135deg, #f97316, #ec4899)", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> },
+          { label: "Total Lessons", value: totalLessons, grad: "linear-gradient(135deg, #10b981, #14b8a6)", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> },
+          { label: "Course Materials", value: totalMaterials, grad: "linear-gradient(135deg, #f97316, #ec4899)", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> },
+          { label: "Learning Streak", value: streak > 0 ? `${streak} day${streak !== 1 ? "s" : ""}` : "Start today!", grad: "linear-gradient(135deg, #f59e0b, #f97316)", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> },
         ].map((stat) => (
           <div key={stat.label} style={{ background: "#fff", borderRadius: 20, border: "1px solid #e2e8f0", padding: "1.25rem 1.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
@@ -550,9 +569,9 @@ export default function DashboardPage({
               const color = getCourseColor(course.course_name);
               const emoji = getCourseEmoji(course.course_name);
               const lessons = Object.values(lessonsMap[id] ?? {});
-              const completed = Math.min(2, lessons.length);
-              const total = lessons.length || 10;
-              const progress = Math.round((completed / total) * 100);
+              const completed = 0;
+              const total = lessons.length;
+              const progress = 0;
               return (
                 <div key={id} onClick={() => openCourse(id)}
                   style={{ background: "#fff", borderRadius: 20, border: "1px solid #e2e8f0", overflow: "hidden", cursor: "pointer", transition: "all 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
@@ -593,6 +612,67 @@ export default function DashboardPage({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── PDF Viewer Component ──────────────────────────────────────────────────────
+function PdfViewer({ courseId, fileHash, filename }: { courseId: string; fileHash: string; filename: string }) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function loadPdf() {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(
+          `http://127.0.0.1:8011/api/courses/${courseId}/materials/${fileHash}/view`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (!res.ok) throw new Error("Could not load file");
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        setBlobUrl(url);
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadPdf();
+    return () => { if (blobUrl) URL.revokeObjectURL(blobUrl); };
+  }, [courseId, fileHash]);
+
+  return (
+    <div style={{ marginTop: 8, borderRadius: 16, overflow: "hidden", border: "1.5px solid #e2e8f0", boxShadow: "0 4px 16px rgba(0,0,0,0.08)" }}>
+      <div style={{ background: "linear-gradient(135deg, #f97316, #ec4899)", padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.85rem" }}>📄 {filename}</span>
+        {blobUrl && (
+          <a href={blobUrl} download={filename}
+            style={{ color: "rgba(255,255,255,0.9)", fontSize: "0.75rem", textDecoration: "none", background: "rgba(255,255,255,0.2)", padding: "4px 10px", borderRadius: 8, fontWeight: 600 }}>
+            Download ↓
+          </a>
+        )}
+      </div>
+      {loading && (
+        <div style={{ padding: "3rem", textAlign: "center", color: "#94a3b8", background: "#f8fafc" }}>
+          <div style={{ fontSize: "1.5rem", marginBottom: 8 }}>⏳</div>
+          Loading PDF…
+        </div>
+      )}
+      {error && (
+        <div style={{ padding: "2rem", textAlign: "center", color: "#ef4444", background: "#fef2f2" }}>
+          {error}
+        </div>
+      )}
+      {blobUrl && (
+        <iframe
+          src={blobUrl}
+          style={{ width: "100%", height: 600, border: "none", display: "block" }}
+          title={filename}
+        />
+      )}
     </div>
   );
 }

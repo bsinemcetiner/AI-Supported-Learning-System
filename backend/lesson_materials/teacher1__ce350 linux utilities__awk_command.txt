@@ -1,0 +1,418 @@
+Lecture 06: awk
+CE350: Linux Utilities and Shell Scripting
+Çağlar Durmaz
+Next week! 
+More details soon. 
+Midterm
+Previously on CE350
+● sed
+This week
+● awk
+awk
+● Identifying awk as a programming language scares some people away from 
+it. 
+● Consider awk a different approach to problem solving. 
+● The key to awk’s operations is that the data it works on has some kind of 
+structure. 
+● A text file can be loosely or tightly structured. 
+○ A chapter containing major and minor sections has some structure. 
+○ A table consisting of tab-separated items in columns is very structured. 
+○ We can use an awk script to reorder columns of data, for example. 
+awk
+● Some of the things awk allows us to do:
+○ View a text file as a textual database made up of records and fields. 
+○ Use variables to manipulate the database. 
+○ Use arithmetic and string operators. 
+○ Use common programming constructs such as loops and conditionals. 
+○ Generate formatted reports. 
+○ Define functions.
+○ Execute UNIX commands from a script. 
+○ Process the result of UNIX commands. 
+○ Process command-line arguments more gracefully. 
+○ Work more easily with multiple input streams. 
+awk
+● Alfred V. Aho, Brian W. Kernighan and Peter J. Weinberger define awk as 
+follows: 
+○ Awk is a programming language whose basic operation is to search a set of files for patterns, 
+and to perform specified actions upon lines or fields of lines which contain instances of those 
+patterns.
+○ The basic operation of awk is to scan a set of input lines in order, searching for lines which 
+match any of a set of patterns which the user has specified.
+○ For each pattern, an action can be specified; this action will be performed on each line that 
+matches the pattern.
+awk-nawk-gawk
+● nawk is a newer version of awk
+● gawk is the GNU version of awk
+awk: usage
+● The command 
+awk program [files] 
+Executes the awk commands in the string “program” on the set of named 
+files, or on the standard input, if there are no files. 
+● It is also possible to place the statements in a program file
+awk -f awkfile [files]
+awk: usage
+● The command formats to be used are:
+awk ‘pattern’ [fileName]
+awk ‘{ action }’ [fileName]
+awk ‘pattern { action }’ [fileName]
+awk: usage
+● Some examples:
+awk ‘/CE350/’ myFile
+○ prints all lines containing CE350
+awk ‘{ print $1 }’ myFile
+○ prints the first field of each line in myFile
+awk ‘/CE350/ { print $1, $2 }’ myFile
+○ We’ll see in a few slides later what gets printed
+awk: usage
+● awk can also be used to manipulate the command output
+command | awk ‘pattern {action}’
+● an example:
+df | awk ‘$4 > 75000’
+df reports the free disk space on filesystems. If the fourth field of any line of 
+the output of the command df is greater than 75000 (blocks), that line will be 
+printed out.
+awk: usage
+● Here’s “hello, world”
+● Notice that the text in file.txt is not used at all. 
+● This script has only a single action, enclosed in braces, which is to print the 
+statement. 
+● In this case, the test file contains only a single line; thus the action occurs 
+once. 
+● The input line is read, but unlike sed, is not printed out. 
+
+An overview on how awk works
+● Let's dissect the following command: awk '{ print $1, $3 }' myFile.in
+● awk takes a line of input from the file myFile.in and puts the line into an 
+internal variable called $0 (zero). Each line is also called a record.
+● Next, the line is broken into fields or words separated by a whitespace 
+character. Each field is stored in a numbered variable, starting with $1.
+● awk knows about the whitespace characters according to FS, field separator, 
+which may be changed.
+myFile.in:
+Kaya A209 8289 CE
+İlker A421 8258 CE
+Senem A310 8360 SE
+An overview on how awk works
+● Let's dissect the following command: awk '{ print $1, $3 }' myFile.in
+● awk takes a line of input from the file myFile.in and puts the line into an 
+internal variable called $0 (zero). Each line is also called a record.
+● Next, the line is broken into fields or words separated by a whitespace 
+character. Each field is stored in a numbered variable, starting with $1.
+● awk knows about the whitespace characters according to FS, field separator, 
+which may be changed.
+myFile.in:
+Kaya A209 8289 CE
+İlker A421 8258 CE
+Senem A310 8360 SE
+“Kaya A209 8289 CE”  -> $0
+“Kaya” -> $1
+“A209” -> $2
+“8289” -> $3
+“CE” -> $4
+An overview on how awk works
+● awk uses print function with comma, which provides a space in the output. 
+The comma is specially mapped to the internal variable OFS, output field 
+separator. The comma generates whatever assigned to OFS.
+● The above processes continue until all lines in the file have been handled.
+awk’s Programming Model
+● It’s important to understand the basic model that awk offers the programmer. 
+● An awk program consists of what we will call a main input loop. 
+● We don’t write this loop, it exists as the framework within which the code we 
+write will be executed. 
+● The main input loop in awk is a routine that reads one line of input from a file 
+and makes it available for processing. 
+● The actions we write to do the processing assume that there is a line of input 
+available. 
+awk’s Programming Model
+● In another programming language, we would have to create the main input 
+loop as part of our program. 
+● This program would have to open the input file, and read one line at a time. 
+● This is not a lot of work, but it illustrates a basic awk shortcut that makes it 
+easier for us to write our programs. 
+● The main input loop is executed as many times as there are lines of input. 
+● It terminates when there is no more input to be read. 
+awk’s Programming Model
+● awk allows us to write two special routines that can be executed before any 
+input is read and after all input is read. 
+● These are the procedures associated with the BEGIN and END rules. 
+● In other words, we can do some preprocessing before the main input loop is 
+ever executed, and some post processing after the main input loop is 
+terminated. 
+● The BEGIN and END procedures are optional. 
+awk’s Programming Model
+Figure reference: Dougherty D., Robbins A., sed and awk, O’Reilly, Second Edition, 1997, page 140
+
+awk’s Processing Model
+● So, we can think of an awk script as having three major parts, what happens 
+before, what happens during, and what happens after processing the input.
+● The “during” process is where most of the work gets done. 
+● Inside the main input loop, our instructions are written as a series of pattern 
+and action procedures. 
+● A pattern is a rule for testing the input line to determine whether or not the 
+action should be applied to it. 
+● The actions can be quite complex, consisting of statements, functions and 
+expressions. 
+awk: Pattern Matching 
+● When awk reads an input line, it attempts to 
+match each pattern-matching rule in a 
+script. 
+● Only the lines matching the particular 
+pattern are the object of an action. 
+● If no action is specified, the line that 
+matches the pattern is printed. 
+● Let’s try some pattern matching exercises. 
+
+awk: Pattern Matching 
+● You should notice, that each command is 
+run on all of the lines. 
+● This is not obvious in this example, 
+because each line matches only one 
+command.
+● The first one matches the integer, the 
+second one string, third one a blank line 
+and the last one another string. 
+● Consider the next example. 
+
+awk: Pattern Matching 
+● This time, the last command, /.+/ matches 
+all non-empty lines. 
+● Notice that the first line is matched by two 
+commands and both are executed. 
+● This is only printing, you can achieve the 
+same functionality with ……..
+
+awk: Records and Fields
+● awk makes the assumption that its input is structured and not just an endless 
+string of characters. 
+● In the simplest case, it takes each input line as a record, and each word, 
+separated by spaces or tabs, as a field. 
+● The characters separating the fields are referred to as “delimiters.”
+● The following record in the file names has three fields, separated by either a 
+space or a tab. 
+
+awk: Records and Fields
+● awk allows us to refer to fields in actions using the field operator $. 
+● This operator is followed by a number, just like positional parameters. 
+● In the case below, $1 refers to the first field, $2 to second, and so on. 
+
+awk: Records and Fields
+● awk allows us to refer to fields in actions using the field operator $. 
+● This operator is followed by a number, just like positional parameters. 
+● In the case below, $1 refers to the first field, $2 to second, and so on. 
+● $0 refers to the entire input record, the whole line. 
+● In the second line, then, $1 is “Ilker”, $2 is “Korkmaz”, and $3 is “305”.
+● Let’s reorder and print them. 
+
+awk: Records and Fields
+● awk allows us to refer to fields in actions using the field operator $. 
+● This operator is followed by a number, just like positional parameters. 
+● In the case below, $1 refers to the first field, $2 to second, and so on. 
+● $0 refers to the entire input record, the whole line. 
+● In the second line, then, $1 is “Ilker”, $2 is “Korkmaz”, and $3 is “305”.
+● Let’s reorder and print them. 
+● Try this in Java :) 
+
+awk: Records and Fields
+● The commas that separate each argument in the print statement cause a 
+space to be output between the values. 
+● This is the output field separator, OFS.
+● The field separator, FS, is the space and tabs to separate the fields in the 
+input.
+● We can change this field separator with the -F option. 
+
+awk: Records and Fields
+● Some other examples to change the field separator:
+awk -F: '/CE350/ {print $1, $2}' file.dat
+The colon character “:” separates the fields
+awk -F'[:\t ]' '{print $1, $2}' file.dat
+Either the colon, the tab, or the space can separate the fields.
+awk: Records and Fields
+● It is usually a better practice, and more convenient, to specify the field 
+separator in the script itself. 
+● The system variable FS can be defined to change the field separator. 
+● This must be done before the first input line is read, so we do it in BEGIN. 
+BEGIN { FS = "," }
+
+awk: Records and Fields
+● Let’s consider the file below. 
+
+awk: Records and Fields
+● We have used a single character to separate fields.
+● Then, in the print statement, we have used a space and a comma to improve 
+readability.
+● This gives a basic idea of how awk can be used to work with data that has a 
+recognizable structure. 
+● In short, we can use the default FS for delimiter, set a single character, or use 
+a regular expression.  
+Programming with awk
+● There are two types of constants in awk; string or numeric.
+● A string must be quoted in an expression. Strings can make use of the 
+escape sequences, such as \n, \r, \t.
+● To define a variable, we only have to name it, and assign it a value. 
+● The name can only contain letters, digits and underscores, and may not start 
+with a digit. 
+● The variable names are case sensitive. 
+● Variables are not declared, we don’t have to tell what type of value will be 
+stored in a variable. Each has a string and a numeric value, and awk uses the 
+appropriate value based on the context of the expression. 
+Programming with awk
+● Variables do not have to be initialized, awk automatically initializes them to 
+the empty string, which acts like 0 if used as a number. 
+● The following expressions assign values to x and z. 
+x = 1
+z = "Hello"
+● A space is the string concatenation operator. The expression 
+z = "Hello" "World"
+returns "HelloWorld"
+Programming with awk
+● The dollar sign, $, is used to reference fields.
+w = $1 assigns the value of the first field to variable w. 
+● A variety of operators can be used in expressions. The 
+arithmetic operators are listed on the right. 
+● Once a variable has been assigned a value, that value 
+can be referenced using the name of the variable. 
+● Evaluate x, add 1 to it, put the result into variable y:
+y = x + 1
+
+Programming with awk
+● The table on the right lists the assignment operators 
+used in awk expressions. 
+● The following awk script counts each blank line in a 
+file. 
+/^$/ { print x += 1 }
+● Although we didn’t initialize the value of x, we can 
+safely assume that its value is 0, up until the first 
+blank line is encountered.
+● The expression x+=1 is evaluated, and printed, every 
+time a blank line is encountered. 
+
+Programming with awk
+● Much like Java, the increment, and the decrement operators, ++ and --, can 
+be used as prefix or postfix operators. 
+● ++x means, increment x before returning value.
+● x++ means, increment x after returning value.
+● Let’s consider the previous blank line counting example. 
+/^$/ { print x++ } 
+/^$/ { print ++x }
+● The first one prints 0 when it encounters the first blank line, then 1 in the 
+second blank line. 
+Programming with awk
+● Let’s, instead of printing at every encounter, print them in END. 
+
+Programming with awk
+● The fun begins when we start averaging grades using awk. 
+
+Programming with awk
+● The fun begins when we start averaging grades using awk.
+● We can do more, of course.
+● We can set different weights for each column. For example, your midterm will 
+be multiplied by 0.3, final by 0.4, the homeworks by 0.3. 
+System variables
+● There are a number of system or built-in variables defined by awk. 
+● awk has two types of system variables. 
+● The first one defines values whose default can be changed, such as the 
+default field and record separators.
+● The second type defines values that can be used in reports or processing, 
+such as the number of fields found in the current record, the count of the 
+current record. These are automatically updated by awk. 
+System variables
+● You remember FS, is the field separator. You also remember its output 
+equivalent, OFS. 
+● awk defines the variable NF to be the number of fields for the current input 
+record. You can use $NF, with $, to reference the last field of each record. 
+● awk sets the variable NR to the number of the current input record. After a 
+record has been processed, NR is incremented.
+● awk also defines RS, the record separator, as a new line. Its output 
+equivalent is ORS. 
+Relational and Boolean operators
+● Relations and Boolean operators allow us to make 
+comparisons between two expressions.
+● A list is given in the table on the right.
+● A relational expression can be used in place of a 
+pattern to control a particular action. For example, if 
+we want to limit the records selected for processing 
+to those that have six fields, we could use the 
+following expression 
+NF == 6 { print $1, $6 }
+
+Relational and Boolean operators
+● We can use the match operator, ~ for fields.
+$5 ~ /MA/ { print $1, ", " $6 }
+● It also works with variables; 
+$5 ~  state { print $1, ", " $6 }
+Relational and Boolean operators
+● Given two or more expressions, || can be used for logical OR, && can be 
+used for logical AND. 
+NF == 6 && NR > 1
+● && has higher precedence than ||. 
+Relational and Boolean operators
+
+Passing parameters into a script
+● One of the more confusing subtleties of awk programming is passing 
+parameters into a script.
+awk -v myVar=$HOME { print myVar } anyfile
+Conditionals
+● The conditional statements in awk are borrowed from C, just as Java. 
+● They are used to control the flow of the program in making decisions. 
+awk '{ if ($5 > 50) print $1 }' filename
+awk '{ if ($4 > 50) print $1; else print $2 }' filename
+● Of course, it is better to write it as a separate awk script, if the script contains 
+many if, else if, and else statements. 
+● awk also borrows the following operator from C, just as Java. 
+expression ? action1 : action2 
+Looping
+● awk supports while, do while and for loops. 
+● We can use break and continue to break the loop, or skip remaining 
+statements.
+● while loop works as follows:
+i = 1
+while ( i <= 4 ) {
+    print $i
+    ++i
+}
+Looping
+● do-while loop works as follows:
+do {
+    ++x
+    print x
+} while ( x <= 4 )
+Looping
+● for loop works as follows:
+for (i=1; i<=NF; i++) {
+    print $i
+} 
+● Remember the grade example? Can we do it with a for loop? 
+Looping
+
+Brian Kernighan
+● One of the creators of awk. 
+● One of the creators of UNIX operating system.
+● One of the authors of popular books such as “C Programming Language” and 
+“The Practice of Programming.” 
+Photo reference: https://cdh.princeton.edu/people/brian-kernighan/ 
+Brian Kernighan on awk
+https://www.youtube.com/watch?v=Sg4U4r_AgJU 
+
+● What gets printed?
+a=4
+tail /etc/passwd | awk -v myVar=$a -F: ‘/jane/ { print $1, “Group: ” $myVar, 
+myVar }’
+Exercise CE350.06 (1)
+● Consider a grades file as given below, where the first grade is 
+homework, second one is project, third is midterm and fourth 
+is final each having weights as 0.15, 0.15, 0.3, 0.4, 
+respectively.
+John Oliver;45;30;80;75
+Graham Norton;60;87;85;90
+Stephen Colbert;40;56;78;88
+Jimmy Fallon;55;60;65;80
+● The IEU letter grades are given on the right. Write a script that 
+will print out the letter grades for these students. 
+Exercise CE350.06 (2)
+
+References
+● Alfred V. Aho and Brian W. Kernighan and Peter J. Weinberger, Awk -- A 
+Pattern Scanning and Processing Language (Second Edition), 1978, http://cit
+eseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.31.1299 
+● Dougherty D., Robbins A., sed and awk, O’Reilly, Second Edition, 1997
+● https://www.youtube.com/watch?v=Sg4U4r_AgJU

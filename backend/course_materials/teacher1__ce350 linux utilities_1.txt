@@ -1,0 +1,661 @@
+Lecture 07: Text Processing
+CE350: Linux Utilities and Shell Scripting
+Çağlar Durmaz
+
+
+Previously on CE350
+●
+sed and awk
+
+
+Text Processing
+●
+All UNIX-like operating systems rely heavily on text files for several types of 
+data storage. 
+●
+So it makes sense that there are many tools for manipulating text. 
+●
+Let’s see the programs that are used to “slice and dice” text. 
+
+
+Text Processing
+●
+Here are a list of them. Do they look familiar? 
+○
+cat
+○
+sort
+○
+uniq
+○
+shuf
+○
+cut
+○
+paste
+○
+join
+○
+comm
+○
+diff
+○
+patch
+○
+tr
+
+
+Text Processing
+●
+Obviously, text is used for a lot of purposes. 
+●
+Documents: Many people write documents using plain text formats. 
+●
+It makes sense that a small text file could be useful for simple notes. 
+●
+It is also possible to write large documents in text format. 
+●
+One popular approach is to write a large document in a text format and then 
+use a markup language to describe the formatting of the finished document. 
+●
+Many scientific papers are written using LaTeX; UNIX-based text processing 
+systems were among the first systems that supported advanced typographical 
+layout needed by writers in technical disciplines. 
+
+
+Text Processing
+●
+Email: is an intrinsically text-based medium. Even non-text attachments are 
+converted into a text representation for transmission. 
+●
+We can see this for ourselves by downloading an email message and then 
+viewing it in less. 
+●
+It begins with a header that describes the source of the message, and the 
+processing it received during its journey, followed by the body of the 
+message. 
+●
+We (Umut, İlker, and Kaya) always ask each other for help, so, here is the 
+source of an email conversation among us. 
+
+
+Text Processing
+●
+Printer Output: On UNIX-like systems, output destined for a printer is sent 
+as plain text or, if the page contains graphics, is converted into a text format 
+page description language, known as PostScript, which is then sent 
+to a program that generates the graphic dots to be printed. 
+●
+Program source code: Many of the command line programs found on 
+UNIX-like systems were created to support system administration and 
+software development, and text processing programs are no exception. 
+●
+Many of them are designed to solve software development problems. 
+●
+The source code is always in text format. 
+
+
+Text Processing: cat
+●
+The cat program has a number of interesting options. 
+●
+The -A option displays nonprinting characters in the text. 
+●
+There may be times when we want to know if control characters are 
+embedded in our otherwise visible text. 
+●
+The most common of these are tab characters and carriage returns, often 
+present as end-of-line characters. 
+
+
+Text Processing: cat
+●
+I assume you can tell what $ means, in this case. 
+●
+Let me try a tab. 
+
+
+Text Processing: cat
+●
+The ^I means a tab. You didn’t expect a \t, did you? 
+●
+The caret shows the Control key on the keyboard. So Control+I is the tab 
+character. 
+●
+On UNIX, the line endings are \n, however, on Windows it is \r\n, where \r is 
+the return carriage. 
+●
+At first I’ve tried to find a text file written on Windows.
+●
+Then, I said, why not write a C program that can output \r\n? 
+
+
+Text Processing: cat
+●
+The ^I means a tab. You didn’t expect a \t, did you? 
+●
+The caret shows the Control key on the keyboard. So Control+I is the tab 
+character. 
+●
+On UNIX, the line endings are \n, however, on Windows it is \r\n, where \r is 
+the return carriage. 
+●
+At first I’ve tried to find a text file written on Windows.
+●
+Then, I said, why not write a C program that can output \r\n? 
+
+
+Text Processing: cat
+●
+Another option for cat, is the -n, where it prints out the line numbers. 
+
+
+Text Processing: cat
+●
+The real purpose of cat is to concatenate text. 
+●
+We never used it, but it does not mean that we will never need or use it.
+●
+Here is a demonstration. 
+●
+Let’s concatenate the following three files into one file by using redirection: 
+uptime, win.c, and cat00. 
+
+
+Text Processing: sort
+●
+The sort program sorts the contents of standard input, or one or more files 
+specified on the command line. 
+●
+It can accept multiple files on the command line as arguments, so it is 
+possible to merge multiple files into a single sorted whole. 
+●
+Let’s try to use an output of a command to sort, instead of a file. 
+●
+The program du, disk usage, gives the disk usage of files and directories. 
+●
+Its -s option summarizes the output. 
+●
+I’ll find the disk usage of the files in /usr/share, however, there are too many. 
+●
+Pipe this output to head program, which, by default, prints the first 10 lines. 
+●
+Its cousin, tail, prints the last 10 lines by default. 
+
+
+Text Processing: sort
+●
+Clearly, du works with the files in alphabetical 
+order. 
+●
+What if I want to see the largest files in this 
+directory? 
+●
+Then, let me sort this output. 
+
+
+Text Processing: sort
+●
+It didn’t work, because sort assumed that 
+the numbers are strings. 
+●
+As a string, 1016 comes before 112. 
+●
+We can use the -n option of sort to fix this. 
+
+
+Text Processing: sort
+●
+Another problem. 
+●
+Since it sorts the numbers, now I have 
+the list in ascending order, the 
+smallest ones first. 
+●
+What can I do? 
+
+
+Text Processing: sort
+●
+I can use the -r option for sort, which 
+reverses the list, and it uses a 
+descending order. 
+●
+I can also use the tail program, 
+instead of head, right? 
+●
+Do they print the same thing? 
+
+
+Text Processing: sort
+●
+Isn’t symmetry a beautiful thing? 
+●
+Choose the one that suits your needs. 
+
+
+Text Processing: sort
+●
+You may ask: can we use it with the output of ls?
+●
+The long option, -l, for ls actually prints the size of each file, but the size field 
+is not at the beginning of the line. 
+●
+It’s in the… 
+fifth field. 
+●
+What can I do? 
+
+
+Text Processing: sort
+●
+At this moment, I might have heard some answers that contain a solution with 
+a particular command we’ve covered; awk. 
+●
+There is another option; the -k option of the sort command. 
+●
+This option sorts based on a key field located from field1 to field2, rather than 
+the entire line. 
+
+
+Text Processing: sort
+●
+Another example using the -k option of the sort command. 
+
+
+Text Processing: sort
+●
+Another example using the -k option of the sort command. 
+
+
+Text Processing: sort
+●
+Using the -o option of the sort command, we can redirect the output to a file.
+
+
+Text Processing: sort
+●
+We can actually do more with the -k option. 
+●
+Consider the distros file. 
+●
+If we sort it, using sort, then it will sort the lines 
+alphabetically. 
+●
+If we use the -k option, and sort according to the 
+version numbers, then we will lose the ordering in 
+the distro name. 
+●
+So, what I want is: sort with the first field first, then, 
+sort according to the second field, but sort it 
+numerically. 
+
+
+Text Processing: sort
+●
+We could have written -k 1,1 -k 2n, but for the first 
+time, I wanted it to improve readability. 
+●
+We specify a range of keys in the first key. 
+●
+Since we wanted to limit the sort to just the first 
+field, we specified 1,1, which means “start at field 
+one, stop at field one.” 
+●
+In the second instance, we specified 2n, which 
+means that field 2 is the sort key, and that the sort 
+should be numeric. 
+
+
+Text Processing: sort
+●
+We also have a date field; 19/01/2010, but it looks impossible to work with. 
+●
+Fortunately, sort provides a way.
+●
+The key option allows specification of offsets within fields, so we can define 
+keys within fields. 
+
+
+Text Processing: sort
+●
+We also have a date field; 19/01/2010, but it looks impossible to work with. 
+●
+Fortunately, sort provides a way.
+●
+The key option allows specification of offsets within fields, so we can define 
+keys within fields. 
+
+
+Text Processing: sort
+●
+By specifying -k 3.7, we instruct sort to use a sort key that begins at the 
+seventh character within the third field, the year. 
+●
+Likewise, we specify 3.1 and 3.4 for the month and day. 
+●
+We also add the n and r options to achieve a numeric sort. 
+●
+The b option is included to suppress leading spaces which vary from line to 
+line.
+
+
+Text Processing: sort
+●
+The fields in some files are delimited with colons (:)
+●
+For such cases, sort provides the -t option to define the field separator 
+character. 
+●
+To sort the passwd file on the seventh field, which is the user’s default shell, 
+we could: 
+
+
+Text Processing: uniq
+●
+Compared to sort, the uniq program is a lightweight.
+●
+It performs seemingly trivial task.
+●
+When given a sorted file, including the standard output, it removes any 
+duplicate lines and sends the results to the standard output. 
+●
+It is often used in conjunction with sort to clean the output of duplicates. 
+
+
+Text Processing: uniq
+●
+The uniq program has interesting options.
+●
+For example, -c option outputs a list of duplicate lines preceded by the 
+number of times the line occurs.
+●
+The -d option only outputs repeated lines, rather than unique lines. 
+
+
+Text Processing: shuf
+●
+If we can sort, then we should also 
+be able to shuffle… 
+●
+The shuf command generates 
+random permutations of input lines. 
+●
+So we can get randomization if we 
+want to… 
+$ seq 1 10 | shuf | sort -n
+
+
+Text Processing: shuf
+●
+Using -n option with shuf command 
+will pick line(s) randomly from input 
+lines.
+$ shuf -n 1 inputFile
+$ shuf -n 3 inputFile
+
+
+Text Processing: cut
+●
+The cut program is used to extract a section of text from a line, and output 
+the extracted section to standard output. 
+●
+It can accept multiple file arguments or input from standard input. 
+●
+Specifying the section of the line to be extracted is somewhat awkward and is 
+specified using the following options
+○
+The -c option works on a character list
+○
+The -f option works on a field list
+○
+The -d option changes the delimiter
+○
+The --complement option extracts the entire line of text, except for those portions specified. 
+●
+Let’s work on the distros again. 
+
+
+Text Processing: cut
+●
+The first command cuts the third field. 
+●
+The second command cuts the third field, which is then piped to another cut 
+which works on the characters in the range 7 to 10. 
+●
+I have used head program in between pipes to print the first five lines only. 
+
+
+Text Processing: paste
+●
+If you cut something, then you probably will paste it. 
+●
+Let me cut from distros, then paste into a new file. 
+
+
+Text Processing: join
+●
+The join program joins lines of two files on a common field.
+●
+It is similar to the JOIN operator on a database. 
+●
+To do so, let’s consider two files that have fields which are defined as keys. 
+●
+The customer file has three fields, a customer number, the first name and the 
+last name.
+●
+The orders file contains four fields, an order number, the customer number, 
+the quantity and the item ordered. 
+●
+Both files share the customer number. 
+
+
+Text Processing: join
+●
+Performing a join operation would allows us to combine the fields in the two 
+tables to achieve a useful result, such as an invoice. 
+
+
+Text Processing: join
+●
+By default, join will use the first fields of the lines of files as the key values.
+
+
+Text Processing: join
+●
+By default, join expects that the files are sorted by the key values.
+
+
+Text Processing: join
+●
+By default, join expects that the files are sorted by the key values.
+
+
+Text Processing: join
+●
+The command join will give no output if there is no joined line based on key.
+
+
+Text Processing: comm
+●
+The comm program compares two sorted files line 
+by line. 
+●
+It outputs three fields as the result of a line 
+comparison.
+●
+The first field contains lines unique to the first file, the 
+second field to the second file, and the third field 
+shows the lines shared by both files. 
+●
+We can suppress the fields using options -1, -2, -3, or 
+a combination -12. 
+
+
+Text Processing: comm
+●
+Another example using comm 
+
+
+Text Processing: diff
+●
+The diff program is one of the most common tools used by UNIX developers.
+●
+Developers usually receive patch files for bug fixes.
+●
+The diff and patch programs are used together.
+●
+Let’s see how they work. 
+
+
+Text Processing: diff
+●
+diff has three types of output. 
+●
+The default one has the following change commands. 
+○
+p1ap2, p1cp2, p1dp2
+●
+Notice that, even though they are written in one piece, they contain three 
+fields. 
+●
+The first field is the position in the first file (p1), the second is the command, 
+and the third is the position in the second file (p2). 
+
+
+Text Processing: diff
+●
+p1ap2 : The a is for the append command. Append the lines at the position 
+p2 in the second file to the position p1 in the first file.
+●
+p1cp2 : The c is for change, or replace. Change the lines at the position p1 
+with the lines at the position p2 in the second file.
+●
+p1dp2 : The d is for delete. Delete the lines in the first file at position p1, 
+which would have appeared at range p2 in the second file. 
+●
+It is also possible to use the context format with the option -c. 
+
+
+Text Processing: diff
+●
+The context format begins with the names 
+of files and their timestamps. 
+●
+The first file is marked with asterisks, the 
+second file with dashes.
+●
+Then there are indicators for each line. 
+
+
+Text Processing: diff
+●
+If there are no indicators, there is no 
+difference. 
+●
+A minus sign (-) indicates that a line is 
+deleted. 
+●
+A plus sign (+) indicates that a line is 
+added.
+●
+An exclamation mark (!) indicates that a 
+line is changed. Two versions of the line 
+will be displayed, each in its respective 
+section of the change group. 
+
+
+Text Processing: diff
+●
+The unified format, -u, is similar to context 
+format but is more concise.
+●
+Only the minus and plus signs are used to 
+indicate the changes. 
+●
+If there is no change, no indicator is used. 
+
+
+Text Processing: diff
+●
+Another example using the command diff 
+
+
+Text Processing: diff
+●
+Another example using the command diff 
+
+
+Text Processing: diff
+●
+Another example using the command diff 
+
+
+Text Processing: diff and patch
+●
+The diff file is useful to record the changes you make. 
+●
+This happens a lot if you are fixing bugs. 
+●
+Sometimes, you fix the bug, but you don’t have the write permissions on the 
+source code management server, so you send a “patch”, which is simply the 
+diff file which contains your changes. 
+●
+The developers then can apply these changes using the patch program. 
+●
+Let me first demonstrate using our f0 and f1. 
+
+
+Text Processing: diff and patch
+●
+What we do here is simply make the f0 the 
+same as f1. 
+●
+We find the difference between them, save 
+the output to a file.
+●
+Then use this difference with patch, and 
+the file f0 is patched. 
+
+
+Text Processing: diff and patch
+●
+Here is a sample from Linus Torvalds himself, available at https://git.kernel.or
+g/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=9e54ef9da519d9febfa
+61fa9392276fbfa6ce79c 
+●
+This commit, dated 2017.03.26, has a diff file that shows the changes made. 
+
+
+Formatting Output: printf
+●
+The printf command is a little different, as it is not used for pipelines. 
+●
+It works as 
+printf “format” arguments
+●
+The command is given a string containing a format description which is then 
+applied to a list of arguments. 
+●
+It actually is very similar to its C counterpart. 
+
+
+A video from the past
+●
+The YouTube channel of AT&T has very interesting archive videos. 
+●
+One of them is titled UNIX: Making Computers Easier To Use, from 1982. 
+●
+You can watch Brian Kernighan give a very relaxed demonstration of the 
+1982 versions of these programs. 
+●
+The video also has significant people, such as Dennis Ritchie and Ken 
+Thompson. Can you spot others?
+
+
+References
+●
+William E. Shotts, Jr., The Linux Command Line
+●
+UNIX: Making Computers Easier To Use -- AT&T Archives film from 1982, 
+Bell Laboratories, online, https://www.youtube.com/watch?v=XvDZLjaCJuw

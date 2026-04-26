@@ -41,7 +41,7 @@ def create_course(db: Session, course_name: str, teacher_username: str):
     return True, course_id
 
 
-def add_material_to_course(db: Session, course_id: str, filename: str, text_content: str):
+def add_material_to_course(db: Session, course_id: str, filename: str, text_content: str, pdf_path: str = None):
     _ensure_storage()
 
     course = db.query(Course).filter(Course.course_id == course_id).first()
@@ -73,6 +73,7 @@ def add_material_to_course(db: Session, course_id: str, filename: str, text_cont
         course_id=course_id,
         original_filename=filename,
         stored_path=material_path,
+        pdf_path=pdf_path,
         file_hash=file_hash,
         uploaded_at=datetime.utcnow(),
     )

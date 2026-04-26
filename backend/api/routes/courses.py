@@ -113,9 +113,20 @@ async def upload_material(
     current_user: dict = Depends(require_teacher),
     db: Session = Depends(get_db)
 ):
+    import hashlib, os
     content = await file.read()
-    text = ocr_service.extract_text(content, file.filename)
 
+    # PDF'i orijinal haliyle kaydet
+    pdf_dir = "course_materials_pdf"
+    os.makedirs(pdf_dir, exist_ok=True)
+    file_hash_raw = hashlib.md5(content).hexdigest()
+    safe_course_id = course_id.replace("::", "__").replace("/", "_")
+    pdf_filename = f"{safe_course_id}_{file_hash_raw}{os.path.splitext(file.filename)[1]}"
+    pdf_path = os.path.join(pdf_dir, pdf_filename)
+    with open(pdf_path, "wb") as f:
+        f.write(content)
+
+    text = ocr_service.extract_text(content, file.filename)
     if not text:
         raise HTTPException(status_code=422, detail=f"{file.filename}: metin çıkarılamadı")
 
@@ -124,6 +135,7 @@ async def upload_material(
         course_id=course_id,
         filename=file.filename,
         text_content=text,
+        pdf_path=pdf_path,
     )
     if not add_ok:
         raise HTTPException(status_code=409, detail=add_msg)
@@ -140,6 +152,47 @@ async def upload_material(
         "chunks": rag_result["chunks"],
         "skipped": rag_result["skipped"],
     }
+
+
+# ── GET /courses/{course_id}/materials/{file_hash}/view ── PDF görüntüle
+@router.get("/{course_id}/materials/{file_hash}/view")
+def view_material(
+    course_id: str,
+    file_hash: str,
+    _: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    from fastapi.responses import FileResponse
+    from models import CourseMaterial
+    import os
+
+    material = db.query(CourseMaterial).filter(
+        CourseMaterial.course_id == course_id,
+        CourseMaterial.file_hash == file_hash
+    ).first()
+
+    if not material:
+        raise HTTPException(status_code=404, detail="Material not found")
+
+    pdf_path = material.pdf_path
+    if not pdf_path or not os.path.exists(pdf_path):
+        # Eski materyaller için txt dosyasını döndür
+        txt_path = material.stored_path
+        if txt_path and os.path.exists(txt_path):
+            return FileResponse(
+                txt_path,
+                media_type="text/plain",
+                headers={"Content-Disposition": f"inline; filename=\"{material.original_filename}.txt\""}
+            )
+        raise HTTPException(status_code=404, detail="File not found on disk")
+
+    ext = os.path.splitext(pdf_path)[1].lower()
+    media_type = "application/pdf" if ext == ".pdf" else "application/octet-stream"
+    return FileResponse(
+        pdf_path,
+        media_type=media_type,
+        headers={"Content-Disposition": f"inline; filename=\"{material.original_filename}\""}
+    )
 
 
 # ── GET /courses/{course_id}/materials ── materyal listesi
