@@ -433,16 +433,24 @@ def unapprove_section(lesson_id: str, section_index: int, current_user: dict = D
 
 
 @router.patch("/{lesson_id}/publish-sections")
-def publish_sections(lesson_id: str, current_user: dict = Depends(require_teacher), db: Session = Depends(get_db)):
+# Bu fonksiyonu lessons.py içindeki publish_sections ile değiştir
+
+@router.patch("/{lesson_id}/publish-sections")
+def publish_sections(
+    lesson_id: str,
+    current_user: dict = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
     lesson = get_lesson_by_id(db, lesson_id)
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
+
     sections = _load_sections(lesson_id)
     approved = [s for s in sections if s.get("approved") and s.get("draft", "").strip()]
+
     if not approved:
         raise HTTPException(status_code=400, detail="No approved sections. Approve at least one section first.")
 
-    # Save as JSON array — preserves rich slide format for student view
     combined = json.dumps([
         {"title": s["title"], "draft": s["draft"], "section_index": s.get("section_index", 0),
          "page_start": s.get("page_start", 1), "page_end": s.get("page_end", 1)}
@@ -451,9 +459,29 @@ def publish_sections(lesson_id: str, current_user: dict = Depends(require_teache
 
     save_draft_explanation(db, lesson_id, combined)
     approve_lesson_explanation(db, lesson_id)
-    return {"message": f"{len(approved)} sections published.", "lesson_id": lesson_id, "section_count": len(approved)}
 
+    # ── Auto-notification ──────────────────────────────────────────────
+    try:
+        from api.routes.notifications import create_notification
+        course_id = lesson.get("course_id", "")
+        week_title = lesson.get("week_title", "New Lesson")
+        create_notification(
+            db=db,
+            course_id=course_id,
+            title=f"New lesson published: {week_title}",
+            message=f"{week_title} has been published with {len(approved)} section(s). Open it to start learning!",
+            created_by=current_user["username"],
+            type="new_lesson",
+        )
+    except Exception:
+        pass  # Never fail the publish because of notification error
+    # ──────────────────────────────────────────────────────────────────
 
+    return {
+        "message": f"{len(approved)} sections published.",
+        "lesson_id": lesson_id,
+        "section_count": len(approved),
+    }
 class FeedbackRequest(BaseModel):
     feedback: str
     custom_prompt: Optional[str] = None

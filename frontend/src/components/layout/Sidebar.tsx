@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { User, ChatMap, TeachingMode, TeachingTone } from "../../types";
 
 interface SidebarProps {
+
   user: User;
   chatMap: ChatMap;
   activeChatId: string | null;
@@ -16,6 +17,17 @@ interface SidebarProps {
   onToneChange: (t: TeachingTone) => void;
 }
 
+interface NotificationItem {
+  id: number;
+  course_id: string;
+  title: string;
+  message: string;
+  type: string;
+  created_at: string;
+  created_by: string;
+  is_read: boolean;
+}
+
 const TONES: TeachingTone[] = [
   "Professional Tutor","Friendly Mentor","Simplified Explainer",
   "Encouraging Coach","Funny YouTuber","Deep Scientist","Simplified (for kids)",
@@ -28,6 +40,24 @@ const MODES: { value: TeachingMode; label: string }[] = [
   { value: "quiz_me",    label: "📝 Quiz Me" },
 ];
 
+const API = "http://127.0.0.1:8011/api";
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+function typeIcon(type: string) {
+  if (type === "new_lesson") return "📚";
+  if (type === "announcement") return "📣";
+  return "🔔";
+}
+
 export default function Sidebar({
   user, chatMap, activeChatId,
   onSelectChat, onNewChat, onDeleteChat,
@@ -37,6 +67,89 @@ export default function Sidebar({
   const [search, setSearch] = useState("");
   const [hoveredChat, setHoveredChat] = useState<string | null>(null);
   const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
+
+
+ // ── Notifications state ───────────────────────────────────────────────
+const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+const [showNotifications, setShowNotifications] = useState(false);
+const notifRef = useRef<HTMLDivElement>(null);
+
+const currentCourseId =
+  activeChatId && chatMap[activeChatId]?.course_id
+    ? chatMap[activeChatId].course_id
+    : null;
+
+const visibleNotifications = currentCourseId
+  ? notifications.filter((n) => n.course_id === currentCourseId)
+  : [];
+
+const unreadCount = visibleNotifications.filter((n) => !n.is_read).length;
+useEffect(() => {
+  fetchNotifications();
+  const interval = setInterval(fetchNotifications, 30000);
+  return () => clearInterval(interval);
+}, []);
+
+useEffect(() => {
+  function handleClick(e: MouseEvent) {
+    if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+      setShowNotifications(false);
+    }
+  }
+
+  document.addEventListener("mousedown", handleClick);
+  return () => document.removeEventListener("mousedown", handleClick);
+}, []);
+
+async function fetchNotifications() {
+  try {
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(`${API}/notifications/`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+
+    setNotifications(data.notifications || []);
+  } catch (err) {
+    console.error("Notifications could not be fetched:", err);
+  }
+}
+
+async function markRead(id: number) {
+  try {
+    const token = localStorage.getItem("token");
+
+    await fetch(`${API}/notifications/${id}/read`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+    );
+  } catch (err) {
+    console.error("Notification could not be marked as read:", err);
+  }
+}
+
+async function markAllRead() {
+  try {
+    const unreadVisible = visibleNotifications.filter((n) => !n.is_read);
+
+    await Promise.all(unreadVisible.map((n) => markRead(n.id)));
+  } catch (err) {
+    console.error("Notifications could not be marked as read:", err);
+  }
+}
+// ─────────────────────────────────────────────────────────────────────
 
   const filteredChats = Object.entries(chatMap)
     .filter(([, c]) => !search || c.title?.toLowerCase().includes(search.toLowerCase()))
@@ -76,7 +189,7 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* User */}
+      {/* User + Notification Bell */}
       <div style={{ padding: "1.25rem 1.5rem", borderBottom: "1px solid #f1f5f9" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ width: 44, height: 44, background: "linear-gradient(135deg, #3b82f6, #06b6d4)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 4px 12px rgba(59,130,246,0.3)" }}>
@@ -84,9 +197,120 @@ export default function Sidebar({
               {(user.full_name?.[0] ?? user.username[0]).toUpperCase()}
             </span>
           </div>
-          <div>
+          <div style={{ flex: 1 }}>
             <p style={{ fontWeight: 600, color: "#1e293b", fontSize: "0.9rem", margin: 0 }}>{user.username}</p>
             <p style={{ fontSize: "0.75rem", color: "#94a3b8", margin: 0, marginTop: 1 }}>Student</p>
+          </div>
+
+          {/* Bell button */}
+          <div ref={notifRef} style={{ position: "relative" }}>
+            <button
+              onClick={() => setShowNotifications((v) => !v)}
+              style={{
+                width: 36, height: 36, borderRadius: 12,
+                border: "1.5px solid #e2e8f0",
+                background: showNotifications ? "linear-gradient(135deg,#f97316,#ec4899)" : "#fff",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer", position: "relative", flexShrink: 0,
+                transition: "all 0.2s",
+              }}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+                stroke={showNotifications ? "#fff" : "#64748b"}
+                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
+              {unreadCount > 0 && (
+                <div style={{
+                  position: "absolute", top: -5, right: -5,
+                  width: 18, height: 18, borderRadius: "50%",
+                  background: "linear-gradient(135deg,#f97316,#ec4899)",
+                  color: "#fff", fontSize: "0.6rem", fontWeight: 800,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  border: "2px solid #fff",
+                }}>
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </div>
+              )}
+            </button>
+
+            {/* Dropdown */}
+            {showNotifications && (
+              <div style={{
+                position: "absolute", top: 44, right: -8,
+                width: 320, background: "#fff",
+                borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.14)",
+                border: "1px solid #f1f5f9", zIndex: 100,
+                overflow: "hidden",
+              }}>
+                {/* Dropdown header */}
+                <div style={{ padding: "14px 16px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #f1f5f9" }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#111827" }}>
+                    Notifications
+                    {unreadCount > 0 && (
+                      <span style={{ marginLeft: 8, background: "linear-gradient(135deg,#f97316,#ec4899)", color: "#fff", fontSize: "0.65rem", fontWeight: 800, padding: "2px 7px", borderRadius: 99 }}>
+                        {unreadCount} new
+                      </span>
+                    )}
+                  </div>
+                  {unreadCount > 0 && (
+                    <button onClick={markAllRead} style={{ fontSize: "0.72rem", color: "#f97316", fontWeight: 600, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+
+                {/* List */}
+                <div style={{ maxHeight: 360, overflowY: "auto" }}>
+              {visibleNotifications.length === 0 ? (
+                    <div style={{ padding: "2rem 1rem", textAlign: "center", color: "#9ca3af", fontSize: "0.85rem" }}>
+                      <div style={{ fontSize: "2rem", marginBottom: 8 }}>🔔</div>
+                      No notifications yet
+                    </div>
+                ) : visibleNotifications.map((n) => (
+                    <div
+                      key={n.id}
+                      onClick={() => !n.is_read && markRead(n.id)}
+                      style={{
+                        padding: "12px 16px",
+                        borderBottom: "1px solid #f9fafb",
+                        background: n.is_read ? "#fff" : "linear-gradient(135deg,rgba(249,115,22,0.04),rgba(236,72,153,0.02))",
+                        cursor: n.is_read ? "default" : "pointer",
+                        display: "flex", gap: 12, alignItems: "flex-start",
+                        transition: "background 0.15s",
+                      }}
+                    >
+                      <div style={{
+                        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                        background: n.is_read ? "#f3f4f6" : "linear-gradient(135deg,#fff7ed,#fdf2f8)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: "1.1rem",
+                        border: n.is_read ? "1px solid #e5e7eb" : "1px solid #fed7aa",
+                      }}>
+                        {typeIcon(n.type)}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                          <p style={{ fontWeight: n.is_read ? 500 : 700, fontSize: "0.82rem", color: "#111827", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {n.title}
+                          </p>
+                          {!n.is_read && (
+                            <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#f97316", flexShrink: 0 }} />
+                          )}
+                        </div>
+                        <p style={{ fontSize: "0.75rem", color: "#6b7280", margin: 0, lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                          {n.message}
+                        </p>
+                        <p style={{ fontSize: "0.68rem", color: "#9ca3af", margin: "4px 0 0", fontWeight: 500 }}>
+                          {n.course_id.split("::")[1] ?? n.course_id} · {timeAgo(n.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -211,4 +435,3 @@ export default function Sidebar({
     </aside>
   );
 }
-

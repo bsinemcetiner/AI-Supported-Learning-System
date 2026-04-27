@@ -12,24 +12,73 @@ interface ChatPageProps {
   onBack: () => void;
 }
 
-interface SlideBase { type: string; title: string; image_keyword?: string | null; highlight?: string; }
-interface IntroSlide extends SlideBase { type: "intro"; subtitle: string; body: string; }
-interface ConceptSlide extends SlideBase { type: "concept" | "deep_dive" | "example"; body: string; }
-interface ComparisonSlide extends SlideBase { type: "comparison"; table: { headers: string[]; rows: string[][] }; }
-interface SummarySlide extends SlideBase { type: "summary"; points: string[]; closing: string; }
+interface NotificationItem {
+  id: string;
+  message: string;
+  time: string;
+  isRead: boolean;
+}
+
+interface SlideBase {
+  type: string;
+  title: string;
+  image_keyword?: string | null;
+  highlight?: string;
+}
+
+interface IntroSlide extends SlideBase {
+  type: "intro";
+  subtitle: string;
+  body: string;
+}
+
+interface ConceptSlide extends SlideBase {
+  type: "concept" | "deep_dive" | "example";
+  body: string;
+}
+
+interface ComparisonSlide extends SlideBase {
+  type: "comparison";
+  table: {
+    headers: string[];
+    rows: string[][];
+  };
+}
+
+interface SummarySlide extends SlideBase {
+  type: "summary";
+  points: string[];
+  closing: string;
+}
+
 type Slide = IntroSlide | ConceptSlide | ComparisonSlide | SummarySlide;
-interface LessonPageData { hero_keyword?: string; learning_objectives?: string[]; slides: Slide[]; }
-interface PublishedSection { title: string; draft: string; section_index: number; page_start: number; page_end: number; }
+
+interface LessonPageData {
+  hero_keyword?: string;
+  learning_objectives?: string[];
+  slides: Slide[];
+}
+
+interface PublishedSection {
+  title: string;
+  draft: string;
+  section_index: number;
+  page_start: number;
+  page_end: number;
+}
 
 const SLIDE_ACCENTS: Record<string, { grad: string; light: string; icon: string }> = {
-  intro:      { grad: "linear-gradient(135deg,#6366f1,#8b5cf6)", light: "#ede9fe", icon: "🚀" },
-  concept:    { grad: "linear-gradient(135deg,#0ea5e9,#6366f1)", light: "#e0f2fe", icon: "💡" },
-  deep_dive:  { grad: "linear-gradient(135deg,#f97316,#ef4444)", light: "#fff7ed", icon: "🔬" },
-  example:    { grad: "linear-gradient(135deg,#10b981,#0ea5e9)", light: "#ecfdf5", icon: "📌" },
+  intro: { grad: "linear-gradient(135deg,#6366f1,#8b5cf6)", light: "#ede9fe", icon: "🚀" },
+  concept: { grad: "linear-gradient(135deg,#0ea5e9,#6366f1)", light: "#e0f2fe", icon: "💡" },
+  deep_dive: { grad: "linear-gradient(135deg,#f97316,#ef4444)", light: "#fff7ed", icon: "🔬" },
+  example: { grad: "linear-gradient(135deg,#10b981,#0ea5e9)", light: "#ecfdf5", icon: "📌" },
   comparison: { grad: "linear-gradient(135deg,#f59e0b,#f97316)", light: "#fffbeb", icon: "⚖️" },
-  summary:    { grad: "linear-gradient(135deg,#ec4899,#f97316)", light: "#fdf2f8", icon: "✅" },
+  summary: { grad: "linear-gradient(135deg,#ec4899,#f97316)", light: "#fdf2f8", icon: "✅" },
 };
-function accent(type: string) { return SLIDE_ACCENTS[type] || SLIDE_ACCENTS["concept"]; }
+
+function accent(type: string) {
+  return SLIDE_ACCENTS[type] || SLIDE_ACCENTS["concept"];
+}
 
 const UNSPLASH_KEY = import.meta.env.VITE_UNSPLASH_ACCESS_KEY as string;
 const imageCache: Record<string, string> = {};
@@ -37,36 +86,44 @@ const imageCache: Record<string, string> = {};
 async function fetchUnsplashUrl(keyword: string): Promise<string | null> {
   if (!UNSPLASH_KEY || !keyword) return null;
   if (imageCache[keyword]) return imageCache[keyword];
+
   try {
     const res = await fetch(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(keyword)}&per_page=5&orientation=landscape&content_filter=high`,
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(
+        keyword
+      )}&per_page=5&orientation=landscape&content_filter=high`,
       { headers: { Authorization: `Client-ID ${UNSPLASH_KEY}` } }
     );
+
     const data = await res.json();
     const results = data?.results || [];
     if (results.length === 0) return null;
+
     const pick = results[Math.floor(Math.random() * results.length)];
     const url = pick?.urls?.regular || null;
+
     if (url) imageCache[keyword] = url;
     return url;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
-// ─── Robust JSON extractor ────────────────────────────────────────────────────
 function extractSlides(raw: string): LessonPageData | null {
   if (!raw) return null;
+
   let text = raw.trim();
+
   if (text.includes("```")) {
     const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (fenceMatch) text = fenceMatch[1].trim();
+if (fenceMatch) text = fenceMatch[1].trim();
   }
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start === -1 || end === -1 || end <= start) return null;
   try {
     const parsed: LessonPageData = JSON.parse(text.slice(start, end + 1));
-    if (parsed.slides && Array.isArray(parsed.slides) && parsed.slides.length > 0) return parsed;
-    return null;
+    return parsed;
   } catch { return null; }
 }
 
@@ -86,8 +143,6 @@ function extractSections(raw: string): PublishedSection[] | null {
 function isJsonContent(content: string): boolean {
   const t = content.trim(); return t.startsWith("[") || t.startsWith("{");
 }
-
-// ─── Image components ─────────────────────────────────────────────────────────
 
 function HeroImage({ keyword }: { keyword: string }) {
   const [imgUrl, setImgUrl] = useState<string | null>(null);
@@ -150,46 +205,35 @@ function SlideCard({ slide, index }: { slide: Slide; index: number }) {
         </div>
       </div>
       <div style={{ padding: "18px 20px" }}>
-        {slide.type === "intro" && (() => {
-          const s = slide as IntroSlide;
-          return (<>
-            {s.image_keyword && <HeroImage keyword={s.image_keyword} />}
-            <p style={{ fontSize: "0.95rem", color: "#6366f1", fontWeight: 700, margin: "0 0 8px" }}>{s.subtitle}</p>
-            <p style={{ fontSize: "0.9rem", color: "#374151", lineHeight: 1.8, margin: 0 }}>{s.body}</p>
-          </>);
-        })()}
-        {slide.type === "concept" && (() => {
-          const s = slide as ConceptSlide;
-          return (<>
-            <p style={{ fontSize: "0.9rem", color: "#374151", lineHeight: 1.85, margin: 0 }}>{s.body}</p>
-            {s.highlight && <HighlightBox text={s.highlight} grad={ac.grad} />}
-          </>);
-        })()}
-        {slide.type === "deep_dive" && (() => {
-          const s = slide as ConceptSlide;
-          return (<div style={{ overflow: "hidden" }}>
-            {s.image_keyword && <SideImage keyword={s.image_keyword} />}
-            <p style={{ fontSize: "0.9rem", color: "#374151", lineHeight: 1.85, margin: 0 }}>{s.body}</p>
-            {s.highlight && <HighlightBox text={s.highlight} grad={ac.grad} />}
-          </div>);
-        })()}
-        {slide.type === "example" && (() => {
-          const s = slide as ConceptSlide;
-          return (<>
-            <p style={{ fontSize: "0.9rem", color: "#374151", lineHeight: 1.85, margin: 0 }}>{s.body}</p>
-            {s.highlight && <HighlightBox text={s.highlight} grad={ac.grad} />}
-          </>);
-        })()}
-        {slide.type === "comparison" && (() => {
-          const s = slide as ComparisonSlide;
-          return (<>
-            {s.table && (
+        {slide.type === "intro" && (
+          <>
+            {(slide as IntroSlide).image_keyword && <HeroImage keyword={(slide as IntroSlide).image_keyword!} />}
+            <p style={{ fontSize: "0.95rem", color: "#6366f1", fontWeight: 700, margin: "0 0 8px" }}>{(slide as IntroSlide).subtitle}</p>
+            <p style={{ fontSize: "0.9rem", color: "#374151", lineHeight: 1.8, margin: 0 }}>{(slide as IntroSlide).body}</p>
+          </>
+        )}
+        {(slide.type === "concept" || slide.type === "example") && (
+          <>
+            <p style={{ fontSize: "0.9rem", color: "#374151", lineHeight: 1.85, margin: 0 }}>{(slide as ConceptSlide).body}</p>
+            {slide.highlight && <HighlightBox text={slide.highlight} grad={ac.grad} />}
+          </>
+        )}
+        {slide.type === "deep_dive" && (
+          <div style={{ overflow: "hidden" }}>
+            {slide.image_keyword && <SideImage keyword={slide.image_keyword} />}
+            <p style={{ fontSize: "0.9rem", color: "#374151", lineHeight: 1.85, margin: 0 }}>{(slide as ConceptSlide).body}</p>
+            {slide.highlight && <HighlightBox text={slide.highlight} grad={ac.grad} />}
+          </div>
+        )}
+        {slide.type === "comparison" && (
+          <>
+            {(slide as ComparisonSlide).table && (
               <div style={{ overflowX: "auto", marginBottom: 12 }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
-                  <thead><tr>{s.table.headers.map((h, i) => (
+                  <thead><tr>{(slide as ComparisonSlide).table.headers.map((h, i) => (
                     <th key={i} style={{ background: ac.grad, color: "#fff", padding: "9px 12px", textAlign: "left", fontWeight: 700, fontSize: "0.8rem" }}>{h}</th>
                   ))}</tr></thead>
-                  <tbody>{s.table.rows.map((row, ri) => (
+                  <tbody>{(slide as ComparisonSlide).table.rows.map((row, ri) => (
                     <tr key={ri} style={{ background: ri % 2 === 0 ? "#f9fafb" : "#fff" }}>
                       {row.map((cell, ci) => (
                         <td key={ci} style={{ padding: "8px 12px", color: ci === 0 ? "#111827" : "#374151", fontWeight: ci === 0 ? 600 : 400, borderBottom: "1px solid #f3f4f6" }}>{cell}</td>
@@ -199,23 +243,22 @@ function SlideCard({ slide, index }: { slide: Slide; index: number }) {
                 </table>
               </div>
             )}
-            {(slide as any).highlight && <HighlightBox text={(slide as any).highlight} grad={ac.grad} />}
-          </>);
-        })()}
-        {slide.type === "summary" && (() => {
-          const s = slide as SummarySlide;
-          return (<>
+            {slide.highlight && <HighlightBox text={slide.highlight} grad={ac.grad} />}
+          </>
+        )}
+        {slide.type === "summary" && (
+          <>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
-              {(s.points || []).map((pt, i) => (
+              {((slide as SummarySlide).points || []).map((pt, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px", background: ac.light, borderRadius: 10 }}>
                   <div style={{ width: 24, height: 24, borderRadius: "50%", background: ac.grad, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.72rem", fontWeight: 800, flexShrink: 0 }}>{i + 1}</div>
                   <span style={{ fontSize: "0.88rem", color: "#374151", lineHeight: 1.6 }}>{pt}</span>
                 </div>
               ))}
             </div>
-            {s.closing && <div style={{ padding: "12px 16px", borderRadius: 10, background: ac.grad, color: "#fff", fontSize: "0.88rem", fontWeight: 600, lineHeight: 1.5 }}><span style={{ marginRight: 8 }}>🎯</span>{s.closing}</div>}
-          </>);
-        })()}
+            {(slide as SummarySlide).closing && <div style={{ padding: "12px 16px", borderRadius: 10, background: ac.grad, color: "#fff", fontSize: "0.88rem", fontWeight: 600, lineHeight: 1.5 }}><span style={{ marginRight: 8 }}>🎯</span>{(slide as SummarySlide).closing}</div>}
+          </>
+        )}
       </div>
     </div>
   );
@@ -238,7 +281,6 @@ function LearningObjectives({ objectives }: { objectives: string[] }) {
 }
 
 function RichLessonView({ content }: { content: string }) {
-  // Try published sections array first
   const sections = extractSections(content);
   if (sections) {
     return (
@@ -269,7 +311,6 @@ function RichLessonView({ content }: { content: string }) {
     );
   }
 
-  // Try single slide JSON
   const data = extractSlides(content);
   if (data) {
     return (
@@ -280,7 +321,6 @@ function RichLessonView({ content }: { content: string }) {
     );
   }
 
-  // Fallback markdown
   return (
     <ReactMarkdown components={{
       p: ({ children }) => <p style={{ margin: "0.35rem 0", lineHeight: 1.65 }}>{children}</p>,
@@ -297,6 +337,12 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
   const [input, setInput] = useState("");
   const [animatedFirstMessage, setAnimatedFirstMessage] = useState("");
   const [animatedChatId, setAnimatedChatId] = useState<string | null>(null);
+
+  // --- YENİ: Bildirim Durumları ---
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef<HTMLDivElement>(null);
+ const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const messages = chat.messages ?? [];
   const hasExchange = messages.length >= 2 && messages.at(-1)?.role === "assistant" && messages.at(-2)?.role === "user";
@@ -319,6 +365,17 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
     return () => clearInterval(interval);
   }, [chatId, messages.length, animateInitialMessage]);
 
+  // Bildirim panelini dışarı tıklandığında kapatmak için
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const val = input.trim();
@@ -327,10 +384,48 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
   }
 
   const courseLabel = chat.course_id ? chat.course_id.split("::")[1] ?? chat.course_id : null;
+  useEffect(() => {
+  async function fetchNotifications() {
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch("http://127.0.0.1:8011/api/notifications/", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+
+      const mapped = (data.notifications || data || []).map((n: any) => ({
+        id: String(n.id),
+        message: n.message || n.title || "New notification",
+        time: n.created_at
+          ? new Date(n.created_at).toLocaleString()
+          : "",
+        isRead: n.is_read ?? false,
+      }));
+
+      setNotifications(mapped);
+    } catch (err) {
+      console.error("Notification fetch error:", err);
+    }
+  }
+
+  fetchNotifications();
+
+  const interval = setInterval(fetchNotifications, 15000);
+
+  return () => clearInterval(interval);
+}, []);
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "#f8fafc" }}>
-      <div style={{ padding: "1rem 1.5rem", background: "#fff", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+      {/* --- HEADER --- */}
+      <div style={{ padding: "1rem 1.5rem", background: "#fff", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.04)", position: "relative", zIndex: 50 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid #e5e7eb", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
@@ -347,14 +442,54 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
             </p>
           </div>
         </div>
-        {hasExchange && !streaming && (
-          <button onClick={onRegenerate} style={{ padding: "7px 14px", borderRadius: 10, border: "1px solid #e5e7eb", background: "#fff", color: "#374151", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>
-            Regenerate
-          </button>
-        )}
+
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {/* --- YENİ: ZİL İKONU VE BİLDİRİM PANELİ --- */}
+          <div ref={notificationRef} style={{ position: "relative" }}>
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              style={{ width: 38, height: 38, borderRadius: "12px", border: "1px solid #e5e7eb", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative", transition: "all 0.2s" }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
+              {unreadCount > 0 && (
+                <div style={{ position: "absolute", top: -4, right: -4, background: "#ef4444", color: "#fff", fontSize: "10px", fontWeight: 800, width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" }}>
+                  {unreadCount}
+                </div>
+              )}
+            </button>
+
+            {showNotifications && (
+              <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 10, width: 280, background: "#fff", borderRadius: 16, boxShadow: "0 10px 25px rgba(0,0,0,0.1)", border: "1px solid #f3f4f6", overflow: "hidden", animation: "slideDown 0.2s ease-out" }}>
+                <div style={{ padding: "12px 16px", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#fafafa" }}>
+                  <span style={{ fontWeight: 700, fontSize: "0.85rem", color: "#111827" }}>Notifications</span>
+                  <span style={{ fontSize: "0.7rem", color: "#f97316", fontWeight: 600, cursor: "pointer" }}>Read All</span>
+                </div>
+                <div style={{ maxHeight: 300, overflowY: "auto" }}>
+                  {notifications.length > 0 ? (
+                    notifications.map((n) => (
+                      <div key={n.id} style={{ padding: "12px 16px", borderBottom: "1px solid #f8fafc", transition: "background 0.2s", cursor: "pointer", background: n.isRead ? "transparent" : "#fff7ed" }}>
+                        <p style={{ margin: "0 0 4px", fontSize: "0.82rem", color: "#374151", lineHeight: 1.4 }}>{n.message}</p>
+                        <p style={{ margin: 0, fontSize: "0.7rem", color: "#9ca3af" }}>{n.time}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ padding: "30px 16px", textAlign: "center", color: "#9ca3af", fontSize: "0.82rem" }}>Yeni bildirim yok</div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {hasExchange && !streaming && (
+            <button onClick={onRegenerate} style={{ padding: "7px 14px", borderRadius: 10, border: "1px solid #e5e7eb", background: "#fff", color: "#374151", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>
+              Regenerate
+            </button>
+          )}
+        </div>
       </div>
 
+      {/* --- CHAT AREA --- */}
       <div style={{ flex: 1, overflowY: "auto", padding: "1.5rem", display: "flex", flexDirection: "column", gap: 16 }}>
         {messages.length === 0 && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, gap: 16, padding: "3rem 1rem" }}>
@@ -364,8 +499,8 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
               </svg>
             </div>
             <div style={{ textAlign: "center" }}>
-              <p style={{ fontSize: "1.2rem", fontWeight: 700, color: "#111827", margin: "0 0 6px" }}>Your conversation starts here</p>
-              <p style={{ fontSize: "0.9rem", color: "#9ca3af", margin: 0 }}>Ask anything about this lesson.</p>
+              <p style={{ fontSize: "1.2rem", fontWeight: 700, color: "#111827", margin: "0 0 6px" }}>Konuşmanız burada başlar</p>
+              <p style={{ fontSize: "0.9rem", color: "#9ca3af", margin: 0 }}>Bu ders hakkında her şeyi sorabilirsiniz.</p>
             </div>
           </div>
         )}
@@ -381,7 +516,7 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
                 <div style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg,#f97316,#ec4899)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z" /></svg>
                 </div>
-                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em" }}>Lesson Content</span>
+                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em" }}>Ders İçeriği</span>
               </div>
               <RichLessonView content={displayContent || ""} />
             </div>
@@ -416,9 +551,10 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
         <div ref={bottomRef} />
       </div>
 
+      {/* --- INPUT AREA --- */}
       <div style={{ padding: "1rem 1.5rem", background: "#fff", borderTop: "1px solid #f3f4f6" }}>
         <form onSubmit={handleSubmit} style={{ display: "flex", alignItems: "flex-end", gap: 10, background: "#f8fafc", borderRadius: 20, border: "1.5px solid #e5e7eb", padding: "8px 8px 8px 16px" }}>
-          <textarea placeholder="Ask something about this lesson…" value={input} rows={1} disabled={streaming}
+          <textarea placeholder="Ders hakkında bir şeyler sor..." value={input} rows={1} disabled={streaming}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(e as any); } }}
             style={{ flex: 1, resize: "none", border: "none", background: "transparent", outline: "none", fontSize: "0.95rem", color: "#111827", fontFamily: "inherit", lineHeight: 1.5, maxHeight: 120, padding: "4px 0" }} />
@@ -426,9 +562,17 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
             {streaming ? <div style={{ width: 16, height: 16, border: "2px solid #9ca3af", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /> : <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>}
           </button>
         </form>
-        <p style={{ fontSize: "0.72rem", color: "#9ca3af", textAlign: "center", marginTop: 8 }}>Press Enter to send · Shift+Enter for new line</p>
+        <p style={{ fontSize: "0.72rem", color: "#9ca3af", textAlign: "center", marginTop: 8 }}>Göndermek için Enter'a basın · Yeni satır için Shift+Enter</p>
       </div>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+
+      {/* --- ANIMATIONS --- */}
+      <style>{`
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes slideDown{
+          from{opacity:0; transform:translateY(-10px)}
+          to{opacity:1; transform:translateY(0)}
+        }
+      `}</style>
     </div>
   );
 }
