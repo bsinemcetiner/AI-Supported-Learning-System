@@ -201,18 +201,78 @@ Rules:
         return _split_pages_into_sections(pages)
 
 
-def _build_section_prompt(preview_question: str) -> str:
-    return f"""
+def _build_section_prompt(section_title: str, preview_question: str) -> str:
+    return f"""You are creating a rich, visual, educational lesson page for the section titled: "{section_title}".
+
 {preview_question}
 
-Important:
-- Write this as a spoken lesson script, not as a chatbot answer.
-- Do not sound like an AI assistant.
-- Use natural, connected paragraphs.
-- Avoid bullet points unless absolutely necessary.
-- Explain the topic like a teacher speaking directly to a student.
-- Use smooth transitions such as "Now", "Let's move on", "At this point".
-- Keep it clear, detailed, and human-like.
+OUTPUT FORMAT — STRICT RULES:
+You must return a JSON object with this exact structure:
+
+{{
+  "hero_keyword": "one 1-3 word phrase capturing the core concept (used for image search)",
+  "learning_objectives": ["objective 1", "objective 2", "objective 3"],
+  "slides": [
+    {{
+      "type": "intro",
+      "title": "Section title here",
+      "subtitle": "A compelling one-line hook for this section",
+      "image_keyword": "specific visual concept for Unsplash search (e.g. 'computer memory chip', 'neural network')",
+      "body": "2-3 sentence engaging introduction paragraph"
+    }},
+    {{
+      "type": "concept",
+      "title": "Key Concept Title",
+      "image_keyword": "relevant image keyword",
+      "body": "Rich explanation paragraph (4-6 sentences). Be detailed and clear. Explain WHY, not just WHAT.",
+      "highlight": "The single most important takeaway sentence from this slide"
+    }},
+    {{
+      "type": "deep_dive",
+      "title": "Deep Dive: [Specific Aspect]",
+      "image_keyword": "relevant image keyword",
+      "body": "Thorough explanation (5-7 sentences). Include mechanisms, processes, or underlying principles.",
+      "highlight": "Key insight sentence"
+    }},
+    {{
+      "type": "example",
+      "title": "Real-World Example",
+      "image_keyword": "concrete real-world image keyword",
+      "body": "Concrete example with context (3-5 sentences). Make it tangible and relatable.",
+      "highlight": "Why this example matters"
+    }},
+    {{
+      "type": "comparison",
+      "title": "Comparison / Contrast",
+      "image_keyword": "relevant image keyword",
+      "table": {{
+        "headers": ["Aspect", "Option A", "Option B"],
+        "rows": [
+          ["row1 aspect", "A value", "B value"],
+          ["row2 aspect", "A value", "B value"],
+          ["row3 aspect", "A value", "B value"]
+        ]
+      }},
+      "highlight": "Key insight from the comparison"
+    }},
+    {{
+      "type": "summary",
+      "title": "Key Takeaways",
+      "image_keyword": "knowledge learning concept",
+      "points": ["Takeaway 1 (full sentence)", "Takeaway 2 (full sentence)", "Takeaway 3 (full sentence)", "Takeaway 4 (full sentence)"],
+      "closing": "A motivating closing sentence connecting this section to the bigger picture."
+    }}
+  ]
+}}
+
+CONTENT RULES:
+- Every slide MUST have substantive content — no shallow bullet dumps
+- The "body" fields must be real paragraphs with depth and explanation
+- Include a comparison/table slide ONLY if genuinely useful for the topic; otherwise replace with another "concept" or "deep_dive" slide
+- Minimum 5 slides, maximum 8 slides
+- image_keyword must be specific and visual (e.g. "paging memory management diagram", not just "computer")
+- hero_keyword should be 1-3 words, highly specific to this section's topic
+- Return ONLY valid JSON — no markdown, no explanation text outside the JSON
 """.strip()
 
 
@@ -331,7 +391,6 @@ def get_sections(
     result = []
     for sec in sections:
         s = dict(sec)
-        # Student yalnızca approved section'ları görebilir
         if not is_teacher and not s.get("approved", False):
             continue
         s["text_preview"] = s.get("text", "")[:200]
@@ -359,16 +418,20 @@ def generate_section(
 
     section = sections[section_index]
     section_text = section.get("text", "")
+    section_title = section.get("title", "this section")
 
     raw_preview_question = lesson.get(
         "preview_question",
-        "Teach this lesson section as a natural spoken teaching script."
+        "Create a comprehensive, visually rich educational lesson page based on the provided content."
     )
-    preview_question = _build_section_prompt(raw_preview_question)
     custom_prompt = lesson.get("custom_prompt", "")
     feedback_history = lesson.get("teacher_feedback_history", [])
 
-    messages = [{"role": "user", "content": f"Please teach: {section.get('title', 'this section')}"}]
+    full_prompt = _build_section_prompt(section_title, raw_preview_question)
+    if custom_prompt:
+        full_prompt += f"\n\nADDITIONAL TEACHER INSTRUCTIONS:\n{custom_prompt}"
+
+    messages = [{"role": "user", "content": f"Create the lesson page for section: {section_title}"}]
 
     def event_stream():
         full_reply = ""
@@ -379,7 +442,7 @@ def generate_section(
             context=section_text,
             teaching_style="Professional Tutor",
             mode="direct",
-            custom_prompt=preview_question + "\n\n" + custom_prompt,
+            custom_prompt=full_prompt,
             feedback_history=feedback_history,
         ):
             delta = cumulative[len(last_text):]
@@ -389,7 +452,19 @@ def generate_section(
             if delta:
                 yield f"data: {json.dumps({'delta': delta, 'section_index': section_index})}\n\n"
 
-        sections[section_index]["draft"] = full_reply
+        # Try to validate JSON before saving
+        cleaned = full_reply.strip()
+        if "```" in cleaned:
+            parts = cleaned.split("```")
+            for part in parts:
+                part = part.strip()
+                if part.startswith("json"):
+                    part = part[4:].strip()
+                if part.startswith("{"):
+                    cleaned = part
+                    break
+
+        sections[section_index]["draft"] = cleaned
         sections[section_index]["approved"] = False
         _save_sections(lesson_id, sections)
 
