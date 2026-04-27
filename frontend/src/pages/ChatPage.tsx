@@ -12,9 +12,7 @@ interface ChatPageProps {
   onBack: () => void;
 }
 
-// ─── Rich lesson preview types ────────────────────────────────────────────────
-
-interface SlideBase { type: string; title: string; image_keyword?: string; highlight?: string; }
+interface SlideBase { type: string; title: string; image_keyword?: string | null; highlight?: string; }
 interface IntroSlide extends SlideBase { type: "intro"; subtitle: string; body: string; }
 interface ConceptSlide extends SlideBase { type: "concept" | "deep_dive" | "example"; body: string; }
 interface ComparisonSlide extends SlideBase { type: "comparison"; table: { headers: string[]; rows: string[][] }; }
@@ -33,25 +31,106 @@ const SLIDE_ACCENTS: Record<string, { grad: string; light: string; icon: string 
 };
 function accent(type: string) { return SLIDE_ACCENTS[type] || SLIDE_ACCENTS["concept"]; }
 
-function unsplashUrl(keyword: string, width = 800, height = 400, seed?: string) {
-  return `https://source.unsplash.com/${width}x${height}/?${encodeURIComponent(keyword)}&sig=${encodeURIComponent(seed || keyword)}`;
+const UNSPLASH_KEY = import.meta.env.VITE_UNSPLASH_ACCESS_KEY as string;
+const imageCache: Record<string, string> = {};
+
+async function fetchUnsplashUrl(keyword: string): Promise<string | null> {
+  if (!UNSPLASH_KEY || !keyword) return null;
+  if (imageCache[keyword]) return imageCache[keyword];
+  try {
+    const res = await fetch(
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(keyword)}&per_page=5&orientation=landscape&content_filter=high`,
+      { headers: { Authorization: `Client-ID ${UNSPLASH_KEY}` } }
+    );
+    const data = await res.json();
+    const results = data?.results || [];
+    if (results.length === 0) return null;
+    const pick = results[Math.floor(Math.random() * results.length)];
+    const url = pick?.urls?.regular || null;
+    if (url) imageCache[keyword] = url;
+    return url;
+  } catch { return null; }
 }
 
-function SlideImage({ keyword, seed, height = 200 }: { keyword: string; seed?: string; height?: number }) {
-  const [errored, setErrored] = useState(false);
-  if (!keyword || errored) return null;
+// ─── Robust JSON extractor ────────────────────────────────────────────────────
+function extractSlides(raw: string): LessonPageData | null {
+  if (!raw) return null;
+  let text = raw.trim();
+  if (text.includes("```")) {
+    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fenceMatch) text = fenceMatch[1].trim();
+  }
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) return null;
+  try {
+    const parsed: LessonPageData = JSON.parse(text.slice(start, end + 1));
+    if (parsed.slides && Array.isArray(parsed.slides) && parsed.slides.length > 0) return parsed;
+    return null;
+  } catch { return null; }
+}
+
+function extractSections(raw: string): PublishedSection[] | null {
+  if (!raw) return null;
+  let text = raw.trim();
+  const start = text.indexOf("[");
+  const end = text.lastIndexOf("]");
+  if (start === -1 || end === -1) return null;
+  try {
+    const arr: PublishedSection[] = JSON.parse(text.slice(start, end + 1));
+    if (Array.isArray(arr) && arr.length > 0 && arr[0].draft) return arr;
+    return null;
+  } catch { return null; }
+}
+
+function isJsonContent(content: string): boolean {
+  const t = content.trim(); return t.startsWith("[") || t.startsWith("{");
+}
+
+// ─── Image components ─────────────────────────────────────────────────────────
+
+function HeroImage({ keyword }: { keyword: string }) {
+  const [imgUrl, setImgUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    setLoading(true);
+    fetchUnsplashUrl(keyword).then((url) => { setImgUrl(url); setLoading(false); });
+  }, [keyword]);
+  if (loading) return (
+    <div style={{ width: "100%", height: 240, borderRadius: 14, marginBottom: 20, background: "linear-gradient(90deg,#f3f4f6 25%,#e5e7eb 50%,#f3f4f6 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.4s infinite" }}>
+      <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
+    </div>
+  );
+  if (!imgUrl) return null;
   return (
-    <div style={{ width: "100%", height, borderRadius: 12, overflow: "hidden", marginBottom: 16, position: "relative", boxShadow: "0 4px 20px rgba(0,0,0,0.10)" }}>
-      <img src={unsplashUrl(keyword, 900, height * 2, seed)} alt={keyword} onError={() => setErrored(true)}
-        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.28) 100%)" }} />
+    <div style={{ width: "100%", height: 240, borderRadius: 14, overflow: "hidden", marginBottom: 20, position: "relative", boxShadow: "0 8px 32px rgba(0,0,0,0.14)" }}>
+      <img src={imgUrl} alt={keyword} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, transparent 40%, rgba(0,0,0,0.3) 100%)" }} />
+    </div>
+  );
+}
+
+function SideImage({ keyword }: { keyword: string }) {
+  const [imgUrl, setImgUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    setLoading(true);
+    fetchUnsplashUrl(keyword).then((url) => { setImgUrl(url); setLoading(false); });
+  }, [keyword]);
+  if (loading) return (
+    <div style={{ float: "right", width: 190, height: 130, borderRadius: 12, marginLeft: 18, marginBottom: 10, background: "linear-gradient(90deg,#f3f4f6 25%,#e5e7eb 50%,#f3f4f6 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.4s infinite" }} />
+  );
+  if (!imgUrl) return null;
+  return (
+    <div style={{ float: "right", width: 190, height: 130, borderRadius: 12, overflow: "hidden", marginLeft: 18, marginBottom: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.12)" }}>
+      <img src={imgUrl} alt={keyword} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
     </div>
   );
 }
 
 function HighlightBox({ text, grad }: { text: string; grad: string }) {
   return (
-    <div style={{ marginTop: 14, padding: "12px 16px", borderRadius: 10, background: grad, color: "#fff", fontSize: "0.88rem", fontWeight: 600, lineHeight: 1.5 }}>
+    <div style={{ marginTop: 14, padding: "12px 16px", borderRadius: 10, background: grad, color: "#fff", fontSize: "0.88rem", fontWeight: 600, lineHeight: 1.5, clear: "both" }}>
       <span style={{ opacity: 0.8, marginRight: 8 }}>💬</span>{text}
     </div>
   );
@@ -73,20 +152,37 @@ function SlideCard({ slide, index }: { slide: Slide; index: number }) {
       <div style={{ padding: "18px 20px" }}>
         {slide.type === "intro" && (() => {
           const s = slide as IntroSlide;
-          return (<><SlideImage keyword={s.image_keyword || "education learning"} seed={s.title} />
+          return (<>
+            {s.image_keyword && <HeroImage keyword={s.image_keyword} />}
             <p style={{ fontSize: "0.95rem", color: "#6366f1", fontWeight: 700, margin: "0 0 8px" }}>{s.subtitle}</p>
-            <p style={{ fontSize: "0.9rem", color: "#374151", lineHeight: 1.75, margin: 0 }}>{s.body}</p></>);
-        })()}
-        {(slide.type === "concept" || slide.type === "deep_dive" || slide.type === "example") && (() => {
-          const s = slide as ConceptSlide;
-          return (<><SlideImage keyword={s.image_keyword || slide.title} seed={s.title} />
             <p style={{ fontSize: "0.9rem", color: "#374151", lineHeight: 1.8, margin: 0 }}>{s.body}</p>
-            {s.highlight && <HighlightBox text={s.highlight} grad={ac.grad} />}</>);
+          </>);
+        })()}
+        {slide.type === "concept" && (() => {
+          const s = slide as ConceptSlide;
+          return (<>
+            <p style={{ fontSize: "0.9rem", color: "#374151", lineHeight: 1.85, margin: 0 }}>{s.body}</p>
+            {s.highlight && <HighlightBox text={s.highlight} grad={ac.grad} />}
+          </>);
+        })()}
+        {slide.type === "deep_dive" && (() => {
+          const s = slide as ConceptSlide;
+          return (<div style={{ overflow: "hidden" }}>
+            {s.image_keyword && <SideImage keyword={s.image_keyword} />}
+            <p style={{ fontSize: "0.9rem", color: "#374151", lineHeight: 1.85, margin: 0 }}>{s.body}</p>
+            {s.highlight && <HighlightBox text={s.highlight} grad={ac.grad} />}
+          </div>);
+        })()}
+        {slide.type === "example" && (() => {
+          const s = slide as ConceptSlide;
+          return (<>
+            <p style={{ fontSize: "0.9rem", color: "#374151", lineHeight: 1.85, margin: 0 }}>{s.body}</p>
+            {s.highlight && <HighlightBox text={s.highlight} grad={ac.grad} />}
+          </>);
         })()}
         {slide.type === "comparison" && (() => {
           const s = slide as ComparisonSlide;
           return (<>
-            <SlideImage keyword={s.image_keyword || "comparison diagram"} seed={s.title} height={140} />
             {s.table && (
               <div style={{ overflowX: "auto", marginBottom: 12 }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
@@ -103,13 +199,12 @@ function SlideCard({ slide, index }: { slide: Slide; index: number }) {
                 </table>
               </div>
             )}
-            {s.highlight && <HighlightBox text={s.highlight} grad={ac.grad} />}
+            {(slide as any).highlight && <HighlightBox text={(slide as any).highlight} grad={ac.grad} />}
           </>);
         })()}
         {slide.type === "summary" && (() => {
           const s = slide as SummarySlide;
           return (<>
-            <SlideImage keyword={s.image_keyword || "knowledge achievement"} seed={s.title} height={140} />
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
               {(s.points || []).map((pt, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px", background: ac.light, borderRadius: 10 }}>
@@ -126,51 +221,30 @@ function SlideCard({ slide, index }: { slide: Slide; index: number }) {
   );
 }
 
-function parseSlides(raw: string): LessonPageData | null {
-  try {
-    let cleaned = raw.trim();
-    if (cleaned.includes("```")) {
-      const parts = cleaned.split("```");
-      for (let p of parts) {
-        p = p.trim();
-        if (p.startsWith("json")) p = p.slice(4).trim();
-        if (p.startsWith("{")) { cleaned = p; break; }
-      }
-    }
-    const start = cleaned.indexOf("{");
-    const end = cleaned.lastIndexOf("}");
-    if (start === -1 || end === -1) return null;
-    const parsed: LessonPageData = JSON.parse(cleaned.slice(start, end + 1));
-    if (parsed.slides && Array.isArray(parsed.slides)) return parsed;
-    return null;
-  } catch { return null; }
-}
-
-function parsePublishedSections(raw: string): PublishedSection[] | null {
-  try {
-    let cleaned = raw.trim();
-    const start = cleaned.indexOf("[");
-    const end = cleaned.lastIndexOf("]");
-    if (start === -1 || end === -1) return null;
-    const arr: PublishedSection[] = JSON.parse(cleaned.slice(start, end + 1));
-    if (Array.isArray(arr) && arr.length > 0 && arr[0].draft) return arr;
-    return null;
-  } catch { return null; }
-}
-
-// JSON lesson içeriği mi kontrol et
-function isJsonContent(content: string): boolean {
-  const t = content.trim();
-  return t.startsWith("[") || t.startsWith("{");
+function LearningObjectives({ objectives }: { objectives: string[] }) {
+  return (
+    <div style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", borderRadius: 14, padding: "14px 18px", marginBottom: 16, color: "#fff" }}>
+      <div style={{ fontWeight: 800, fontSize: "0.78rem", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 10, opacity: 0.85 }}>🎯 Learning Objectives</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {objectives.map((obj, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+            <div style={{ width: 20, height: 20, borderRadius: "50%", background: "rgba(255,255,255,0.25)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.68rem", fontWeight: 800, flexShrink: 0 }}>{i + 1}</div>
+            <span style={{ fontSize: "0.86rem", lineHeight: 1.5 }}>{obj}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function RichLessonView({ content }: { content: string }) {
-  const sections = parsePublishedSections(content);
+  // Try published sections array first
+  const sections = extractSections(content);
   if (sections) {
     return (
       <div>
         {sections.map((sec, si) => {
-          const data = parseSlides(sec.draft);
+          const data = extractSlides(sec.draft);
           return (
             <div key={si} style={{ marginBottom: 32 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18, paddingBottom: 12, borderBottom: "2px solid #f3f4f6" }}>
@@ -182,19 +256,7 @@ function RichLessonView({ content }: { content: string }) {
               </div>
               {data ? (
                 <>
-                  {data.learning_objectives && data.learning_objectives.length > 0 && (
-                    <div style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", borderRadius: 14, padding: "14px 18px", marginBottom: 16, color: "#fff" }}>
-                      <div style={{ fontWeight: 800, fontSize: "0.78rem", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 10, opacity: 0.85 }}>🎯 Learning Objectives</div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                        {data.learning_objectives.map((obj, i) => (
-                          <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                            <div style={{ width: 20, height: 20, borderRadius: "50%", background: "rgba(255,255,255,0.25)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.68rem", fontWeight: 800, flexShrink: 0 }}>{i + 1}</div>
-                            <span style={{ fontSize: "0.86rem", lineHeight: 1.5 }}>{obj}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  {data.learning_objectives && data.learning_objectives.length > 0 && <LearningObjectives objectives={data.learning_objectives} />}
                   {data.slides.map((slide, i) => <SlideCard key={i} slide={slide} index={i} />)}
                 </>
               ) : (
@@ -207,26 +269,18 @@ function RichLessonView({ content }: { content: string }) {
     );
   }
 
-  const data = parseSlides(content);
+  // Try single slide JSON
+  const data = extractSlides(content);
   if (data) {
     return (
       <div>
-        {data.learning_objectives && data.learning_objectives.length > 0 && (
-          <div style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", borderRadius: 14, padding: "14px 18px", marginBottom: 16, color: "#fff" }}>
-            <div style={{ fontWeight: 800, fontSize: "0.78rem", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 10, opacity: 0.85 }}>🎯 Learning Objectives</div>
-            {data.learning_objectives.map((obj, i) => (
-              <div key={i} style={{ display: "flex", gap: 8, marginBottom: 4 }}>
-                <span style={{ opacity: 0.7 }}>{i + 1}.</span>
-                <span style={{ fontSize: "0.86rem", lineHeight: 1.5, color: "#fff" }}>{obj}</span>
-              </div>
-            ))}
-          </div>
-        )}
+        {data.learning_objectives && data.learning_objectives.length > 0 && <LearningObjectives objectives={data.learning_objectives} />}
         {data.slides.map((slide, i) => <SlideCard key={i} slide={slide} index={i} />)}
       </div>
     );
   }
 
+  // Fallback markdown
   return (
     <ReactMarkdown components={{
       p: ({ children }) => <p style={{ margin: "0.35rem 0", lineHeight: 1.65 }}>{children}</p>,
@@ -239,46 +293,23 @@ function RichLessonView({ content }: { content: string }) {
   );
 }
 
-// ─── Main component ────────────────────────────────────────────────────────────
-
-export default function ChatPage({
-  chatId,
-  chat,
-  streaming,
-  animateInitialMessage = false,
-  onSend,
-  onRegenerate,
-  onBack,
-}: ChatPageProps) {
+export default function ChatPage({ chatId, chat, streaming, animateInitialMessage = false, onSend, onRegenerate, onBack }: ChatPageProps) {
   const [input, setInput] = useState("");
   const [animatedFirstMessage, setAnimatedFirstMessage] = useState("");
   const [animatedChatId, setAnimatedChatId] = useState<string | null>(null);
-
   const bottomRef = useRef<HTMLDivElement>(null);
   const messages = chat.messages ?? [];
+  const hasExchange = messages.length >= 2 && messages.at(-1)?.role === "assistant" && messages.at(-2)?.role === "user";
 
-  const hasExchange =
-    messages.length >= 2 &&
-    messages.at(-1)?.role === "assistant" &&
-    messages.at(-2)?.role === "user";
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length, messages.at(-1)?.content, animatedFirstMessage]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages.length, messages.at(-1)?.content, animatedFirstMessage]);
 
   useEffect(() => {
     const firstAssistantMessage = messages.find((m) => m.role === "assistant")?.content || "";
-
-    // JSON lesson içeriğiyse animasyon yok — direkt render et
     if (!firstAssistantMessage || !animateInitialMessage || isJsonContent(firstAssistantMessage)) {
-      setAnimatedFirstMessage("");
-      setAnimatedChatId(null);
-      return;
+      setAnimatedFirstMessage(""); setAnimatedChatId(null); return;
     }
-
     if (animatedChatId === chatId) return;
-    setAnimatedChatId(chatId);
-    setAnimatedFirstMessage("");
+    setAnimatedChatId(chatId); setAnimatedFirstMessage("");
     let i = 0;
     const interval = setInterval(() => {
       i += 8;
@@ -292,24 +323,20 @@ export default function ChatPage({
     e.preventDefault();
     const val = input.trim();
     if (!val || streaming) return;
-    setInput("");
-    onSend(val);
+    setInput(""); onSend(val);
   }
 
   const courseLabel = chat.course_id ? chat.course_id.split("::")[1] ?? chat.course_id : null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "#f8fafc" }}>
-      {/* Header */}
       <div style={{ padding: "1rem 1.5rem", background: "#fff", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid #e5e7eb", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           </button>
-          <div style={{ width: 40, height: 40, borderRadius: 14, background: "linear-gradient(135deg, #f97316, #ec4899)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
+          <div style={{ width: 40, height: 40, borderRadius: 14, background: "linear-gradient(135deg,#f97316,#ec4899)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
           </div>
           <div>
             <p style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111827", margin: 0 }}>{chat.title || "Learning Chat"}</p>
@@ -328,11 +355,10 @@ export default function ChatPage({
         )}
       </div>
 
-      {/* Messages */}
       <div style={{ flex: 1, overflowY: "auto", padding: "1.5rem", display: "flex", flexDirection: "column", gap: 16 }}>
         {messages.length === 0 && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, gap: 16, padding: "3rem 1rem" }}>
-            <div style={{ width: 72, height: 72, borderRadius: 22, background: "linear-gradient(135deg, #f97316, #ec4899)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 24px rgba(249,115,22,0.3)" }}>
+            <div style={{ width: 72, height: 72, borderRadius: 22, background: "linear-gradient(135deg,#f97316,#ec4899)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 24px rgba(249,115,22,0.3)" }}>
               <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
               </svg>
@@ -347,31 +373,20 @@ export default function ChatPage({
         {messages.map((msg, i) => {
           const firstAssistantIndex = messages.findIndex((m) => m.role === "assistant");
           const isFirstAssistant = msg.role === "assistant" && firstAssistantIndex === i;
+          const displayContent = isFirstAssistant && animatedChatId === chatId && !isJsonContent(msg.content || "") ? animatedFirstMessage : msg.content;
 
-          // JSON içerikse animasyon yok, direkt göster
-          const displayContent =
-            isFirstAssistant && animatedChatId === chatId && !isJsonContent(msg.content || "")
-              ? animatedFirstMessage
-              : msg.content;
-
-          // First assistant message → rich lesson view (full width, no bubble)
-          if (isFirstAssistant) {
-            return (
-              <div key={i} style={{ width: "100%" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg,#f97316,#ec4899)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                    </svg>
-                  </div>
-                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em" }}>Lesson Content</span>
+          if (isFirstAssistant) return (
+            <div key={i} style={{ width: "100%" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg,#f97316,#ec4899)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z" /></svg>
                 </div>
-                <RichLessonView content={displayContent || ""} />
+                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em" }}>Lesson Content</span>
               </div>
-            );
-          }
+              <RichLessonView content={displayContent || ""} />
+            </div>
+          );
 
-          // Regular chat messages
           return (
             <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}>
               {msg.role === "assistant" && (
@@ -379,19 +394,9 @@ export default function ChatPage({
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z" /></svg>
                 </div>
               )}
-              <div style={{
-                maxWidth: "75%", padding: "12px 16px",
-                borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                background: msg.role === "user" ? "linear-gradient(135deg,#f97316,#ec4899)" : "#fff",
-                color: msg.role === "user" ? "#fff" : "#111827",
-                fontSize: "0.92rem", lineHeight: 1.65,
-                boxShadow: msg.role === "user" ? "0 4px 14px rgba(249,115,22,0.3)" : "0 1px 6px rgba(0,0,0,0.06)",
-                border: msg.role === "assistant" ? "1px solid #f3f4f6" : "none",
-              }}>
+              <div style={{ maxWidth: "75%", padding: "12px 16px", borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: msg.role === "user" ? "linear-gradient(135deg,#f97316,#ec4899)" : "#fff", color: msg.role === "user" ? "#fff" : "#111827", fontSize: "0.92rem", lineHeight: 1.65, boxShadow: msg.role === "user" ? "0 4px 14px rgba(249,115,22,0.3)" : "0 1px 6px rgba(0,0,0,0.06)", border: msg.role === "assistant" ? "1px solid #f3f4f6" : "none" }}>
                 {displayContent ? (
-                  msg.role === "user" ? (
-                    <p style={{ margin: 0 }}>{displayContent}</p>
-                  ) : (
+                  msg.role === "user" ? <p style={{ margin: 0 }}>{displayContent}</p> : (
                     <ReactMarkdown components={{
                       p: ({ children }) => <p style={{ margin: "0.35rem 0", lineHeight: 1.65 }}>{children}</p>,
                       h1: ({ children }) => <h1 style={{ fontSize: "1.1rem", fontWeight: 700, margin: "0.7rem 0 0.35rem", color: "#111827" }}>{children}</h1>,
@@ -403,9 +408,7 @@ export default function ChatPage({
                       strong: ({ children }) => <strong style={{ fontWeight: 700, color: "#111827" }}>{children}</strong>,
                     }}>{displayContent}</ReactMarkdown>
                   )
-                ) : streaming && i === messages.length - 1 ? (
-                  <span style={{ color: "#9ca3af", fontSize: "1.2rem" }}>▌</span>
-                ) : null}
+                ) : streaming && i === messages.length - 1 ? <span style={{ color: "#9ca3af", fontSize: "1.2rem" }}>▌</span> : null}
               </div>
             </div>
           );
@@ -413,27 +416,19 @@ export default function ChatPage({
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
       <div style={{ padding: "1rem 1.5rem", background: "#fff", borderTop: "1px solid #f3f4f6" }}>
-        <form onSubmit={handleSubmit} style={{ display: "flex", alignItems: "flex-end", gap: 10, background: "#f8fafc", borderRadius: 20, border: "1.5px solid #e5e7eb", padding: "8px 8px 8px 16px", transition: "border-color 0.15s" }}>
-          <textarea
-            placeholder="Ask something about this lesson…"
-            value={input} rows={1} disabled={streaming}
+        <form onSubmit={handleSubmit} style={{ display: "flex", alignItems: "flex-end", gap: 10, background: "#f8fafc", borderRadius: 20, border: "1.5px solid #e5e7eb", padding: "8px 8px 8px 16px" }}>
+          <textarea placeholder="Ask something about this lesson…" value={input} rows={1} disabled={streaming}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(e as any); } }}
-            style={{ flex: 1, resize: "none", border: "none", background: "transparent", outline: "none", fontSize: "0.95rem", color: "#111827", fontFamily: "inherit", lineHeight: 1.5, maxHeight: 120, padding: "4px 0" }}
-          />
-          <button type="submit" disabled={streaming || !input.trim()} style={{ width: 40, height: 40, borderRadius: 14, border: "none", background: streaming || !input.trim() ? "#e5e7eb" : "linear-gradient(135deg,#f97316,#ec4899)", display: "flex", alignItems: "center", justifyContent: "center", cursor: streaming || !input.trim() ? "not-allowed" : "pointer", flexShrink: 0, transition: "all 0.15s", boxShadow: streaming || !input.trim() ? "none" : "0 4px 14px rgba(249,115,22,0.35)" }}>
-            {streaming ? (
-              <div style={{ width: 16, height: 16, border: "2px solid #9ca3af", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-            ) : (
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
-            )}
+            style={{ flex: 1, resize: "none", border: "none", background: "transparent", outline: "none", fontSize: "0.95rem", color: "#111827", fontFamily: "inherit", lineHeight: 1.5, maxHeight: 120, padding: "4px 0" }} />
+          <button type="submit" disabled={streaming || !input.trim()} style={{ width: 40, height: 40, borderRadius: 14, border: "none", background: streaming || !input.trim() ? "#e5e7eb" : "linear-gradient(135deg,#f97316,#ec4899)", display: "flex", alignItems: "center", justifyContent: "center", cursor: streaming || !input.trim() ? "not-allowed" : "pointer", flexShrink: 0, boxShadow: streaming || !input.trim() ? "none" : "0 4px 14px rgba(249,115,22,0.35)" }}>
+            {streaming ? <div style={{ width: 16, height: 16, border: "2px solid #9ca3af", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /> : <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>}
           </button>
         </form>
         <p style={{ fontSize: "0.72rem", color: "#9ca3af", textAlign: "center", marginTop: 8 }}>Press Enter to send · Shift+Enter for new line</p>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }

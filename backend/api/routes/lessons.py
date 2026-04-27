@@ -90,7 +90,6 @@ def _save_sections(lesson_id: str, sections: list):
 def _split_pages_into_sections(pages: list) -> list:
     if not pages:
         return []
-
     total = len(pages)
     if total <= 5:
         pages_per_section = total
@@ -104,15 +103,12 @@ def _split_pages_into_sections(pages: list) -> list:
     sections = []
     i = 0
     section_num = 1
-
     while i < total:
         end = min(i + pages_per_section, total)
         section_pages = pages[i:end]
         combined_text = "\n\n".join(section_pages)
-
         first_lines = section_pages[0].split("\n")[:3]
         title_guess = next((line.strip() for line in first_lines if len(line.strip()) > 3), f"Section {section_num}")
-
         sections.append({
             "section_index": section_num - 1,
             "title": title_guess[:60],
@@ -123,10 +119,8 @@ def _split_pages_into_sections(pages: list) -> list:
             "draft": "",
             "approved": False,
         })
-
         i = end
         section_num += 1
-
     return sections
 
 
@@ -173,16 +167,13 @@ Rules:
             if raw.startswith("json"):
                 raw = raw[4:]
         raw = raw.strip()
-
         ai_sections = json.loads(raw)
-
         sections = []
         for sec in ai_sections:
             start = sec["page_start"] - 1
             end = sec["page_end"]
             section_pages = pages[start:end]
             combined_text = "\n\n".join(section_pages)
-
             sections.append({
                 "section_index": sec["section_index"],
                 "title": sec["title"],
@@ -193,9 +184,7 @@ Rules:
                 "draft": "",
                 "approved": False,
             })
-
         return sections
-
     except Exception as e:
         print(f"AI section split failed: {e}, falling back to simple split")
         return _split_pages_into_sections(pages)
@@ -207,44 +196,44 @@ def _build_section_prompt(section_title: str, preview_question: str) -> str:
 {preview_question}
 
 OUTPUT FORMAT — STRICT RULES:
-You must return a JSON object with this exact structure:
+Return a JSON object with this exact structure. Do NOT include markdown, no code fences, no explanation — pure JSON only.
 
 {{
-  "hero_keyword": "one 1-3 word phrase capturing the core concept (used for image search)",
+  "hero_keyword": "2-4 word highly specific Unsplash search term for this topic (e.g. 'computer memory chip closeup', 'neural network visualization', 'paging memory diagram')",
   "learning_objectives": ["objective 1", "objective 2", "objective 3"],
   "slides": [
     {{
       "type": "intro",
       "title": "Section title here",
-      "subtitle": "A compelling one-line hook for this section",
-      "image_keyword": "specific visual concept for Unsplash search (e.g. 'computer memory chip', 'neural network')",
-      "body": "2-3 sentence engaging introduction paragraph"
+      "subtitle": "A compelling one-line hook that makes the student want to read on",
+      "image_keyword": "REQUIRED: 3-5 word highly specific Unsplash search term — must be visually concrete and directly related to THIS topic. Good: 'computer memory allocation diagram'. Bad: 'technology', 'education', 'learning'",
+      "body": "2-3 sentence engaging introduction. Set the scene, explain why this matters."
     }},
     {{
       "type": "concept",
       "title": "Key Concept Title",
-      "image_keyword": "relevant image keyword",
+      "image_keyword": null,
       "body": "Rich explanation paragraph (4-6 sentences). Be detailed and clear. Explain WHY, not just WHAT.",
       "highlight": "The single most important takeaway sentence from this slide"
     }},
     {{
       "type": "deep_dive",
       "title": "Deep Dive: [Specific Aspect]",
-      "image_keyword": "relevant image keyword",
+      "image_keyword": "REQUIRED: 3-5 word highly specific term for a diagram/visual that directly illustrates the mechanism being explained. Good: 'page table virtual memory', 'TLB cache lookup diagram'. Bad: 'computer', 'science'",
       "body": "Thorough explanation (5-7 sentences). Include mechanisms, processes, or underlying principles.",
       "highlight": "Key insight sentence"
     }},
     {{
       "type": "example",
       "title": "Real-World Example",
-      "image_keyword": "concrete real-world image keyword",
+      "image_keyword": null,
       "body": "Concrete example with context (3-5 sentences). Make it tangible and relatable.",
       "highlight": "Why this example matters"
     }},
     {{
       "type": "comparison",
       "title": "Comparison / Contrast",
-      "image_keyword": "relevant image keyword",
+      "image_keyword": null,
       "table": {{
         "headers": ["Aspect", "Option A", "Option B"],
         "rows": [
@@ -258,21 +247,25 @@ You must return a JSON object with this exact structure:
     {{
       "type": "summary",
       "title": "Key Takeaways",
-      "image_keyword": "knowledge learning concept",
+      "image_keyword": null,
       "points": ["Takeaway 1 (full sentence)", "Takeaway 2 (full sentence)", "Takeaway 3 (full sentence)", "Takeaway 4 (full sentence)"],
       "closing": "A motivating closing sentence connecting this section to the bigger picture."
     }}
   ]
 }}
 
+IMAGE KEYWORD RULES (CRITICAL):
+- ONLY "intro" and "deep_dive" slides get image_keyword values. ALL other slide types must have "image_keyword": null
+- image_keyword must be 3-5 words, highly specific to the exact concept (not generic)
+- Think: what would a textbook diagram of this concept look like? Use that as the keyword.
+- Examples of GOOD keywords: "paging memory management", "TCP three way handshake", "binary search tree traversal", "CPU pipeline stages"
+- Examples of BAD keywords: "computer", "technology", "diagram", "concept", "learning"
+
 CONTENT RULES:
-- Every slide MUST have substantive content — no shallow bullet dumps
-- The "body" fields must be real paragraphs with depth and explanation
-- Include a comparison/table slide ONLY if genuinely useful for the topic; otherwise replace with another "concept" or "deep_dive" slide
-- Minimum 5 slides, maximum 8 slides
-- image_keyword must be specific and visual (e.g. "paging memory management diagram", not just "computer")
-- hero_keyword should be 1-3 words, highly specific to this section's topic
-- Return ONLY valid JSON — no markdown, no explanation text outside the JSON
+- Every slide body must be a real paragraph — no shallow one-liners
+- Include comparison table ONLY if genuinely useful; otherwise replace with another concept or deep_dive slide
+- Minimum 5 slides, maximum 7 slides
+- Return ONLY valid JSON — absolutely no text outside the JSON object
 """.strip()
 
 
@@ -287,7 +280,6 @@ async def upload_lesson(
     _ensure_dirs()
     content = await file.read()
     text = _read_pdf_bytes(content)
-
     if not text:
         raise HTTPException(status_code=422, detail=f"{file.filename}: could not extract text")
 
@@ -305,15 +297,9 @@ async def upload_lesson(
         json.dump(pages, f, ensure_ascii=False)
 
     ok, msg, lesson_id = create_lesson(
-        db=db,
-        course_id=course_id,
-        teacher_username=current_user["username"],
-        week_title=week_title,
-        filename=file.filename,
-        stored_path=stored_path,
-        text_content=text,
+        db=db, course_id=course_id, teacher_username=current_user["username"],
+        week_title=week_title, filename=file.filename, stored_path=stored_path, text_content=text,
     )
-
     if not ok:
         raise HTTPException(status_code=409, detail=msg)
 
@@ -321,54 +307,26 @@ async def upload_lesson(
     _save_sections(lesson_id, sections)
 
     try:
-        rag.add_document(
-            text=text,
-            source_name=file.filename,
-            course_id=course_id,
-            teacher_username=current_user["username"],
-        )
+        rag.add_document(text=text, source_name=file.filename, course_id=course_id, teacher_username=current_user["username"])
     except Exception:
         pass
 
-    return {
-        "lesson_id": lesson_id,
-        "week_title": week_title,
-        "filename": file.filename,
-        "message": msg,
-        "page_count": len(pages),
-        "section_count": len(sections),
-    }
+    return {"lesson_id": lesson_id, "week_title": week_title, "filename": file.filename, "message": msg, "page_count": len(pages), "section_count": len(sections)}
 
 
 @router.get("/course/{course_id}")
-def list_lessons(
-    course_id: str,
-    _: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
+def list_lessons(course_id: str, _: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     lessons = get_lessons_by_course(db, course_id)
-    return {
-        lid: ldata
-        for lid, ldata in lessons.items()
-        if ldata.get("is_published", False)
-    }
+    return {lid: ldata for lid, ldata in lessons.items() if ldata.get("is_published", False)}
 
 
 @router.get("/course/{course_id}/all")
-def list_all_lessons(
-    course_id: str,
-    current_user: dict = Depends(require_teacher),
-    db: Session = Depends(get_db),
-):
+def list_all_lessons(course_id: str, current_user: dict = Depends(require_teacher), db: Session = Depends(get_db)):
     return get_lessons_by_course(db, course_id)
 
 
 @router.get("/{lesson_id}")
-def get_lesson(
-    lesson_id: str,
-    _: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
+def get_lesson(lesson_id: str, _: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     lesson = get_lesson_by_id(db, lesson_id)
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
@@ -376,18 +334,12 @@ def get_lesson(
 
 
 @router.get("/{lesson_id}/sections")
-def get_sections(
-    lesson_id: str,
-    current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
+def get_sections(lesson_id: str, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     lesson = get_lesson_by_id(db, lesson_id)
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
-
     sections = _load_sections(lesson_id)
     is_teacher = current_user.get("role") == "teacher"
-
     result = []
     for sec in sections:
         s = dict(sec)
@@ -396,34 +348,22 @@ def get_sections(
         s["text_preview"] = s.get("text", "")[:200]
         s.pop("text", None)
         result.append(s)
-
     return {"sections": result, "total": len(result)}
 
 
 @router.post("/{lesson_id}/sections/{section_index}/generate")
-def generate_section(
-    lesson_id: str,
-    section_index: int,
-    current_user: dict = Depends(require_teacher),
-    db: Session = Depends(get_db),
-):
+def generate_section(lesson_id: str, section_index: int, current_user: dict = Depends(require_teacher), db: Session = Depends(get_db)):
     lesson = get_lesson_by_id(db, lesson_id)
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
-
     sections = _load_sections(lesson_id)
-
     if section_index < 0 or section_index >= len(sections):
         raise HTTPException(status_code=400, detail=f"Section index {section_index} out of range")
 
     section = sections[section_index]
     section_text = section.get("text", "")
     section_title = section.get("title", "this section")
-
-    raw_preview_question = lesson.get(
-        "preview_question",
-        "Create a comprehensive, visually rich educational lesson page based on the provided content."
-    )
+    raw_preview_question = lesson.get("preview_question", "Create a comprehensive, visually rich educational lesson page based on the provided content.")
     custom_prompt = lesson.get("custom_prompt", "")
     feedback_history = lesson.get("teacher_feedback_history", [])
 
@@ -436,23 +376,16 @@ def generate_section(
     def event_stream():
         full_reply = ""
         last_text = ""
-
         for cumulative in ai_engine.stream_ai_response(
-            messages=messages,
-            context=section_text,
-            teaching_style="Professional Tutor",
-            mode="direct",
-            custom_prompt=full_prompt,
-            feedback_history=feedback_history,
+            messages=messages, context=section_text, teaching_style="Professional Tutor",
+            mode="direct", custom_prompt=full_prompt, feedback_history=feedback_history,
         ):
             delta = cumulative[len(last_text):]
             last_text = cumulative
             full_reply += delta
-
             if delta:
                 yield f"data: {json.dumps({'delta': delta, 'section_index': section_index})}\n\n"
 
-        # Try to validate JSON before saving
         cleaned = full_reply.strip()
         if "```" in cleaned:
             parts = cleaned.split("```")
@@ -467,88 +400,58 @@ def generate_section(
         sections[section_index]["draft"] = cleaned
         sections[section_index]["approved"] = False
         _save_sections(lesson_id, sections)
-
         yield f"data: {json.dumps({'done': True, 'section_index': section_index})}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
 @router.patch("/{lesson_id}/sections/{section_index}/approve")
-def approve_section(
-    lesson_id: str,
-    section_index: int,
-    current_user: dict = Depends(require_teacher),
-    db: Session = Depends(get_db),
-):
+def approve_section(lesson_id: str, section_index: int, current_user: dict = Depends(require_teacher), db: Session = Depends(get_db)):
     lesson = get_lesson_by_id(db, lesson_id)
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
-
     sections = _load_sections(lesson_id)
-
     if section_index < 0 or section_index >= len(sections):
         raise HTTPException(status_code=400, detail=f"Section index {section_index} out of range")
-
     draft = sections[section_index].get("draft", "")
     if not draft.strip():
         raise HTTPException(status_code=400, detail="No draft to approve. Generate first.")
-
     sections[section_index]["approved"] = True
     _save_sections(lesson_id, sections)
-
-    return {
-        "message": f"Section {section_index + 1} approved.",
-        "section_index": section_index,
-        "lesson_id": lesson_id,
-    }
+    return {"message": f"Section {section_index + 1} approved.", "section_index": section_index, "lesson_id": lesson_id}
 
 
 @router.patch("/{lesson_id}/sections/{section_index}/unapprove")
-def unapprove_section(
-    lesson_id: str,
-    section_index: int,
-    current_user: dict = Depends(require_teacher),
-    db: Session = Depends(get_db),
-):
+def unapprove_section(lesson_id: str, section_index: int, current_user: dict = Depends(require_teacher), db: Session = Depends(get_db)):
     sections = _load_sections(lesson_id)
     if section_index < 0 or section_index >= len(sections):
         raise HTTPException(status_code=400, detail="Invalid section index")
-
     sections[section_index]["approved"] = False
     sections[section_index]["draft"] = ""
     _save_sections(lesson_id, sections)
-
     return {"message": f"Section {section_index + 1} unapproved.", "section_index": section_index}
 
 
 @router.patch("/{lesson_id}/publish-sections")
-def publish_sections(
-    lesson_id: str,
-    current_user: dict = Depends(require_teacher),
-    db: Session = Depends(get_db),
-):
+def publish_sections(lesson_id: str, current_user: dict = Depends(require_teacher), db: Session = Depends(get_db)):
     lesson = get_lesson_by_id(db, lesson_id)
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
-
     sections = _load_sections(lesson_id)
     approved = [s for s in sections if s.get("approved") and s.get("draft", "").strip()]
-
     if not approved:
         raise HTTPException(status_code=400, detail="No approved sections. Approve at least one section first.")
 
-    combined = "\n\n---\n\n".join([
-        f"## {s['title']}\n\n{s['draft']}" for s in approved
-    ])
+    # Save as JSON array — preserves rich slide format for student view
+    combined = json.dumps([
+        {"title": s["title"], "draft": s["draft"], "section_index": s.get("section_index", 0),
+         "page_start": s.get("page_start", 1), "page_end": s.get("page_end", 1)}
+        for s in approved
+    ], ensure_ascii=False)
 
     save_draft_explanation(db, lesson_id, combined)
     approve_lesson_explanation(db, lesson_id)
-
-    return {
-        "message": f"{len(approved)} sections published.",
-        "lesson_id": lesson_id,
-        "section_count": len(approved),
-    }
+    return {"message": f"{len(approved)} sections published.", "lesson_id": lesson_id, "section_count": len(approved)}
 
 
 class FeedbackRequest(BaseModel):
@@ -557,26 +460,13 @@ class FeedbackRequest(BaseModel):
 
 
 @router.post("/{lesson_id}/feedback")
-def submit_feedback(
-    lesson_id: str,
-    body: FeedbackRequest,
-    current_user: dict = Depends(require_teacher),
-    db: Session = Depends(get_db),
-):
+def submit_feedback(lesson_id: str, body: FeedbackRequest, current_user: dict = Depends(require_teacher), db: Session = Depends(get_db)):
     lesson = get_lesson_by_id(db, lesson_id)
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
-
-    ok, msg = update_lesson_feedback(
-        db=db,
-        lesson_id=lesson_id,
-        feedback_text=body.feedback,
-        custom_prompt=body.custom_prompt,
-    )
-
+    ok, msg = update_lesson_feedback(db=db, lesson_id=lesson_id, feedback_text=body.feedback, custom_prompt=body.custom_prompt)
     if not ok:
         raise HTTPException(status_code=400, detail=msg)
-
     return {"message": msg, "lesson_id": lesson_id}
 
 
@@ -585,12 +475,7 @@ class PreviewQuestionRequest(BaseModel):
 
 
 @router.patch("/{lesson_id}/preview-question")
-def update_preview_question(
-    lesson_id: str,
-    body: PreviewQuestionRequest,
-    current_user: dict = Depends(require_teacher),
-    db: Session = Depends(get_db),
-):
+def update_preview_question(lesson_id: str, body: PreviewQuestionRequest, current_user: dict = Depends(require_teacher), db: Session = Depends(get_db)):
     ok, msg = set_lesson_preview_question(db, lesson_id, body.preview_question)
     if not ok:
         raise HTTPException(status_code=404, detail=msg)
@@ -602,12 +487,7 @@ class PublishRequest(BaseModel):
 
 
 @router.patch("/{lesson_id}/publish")
-def toggle_publish(
-    lesson_id: str,
-    body: PublishRequest,
-    current_user: dict = Depends(require_teacher),
-    db: Session = Depends(get_db),
-):
+def toggle_publish(lesson_id: str, body: PublishRequest, current_user: dict = Depends(require_teacher), db: Session = Depends(get_db)):
     ok, msg = set_lesson_published(db, lesson_id, body.is_published)
     if not ok:
         raise HTTPException(status_code=404, detail=msg)
@@ -615,19 +495,13 @@ def toggle_publish(
 
 
 @router.patch("/{lesson_id}/approve")
-def approve_lesson(
-    lesson_id: str,
-    current_user: dict = Depends(require_teacher),
-    db: Session = Depends(get_db),
-):
+def approve_lesson(lesson_id: str, current_user: dict = Depends(require_teacher), db: Session = Depends(get_db)):
     lesson = get_lesson_by_id(db, lesson_id)
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
-
     ok, msg = approve_lesson_explanation(db, lesson_id)
     if not ok:
         raise HTTPException(status_code=400, detail=msg)
-
     return {"message": msg, "lesson_id": lesson_id, "is_published": True}
 
 
@@ -637,86 +511,37 @@ class StartLessonChatRequest(BaseModel):
 
 
 @router.post("/{lesson_id}/chat", status_code=201)
-def start_lesson_chat(
-    lesson_id: str,
-    body: StartLessonChatRequest,
-    current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
+def start_lesson_chat(lesson_id: str, body: StartLessonChatRequest, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     lesson = get_lesson_by_id(db, lesson_id)
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
-
     if not lesson.get("is_published", False):
         raise HTTPException(status_code=403, detail="This lesson is not published yet.")
-
     approved_text = (get_student_visible_explanation(db, lesson_id) or "").strip()
     if not approved_text:
-        raise HTTPException(
-            status_code=400,
-            detail="This lesson does not have an approved explanation yet."
-        )
+        raise HTTPException(status_code=400, detail="This lesson does not have an approved explanation yet.")
 
     username = current_user["username"]
     user = db.query(User).filter(User.username == username).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    existing_chat = (
-        db.query(Chat)
-        .filter(Chat.user_id == user.id, Chat.lesson_id == lesson_id)
-        .order_by(Chat.created_at.desc())
-        .first()
-    )
-
+    existing_chat = (db.query(Chat).filter(Chat.user_id == user.id, Chat.lesson_id == lesson_id).order_by(Chat.created_at.desc()).first())
     if existing_chat:
         existing_chat.mode = body.mode
         existing_chat.tone = body.tone
         db.commit()
         db.refresh(existing_chat)
-
         has_messages = db.query(Message).filter(Message.chat_id == existing_chat.id).count() > 0
-
         if not has_messages:
-            starter_message = Message(
-                chat_id=existing_chat.id,
-                sender="assistant",
-                content=approved_text,
-            )
-            db.add(starter_message)
+            db.add(Message(chat_id=existing_chat.id, sender="assistant", content=approved_text))
             db.commit()
+        return {"chat_id": str(existing_chat.id), "lesson_id": lesson_id, "week_title": lesson.get("week_title"), "starter_message": ""}
 
-        return {
-            "chat_id": str(existing_chat.id),
-            "lesson_id": lesson_id,
-            "week_title": lesson.get("week_title"),
-            "starter_message": ""
-        }
-
-    chat = Chat(
-        title=lesson.get("week_title", "Lesson Chat"),
-        user_id=user.id,
-        course_id=lesson.get("course_id"),
-        lesson_id=lesson_id,
-        mode=body.mode,
-        tone=body.tone,
-    )
-
+    chat = Chat(title=lesson.get("week_title", "Lesson Chat"), user_id=user.id, course_id=lesson.get("course_id"), lesson_id=lesson_id, mode=body.mode, tone=body.tone)
     db.add(chat)
     db.commit()
     db.refresh(chat)
-
-    starter_message = Message(
-        chat_id=chat.id,
-        sender="assistant",
-        content=approved_text,
-    )
-    db.add(starter_message)
+    db.add(Message(chat_id=chat.id, sender="assistant", content=approved_text))
     db.commit()
-
-    return {
-        "chat_id": str(chat.id),
-        "lesson_id": lesson_id,
-        "week_title": lesson.get("week_title"),
-        "starter_message": ""
-    }
+    return {"chat_id": str(chat.id), "lesson_id": lesson_id, "week_title": lesson.get("week_title"), "starter_message": ""}
