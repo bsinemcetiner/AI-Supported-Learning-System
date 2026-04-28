@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   GraduationCap, BookOpen, Upload, FileText, CheckCircle2,
   Send, Sparkles, TrendingUp, BookMarked, ChevronRight,
-  Plus, Layers, Users, Moon, Sun
+  Plus, Layers, Users, Moon, Sun, Settings
 } from "lucide-react";
 import { courses as coursesApi, lessons as lessonsApi } from "../services/api";
 import type { Course, Material } from "../types";
@@ -15,6 +15,147 @@ type View = "home" | "course" | "section";
 type HomeTab = "quick-start" | "courses" | "create" | "upload" | "upload_material";
 type ActiveSection = { lesson: Lesson; sectionIndex: number };
 
+type StepStatus = "Done" | "Next" | "Pending" | "Available";
+
+type FlowStep = {
+  id: number;
+  title: string;
+  desc: string;
+  icon: any;
+  gradient: string;
+  status: StepStatus;
+};
+
+function getStatusStyle(status: StepStatus) {
+  if (status === "Done") {
+    return {
+      text: "✓ Done",
+      bg: "rgba(16,185,129,0.12)",
+      color: "#059669",
+      border: "rgba(16,185,129,0.3)",
+    };
+  }
+
+  if (status === "Next") {
+    return {
+      text: "Next",
+      bg: "rgba(249,115,22,0.12)",
+      color: "#ea580c",
+      border: "rgba(249,115,22,0.3)",
+    };
+  }
+
+  if (status === "Available") {
+    return {
+      text: "Available",
+      bg: "rgba(59,130,246,0.12)",
+      color: "#2563eb",
+      border: "rgba(59,130,246,0.3)",
+    };
+  }
+
+  return {
+    text: "Pending",
+    bg: "rgba(148,163,184,0.12)",
+    color: "#64748b",
+    border: "rgba(148,163,184,0.25)",
+  };
+}
+
+function FlowStepCard({
+  step,
+  index,
+  darkMode,
+  textPrimary,
+  textSecondary,
+  borderColor,
+}: {
+  step: FlowStep;
+  index: number;
+  darkMode: boolean;
+  textPrimary: string;
+  textSecondary: string;
+  borderColor: string;
+}) {
+  const status = getStatusStyle(step.status);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0, transition: { delay: 0.08 + index * 0.06 } }}
+      whileHover={{ scale: 1.03, y: -3 }}
+      style={{
+        background: darkMode ? "rgba(15,23,42,0.7)" : "#fff",
+        borderRadius: 16,
+        border: `1px solid ${borderColor}`,
+        boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+        padding: "1.1rem",
+        cursor: "default",
+        position: "relative",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+        minHeight: 150,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div
+          style={{
+            padding: 10,
+            background: step.gradient,
+            borderRadius: 12,
+            flexShrink: 0,
+            boxShadow: "0 3px 10px rgba(0,0,0,0.15)",
+          }}
+        >
+          <step.icon size={20} color="#fff" />
+        </div>
+
+        <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
+            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: textSecondary }}>
+              {step.id}
+            </span>
+
+            <span
+              style={{
+                fontSize: "0.68rem",
+                background: status.bg,
+                color: status.color,
+                border: `1px solid ${status.border}`,
+                borderRadius: 99,
+                padding: "2px 8px",
+                fontWeight: 700,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 2,
+              }}
+            >
+              {status.text}
+            </span>
+          </div>
+
+          <h3
+            style={{
+              fontSize: "0.95rem",
+              fontWeight: 700,
+              color: textPrimary,
+              margin: 0,
+              lineHeight: 1.3,
+            }}
+          >
+            {step.title}
+          </h3>
+        </div>
+      </div>
+
+      <p style={{ fontSize: "0.84rem", color: textSecondary, margin: 0, lineHeight: 1.55 }}>
+        {step.desc}
+      </p>
+    </motion.div>
+  );
+}
 const fadeUp = {
   initial: { opacity: 0, y: 16 },
   animate: { opacity: 1, y: 0 },
@@ -22,7 +163,15 @@ const fadeUp = {
   transition: { duration: 0.22 },
 };
 
-export default function TeacherPage({ username, onLogout }: { username: string; onLogout?: () => void }) {
+   export default function TeacherPage({
+      username,
+      onLogout,
+      onSettings,
+   }: {
+      username: string;
+      onLogout?: () => void;
+      onSettings?: () => void;
+   }) {
   const [courseMap, setCourseMap] = useState<Record<string, Course>>({});
   const [lessonMap, setLessonMap] = useState<Record<string, Record<string, Lesson>>>({});
   const [loading, setLoading] = useState(false);
@@ -68,16 +217,91 @@ export default function TeacherPage({ username, onLogout }: { username: string; 
   useEffect(() => { loadCourses(); }, []);
 
   const courseList = Object.entries(courseMap);
-  const totalLessons = Object.values(lessonMap).reduce((a, m) => a + Object.keys(m).length, 0);
-  const totalMaterials = courseList.reduce((a, [, c]) => a + (c.materials?.length ?? 0), 0);
+const totalLessons = Object.values(lessonMap).reduce((a, m) => a + Object.keys(m).length, 0);
+const totalMaterials = courseList.reduce((a, [, c]) => a + (c.materials?.length ?? 0), 0);
 
-  const steps = [
-    { id: 1, title: "Create a course", desc: "Start by creating the course where you want to place lessons and materials.", icon: BookOpen, gradient: "linear-gradient(135deg, #34d399, #0ea5e9)", done: courseList.length > 0 },
-    { id: 2, title: "Upload a lesson PDF", desc: "Upload the lesson file. The system will split it into sections automatically.", icon: Upload, gradient: "linear-gradient(135deg, #60a5fa, #22d3ee)", done: totalLessons > 0 },
-    { id: 3, title: "Review sections", desc: "Open a course, generate or regenerate the preview, and check section quality.", icon: FileText, gradient: "linear-gradient(135deg, #fb923c, #f59e0b)", done: false },
-    { id: 4, title: "Approve sections", desc: "Approve sections that are ready for students.", icon: CheckCircle2, gradient: "linear-gradient(135deg, #a78bfa, #ec4899)", done: false },
-    { id: 5, title: "Publish approved sections", desc: "Publish only after you are satisfied with the approved content.", icon: Send, gradient: "linear-gradient(135deg, #f87171, #fb7185)", done: false },
-  ];
+const hasCourse = courseList.length > 0;
+const hasLesson = totalLessons > 0;
+const hasMaterial = totalMaterials > 0;
+
+const lessonSteps: FlowStep[] = [
+  {
+    id: 1,
+    title: "Create a course",
+    desc: "Create the course where lessons will be published.",
+    icon: BookOpen,
+    gradient: "linear-gradient(135deg, #34d399, #0ea5e9)",
+    status: hasCourse ? "Done" : "Next",
+  },
+  {
+    id: 2,
+    title: "Upload a lesson PDF",
+    desc: "Upload a lesson file. The system splits it into sections automatically.",
+    icon: Upload,
+    gradient: "linear-gradient(135deg, #60a5fa, #22d3ee)",
+    status: hasLesson ? "Done" : hasCourse ? "Next" : "Pending",
+  },
+  {
+    id: 3,
+    title: "Review sections",
+    desc: "Open a course, generate previews, and check section quality.",
+    icon: FileText,
+    gradient: "linear-gradient(135deg, #fb923c, #f59e0b)",
+    status: hasLesson ? "Next" : "Pending",
+  },
+  {
+    id: 4,
+    title: "Approve sections",
+    desc: "Approve sections that are ready for students.",
+    icon: CheckCircle2,
+    gradient: "linear-gradient(135deg, #a78bfa, #ec4899)",
+    status: "Pending",
+  },
+  {
+    id: 5,
+    title: "Publish",
+    desc: "Publish approved sections for students.",
+    icon: Send,
+    gradient: "linear-gradient(135deg, #f87171, #fb7185)",
+    status: "Pending",
+  },
+];
+
+const materialSteps: FlowStep[] = [
+  {
+    id: 1,
+    title: "Create a course",
+    desc: "Use an existing course or create a new one.",
+    icon: BookOpen,
+    gradient: "linear-gradient(135deg, #34d399, #0ea5e9)",
+    status: hasCourse ? "Done" : "Next",
+  },
+  {
+    id: 2,
+    title: "Upload material",
+    desc: "Upload extra PDFs for course-wide chat support.",
+    icon: Layers,
+    gradient: "linear-gradient(135deg, #8b5cf6, #ec4899)",
+    status: hasMaterial ? "Done" : hasCourse ? "Next" : "Pending",
+  },
+  {
+    id: 3,
+    title: "Materials available",
+    desc: "Students can browse uploaded materials under the course page.",
+    icon: FileText,
+    gradient: "linear-gradient(135deg, #0ea5e9, #6366f1)",
+    status: hasMaterial ? "Done" : "Pending",
+  },
+  {
+    id: 4,
+    title: "Chat support ready",
+    desc: "Students can ask questions based on uploaded course documents.",
+    icon: Sparkles,
+    gradient: "linear-gradient(135deg, #f97316, #ec4899)",
+    status: hasMaterial ? "Available" : "Pending",
+  },
+];
+
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -246,39 +470,151 @@ export default function TeacherPage({ username, onLogout }: { username: string; 
       <div style={{ position: "relative", zIndex: 1, padding: "2rem 2rem", maxWidth: 1200, margin: "0 auto" }}>
 
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
-          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2.5rem", gap: 12 }}
+        <motion.div
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: "2.5rem",
+            gap: 12,
+          }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <div style={{ position: "relative" }}>
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #fb923c, #ec4899)", borderRadius: 20, filter: "blur(12px)", opacity: 0.45 }} />
-              <div style={{ position: "relative", background: darkMode ? "#1e293b" : "#fff", padding: 14, borderRadius: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.12)" }}>
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "linear-gradient(135deg, #fb923c, #ec4899)",
+                  borderRadius: 20,
+                  filter: "blur(12px)",
+                  opacity: 0.45,
+                }}
+              />
+              <div
+                style={{
+                  position: "relative",
+                  background: darkMode ? "#1e293b" : "#fff",
+                  padding: 14,
+                  borderRadius: 20,
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+                }}
+              >
                 <GraduationCap size={28} color="#f97316" />
               </div>
             </div>
+
             <div>
-              <h1 style={{ fontSize: "2.2rem", fontWeight: 700, color: textPrimary, margin: 0, letterSpacing: "-0.02em" }}>Teacher Dashboard</h1>
-              <p style={{ fontSize: "0.85rem", color: textSecondary, margin: 0 }}>AI-Powered Learning Platform</p>
+              <h1
+                style={{
+                  fontSize: "2.2rem",
+                  fontWeight: 700,
+                  color: textPrimary,
+                  margin: 0,
+                  letterSpacing: "-0.02em",
+                }}
+              >
+                Teacher Dashboard
+              </h1>
+              <p
+                style={{
+                  fontSize: "0.85rem",
+                  color: textSecondary,
+                  margin: 0,
+                }}
+              >
+                AI-Powered Learning Platform
+              </p>
             </div>
           </div>
+
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <motion.button
-              whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setDarkMode(!darkMode)}
-              style={{ width: 40, height: 40, borderRadius: "50%", background: darkMode ? "#334155" : "#fff", border: `1px solid ${borderColor}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 12px rgba(0,0,0,0.1)" }}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: "50%",
+                background: darkMode ? "#334155" : "#fff",
+                border: `1px solid ${borderColor}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
+              }}
             >
-              {darkMode ? <Sun size={18} color="#fbbf24" /> : <Moon size={18} color="#6b7280" />}
+              {darkMode ? (
+                <Sun size={18} color="#fbbf24" />
+              ) : (
+                <Moon size={18} color="#6b7280" />
+              )}
             </motion.button>
+
+            {onSettings && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={onSettings}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "8px 16px",
+                  borderRadius: 12,
+                  background: darkMode ? "#334155" : "#fff",
+                  border: `1px solid ${borderColor}`,
+                  cursor: "pointer",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  color: textSecondary,
+                  fontFamily: "inherit",
+                  boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
+                }}
+              >
+                <Settings size={16} />
+                Settings
+              </motion.button>
+            )}
+
             {onLogout && (
               <motion.button
-                whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={onLogout}
-                style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 12, background: darkMode ? "#334155" : "#fff", border: `1px solid ${borderColor}`, cursor: "pointer", fontSize: "0.85rem", fontWeight: 600, color: textSecondary, fontFamily: "inherit", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "8px 16px",
+                  borderRadius: 12,
+                  background: darkMode ? "#334155" : "#fff",
+                  border: `1px solid ${borderColor}`,
+                  cursor: "pointer",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  color: textSecondary,
+                  fontFamily: "inherit",
+                  boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
+                }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                  <polyline points="16 17 21 12 16 7"/>
-                  <line x1="21" y1="12" x2="9" y2="12"/>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
                 </svg>
                 Logout
               </motion.button>
@@ -328,58 +664,138 @@ export default function TeacherPage({ username, onLogout }: { username: string; 
         {/* ── Quick Start ── */}
         {homeTab === "quick-start" && (
           <motion.div {...fadeUp}>
+        {/* Flow Info */}
+        <div
+          style={{
+            background: darkMode ? "rgba(59,130,246,0.10)" : "#eff6ff",
+            border: darkMode ? "1px solid rgba(96,165,250,0.25)" : "1px solid #bfdbfe",
+            borderRadius: 16,
+            padding: "1rem 1.25rem",
+            marginBottom: "1.25rem",
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 12,
+          }}
+        >
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 12,
+              background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              boxShadow: "0 4px 12px rgba(59,130,246,0.25)",
+            }}
+          >
+            <Sparkles size={18} color="#fff" />
+          </div>
 
-            {/* Teacher Flow */}
-            <div style={{ background: cardBg, backdropFilter: "blur(20px)", borderRadius: 20, border: `1px solid ${borderColor}`, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", padding: "1.5rem 1.75rem", marginBottom: "1.5rem" }}>
+          <div>
+            <p
+              style={{
+                fontWeight: 800,
+                fontSize: "0.92rem",
+                color: darkMode ? "#bfdbfe" : "#1e40af",
+                margin: "0 0 4px",
+              }}
+            >
+              Lesson PDFs and course materials are used differently
+            </p>
+
+            <p
+              style={{
+                fontSize: "0.84rem",
+                color: darkMode ? "#dbeafe" : "#1e3a8a",
+                margin: 0,
+                lineHeight: 1.6,
+              }}
+            >
+              Lesson PDFs create structured, teacher-reviewed lesson pages. Course materials are extra supporting documents used for course-wide student chat and material search.
+            </p>
+          </div>
+        </div>
+
+            {/* Lesson Publishing Flow */}
+            <div
+              style={{
+                background: cardBg,
+                backdropFilter: "blur(20px)",
+                borderRadius: 20,
+                border: `1px solid ${borderColor}`,
+                boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
+                padding: "1.5rem 1.75rem",
+                marginBottom: "1.5rem",
+              }}
+            >
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
                 <div style={{ padding: 9, background: "linear-gradient(135deg, #fb923c, #ec4899)", borderRadius: 12 }}>
                   <TrendingUp size={18} color="#fff" />
                 </div>
-                <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: textPrimary, margin: 0 }}>Teacher flow</h2>
+                <div>
+                  <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: textPrimary, margin: 0 }}>
+                    Lesson publishing flow
+                  </h2>
+                  <p style={{ color: textSecondary, fontSize: "0.86rem", margin: "4px 0 0", lineHeight: 1.55 }}>
+                    Use this flow for structured lesson pages that teachers review, approve, and publish for students.
+                  </p>
+                </div>
               </div>
-              <p style={{ color: textSecondary, fontSize: "0.9rem", marginBottom: "1.75rem", lineHeight: 1.65 }}>
-                The system works best in this order: create a course, upload a lesson PDF, review sections, approve the good ones, then publish them.
-              </p>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 10 }}>
-                {steps.map((step, i) => (
-                  <motion.div
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 10, marginTop: "1.5rem" }}>
+                {lessonSteps.map((step, i) => (
+                  <FlowStepCard
                     key={step.id}
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0, transition: { delay: 0.08 + i * 0.07 } }}
-                    whileHover={{ scale: 1.03, y: -3 }}
-                    style={{
-                      background: darkMode ? "rgba(15,23,42,0.7)" : "#fff",
-                      borderRadius: 16,
-                      border: `1px solid ${borderColor}`,
-                      boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
-                      padding: "1.1rem",
-                      cursor: "pointer",
-                      position: "relative",
-                      overflow: "hidden",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 10,
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div style={{ padding: 10, background: step.gradient, borderRadius: 12, flexShrink: 0, boxShadow: "0 3px 10px rgba(0,0,0,0.15)" }}>
-                        <step.icon size={20} color="#fff" />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
-                          <span style={{ fontSize: "0.78rem", fontWeight: 700, color: textSecondary }}>{step.id}</span>
-                          {step.done && (
-                            <span style={{ fontSize: "0.68rem", background: "rgba(16,185,129,0.12)", color: "#059669", border: "1px solid rgba(16,185,129,0.3)", borderRadius: 99, padding: "2px 8px", fontWeight: 700, display: "flex", alignItems: "center", gap: 2 }}>
-                              <CheckCircle2 size={10} /> Done
-                            </span>
-                          )}
-                        </div>
-                        <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: textPrimary, margin: 0, lineHeight: 1.3 }}>{step.title}</h3>
-                      </div>
-                    </div>
-                    <p style={{ fontSize: "0.84rem", color: textSecondary, margin: 0, lineHeight: 1.55 }}>{step.desc}</p>
-                  </motion.div>
+                    step={step}
+                    index={i}
+                    darkMode={darkMode}
+                    textPrimary={textPrimary}
+                    textSecondary={textSecondary}
+                    borderColor={borderColor}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Course Material Support Flow */}
+            <div
+              style={{
+                background: cardBg,
+                backdropFilter: "blur(20px)",
+                borderRadius: 20,
+                border: `1px solid ${borderColor}`,
+                boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
+                padding: "1.5rem 1.75rem",
+                marginBottom: "1.5rem",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                <div style={{ padding: 9, background: "linear-gradient(135deg, #8b5cf6, #0ea5e9)", borderRadius: 12 }}>
+                  <Layers size={18} color="#fff" />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: textPrimary, margin: 0 }}>
+                    Course material support flow
+                  </h2>
+                  <p style={{ color: textSecondary, fontSize: "0.86rem", margin: "4px 0 0", lineHeight: 1.55 }}>
+                    Use this flow for extra course PDFs that support student chat and course-wide material search.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10, marginTop: "1.5rem" }}>
+                {materialSteps.map((step, i) => (
+                  <FlowStepCard
+                    key={step.id}
+                    step={step}
+                    index={i}
+                    darkMode={darkMode}
+                    textPrimary={textPrimary}
+                    textSecondary={textSecondary}
+                    borderColor={borderColor}
+                  />
                 ))}
               </div>
             </div>

@@ -425,7 +425,11 @@ export default function App() {
     return (
       <>
         <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #fff7ed 0%, #fdf2f8 50%, #f5f3ff 100%)" }}>
-          <TeacherPage username={user.username} onLogout={handleLogout} />
+          <TeacherPage
+              username={user.username}
+              onLogout={handleLogout}
+              onSettings={() => setSettingsOpen(true)}
+          />
         </div>
         {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} onProfileUpdated={(fn) => setUser((p) => p ? { ...p, full_name: fn } : p)} />}
       </>
