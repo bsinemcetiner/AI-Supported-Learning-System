@@ -8,6 +8,11 @@ interface SectionDetailPageProps {
   onBack: () => void;
   showFeedback: (type: "success" | "error" | "info", text: string) => void;
   onApproved: () => void;
+  darkMode: boolean;
+  cardBg: string;
+  textPrimary: string;
+  textSecondary: string;
+  borderColor: string;
 }
 
 interface SlideBase { type: string; title: string; image_keyword?: string | null; highlight?: string; }
@@ -249,7 +254,7 @@ function StreamingOrRich({ draft, isGenerating }: { draft: string; isGenerating:
   return <RichPreview raw={draft} />;
 }
 
-export function SectionDetailPage({ lesson, sectionIndex, onBack, showFeedback, onApproved }: SectionDetailPageProps) {
+export function SectionDetailPage({ lesson, sectionIndex, onBack, showFeedback, onApproved, darkMode, cardBg, textPrimary, textSecondary, borderColor, }: SectionDetailPageProps) {
   const [section, setSection] = useState<Section | null>(null);
   const [promptDraft, setPromptDraft] = useState("");
   const [feedbackDraft, setFeedbackDraft] = useState("");
@@ -305,10 +310,37 @@ export function SectionDetailPage({ lesson, sectionIndex, onBack, showFeedback, 
   }
 
   function getStatusBlock() {
-    if (section?.approved) return { title: "This section is approved", text: "You can still review the preview below, but this section is already marked ready for publishing.", bg: "#E1F5EE", border: "#5DCAA5" };
-    if (draft.trim()) return { title: "Preview is ready", text: "Review the slides below. If they look good, approve the section. If not, add feedback and regenerate.", bg: "#FFF4EA", border: "var(--orange-md)" };
-    return { title: "Next step: generate preview", text: "Click Generate Preview to create a rich, visual lesson page for this section.", bg: "var(--bg2)", border: "var(--line)" };
+  if (section?.approved) {
+    return {
+      title: "This section is approved",
+      text: "You can still review the preview below, but this section is already marked ready for publishing.",
+      bg: darkMode ? "rgba(16,185,129,0.12)" : "#E1F5EE",
+      border: darkMode ? "rgba(16,185,129,0.30)" : "#5DCAA5",
+      titleColor: darkMode ? "#86efac" : "#0F6E56",
+      textColor: darkMode ? "#bbf7d0" : "#0F6E56",
+    };
   }
+
+  if (draft.trim()) {
+    return {
+      title: "Preview is ready",
+      text: "Review the slides below. If they look good, approve the section. If not, add feedback and regenerate.",
+      bg: darkMode ? "rgba(251,146,60,0.10)" : "#FFF4EA",
+      border: darkMode ? "rgba(251,146,60,0.30)" : "var(--orange-md)",
+      titleColor: darkMode ? "#fdba74" : "#9a3412",
+      textColor: darkMode ? "#fed7aa" : "#92400e",
+    };
+  }
+
+  return {
+    title: "Next step: generate preview",
+    text: "Click Generate Preview to create a rich, visual lesson page for this section.",
+    bg: darkMode ? "rgba(15,23,42,0.70)" : "var(--bg2)",
+    border: darkMode ? "rgba(255,255,255,0.12)" : "var(--line)",
+    titleColor: textPrimary,
+    textColor: textSecondary,
+  };
+}
 
   if (!loaded || !section) return <div style={{ padding: "2rem", color: "var(--text-soft)" }}>Loading section...</div>;
   const status = getStatusBlock();
@@ -318,31 +350,94 @@ export function SectionDetailPage({ lesson, sectionIndex, onBack, showFeedback, 
       <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
         <button className="btn btn-ghost" onClick={onBack}>← Back</button>
         <div>
-          <div style={{ fontSize: "0.78rem", color: "var(--text-soft)", marginBottom: 2 }}>{lesson.week_title} · Section {sectionIndex + 1} · Page {section.page_start}–{section.page_end}</div>
-          <h2 style={{ fontSize: "1.45rem", margin: 0 }}>{section.title}</h2>
+         <div style={{ fontSize: "0.78rem", color: textSecondary, marginBottom: 2 }}>{lesson.week_title} · Section {sectionIndex + 1} · Page {section.page_start}–{section.page_end}</div>
+          <h2 style={{ fontSize: "1.45rem", margin: 0, color: textPrimary }}>
+            {section.title}
+          </h2>
         </div>
         {section.approved && <span style={{ marginLeft: "auto", fontSize: "0.82rem", background: "#E1F5EE", color: "#0F6E56", borderRadius: "99px", padding: "4px 14px", fontWeight: 700 }}>✅ Approved</span>}
       </div>
 
-      <div className="card" style={{ padding: "1rem 1.1rem", background: status.bg, border: `1px solid ${status.border}` }}>
-        <div style={{ fontWeight: 700, marginBottom: 6 }}>{status.title}</div>
-        <div style={{ fontSize: "0.84rem", color: "var(--text-mid)", lineHeight: 1.6 }}>{status.text}</div>
+      <div
+          className="card"
+          style={{
+            padding: "1rem 1.1rem",
+            background: status.bg,
+            border: `1px solid ${status.border}`,
+          }}
+        >
+          <div style={{ fontWeight: 700, marginBottom: 6, color: status.titleColor }}>
+            {status.title}
+          </div>
+          <div style={{ fontSize: "0.84rem", color: status.textColor, lineHeight: 1.6 }}>
+            {status.text}
+          </div>
       </div>
 
-      <div className="card" style={{ padding: "0.9rem 1.25rem" }}>
-        <div className="label" style={{ marginBottom: 6 }}>Page Content Preview</div>
-        <div style={{ fontSize: "0.82rem", color: "var(--text-soft)", lineHeight: 1.6 }}>{section.text_preview}...</div>
+      <div
+          className="card"
+          style={{
+            padding: "0.9rem 1.25rem",
+            background: cardBg,
+            border: `1px solid ${borderColor}`,
+          }}
+        >
+          <div className="label" style={{ marginBottom: 6, color: textSecondary }}>
+            Page Content Preview
+          </div>
+          <div style={{ fontSize: "0.82rem", color: textSecondary, lineHeight: 1.6 }}>
+            {section.text_preview}...
+          </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <div className="card" style={{ padding: "1rem 1.25rem" }}>
+        <div
+          className="card"
+          style={{
+            padding: "1rem 1.25rem",
+            background: cardBg,
+            border: `1px solid ${borderColor}`,
+          }}
+        >
           <div className="label" style={{ marginBottom: 8 }}>Preview Prompt</div>
-          <textarea className="input" rows={5} value={promptDraft} onChange={(e) => setPromptDraft(e.target.value)} style={{ resize: "vertical", fontSize: "0.85rem" }} />
+          <textarea
+              className="input"
+              rows={5}
+              value={promptDraft}
+              onChange={(e) => setPromptDraft(e.target.value)}
+              style={{
+                resize: "vertical",
+                fontSize: "0.85rem",
+                background: darkMode ? "rgba(15,23,42,0.65)" : "#fff",
+                color: textPrimary,
+                border: `1px solid ${borderColor}`,
+              }}
+          />
           <button className="btn btn-ghost" onClick={handleSavePrompt} disabled={isSavingPrompt} style={{ marginTop: 8, fontSize: "0.82rem" }}>{isSavingPrompt ? "Saving..." : "Save Prompt"}</button>
         </div>
-        <div className="card" style={{ padding: "1rem 1.25rem" }}>
+        <div
+          className="card"
+          style={{
+            padding: "1rem 1.25rem",
+            background: cardBg,
+            border: `1px solid ${borderColor}`,
+          }}
+        >
           <div className="label" style={{ marginBottom: 8 }}>Teacher Feedback</div>
-          <textarea className="input" rows={5} placeholder="e.g. Add more real-world examples, simplify language, include a table comparing X and Y..." value={feedbackDraft} onChange={(e) => setFeedbackDraft(e.target.value)} style={{ resize: "vertical", fontSize: "0.85rem" }} />
+          <textarea
+            className="input"
+              rows={5}
+              placeholder="e.g. Add more real-world examples, simplify language, include a table comparing X and Y..."
+              value={feedbackDraft}
+              onChange={(e) => setFeedbackDraft(e.target.value)}
+              style={{
+                resize: "vertical",
+                fontSize: "0.85rem",
+                background: darkMode ? "rgba(15,23,42,0.65)" : "#fff",
+                color: textPrimary,
+                border: `1px solid ${borderColor}`,
+              }}
+          />
           <p style={{ fontSize: "0.75rem", color: "var(--text-soft)", marginTop: 6 }}>This feedback will be applied the next time you generate the preview.</p>
         </div>
       </div>
@@ -358,7 +453,14 @@ export function SectionDetailPage({ lesson, sectionIndex, onBack, showFeedback, 
       </div>
 
       {(draft || isGenerating) && (
-        <div className="card" style={{ padding: "1rem 1.25rem" }}>
+        <div
+          className="card"
+          style={{
+            padding: "1rem 1.25rem",
+            background: cardBg,
+            border: `1px solid ${borderColor}`,
+          }}
+        >
           <div className="label" style={{ marginBottom: 14 }}>
             AI Preview
             {isGenerating && <span style={{ marginLeft: 8, fontSize: "0.72rem", color: "var(--orange)", fontWeight: 400 }}>generating...</span>}
@@ -368,7 +470,15 @@ export function SectionDetailPage({ lesson, sectionIndex, onBack, showFeedback, 
       )}
 
       {!draft && !isGenerating && (
-        <div className="card" style={{ padding: "2rem 1.25rem", textAlign: "center" }}>
+        <div
+          className="card"
+          style={{
+            padding: "2rem 1.25rem",
+            textAlign: "center",
+            background: cardBg,
+            border: `1px solid ${borderColor}`,
+          }}
+        >
           <div style={{ fontSize: "2.5rem", marginBottom: 10 }}>✨</div>
           <p style={{ color: "var(--text-soft)", fontSize: "0.9rem" }}>No preview yet. Click <b>Generate Preview</b> to create a rich visual lesson page.</p>
         </div>

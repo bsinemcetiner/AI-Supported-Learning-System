@@ -360,20 +360,160 @@ const materialSteps: FlowStep[] = [
   const textSecondary = darkMode ? "#94a3b8" : "#6b7280";
   const borderColor = darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.07)";
 
+function TeacherTopHeader() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -16 }}
+      animate={{ opacity: 1, y: 0 }}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: "2rem",
+        gap: 12,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ position: "relative" }}>
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(135deg, #fb923c, #ec4899)",
+              borderRadius: 20,
+              filter: "blur(12px)",
+              opacity: 0.45,
+            }}
+          />
+          <div
+            style={{
+              position: "relative",
+              background: darkMode ? "#1e293b" : "#fff",
+              padding: 14,
+              borderRadius: 20,
+              boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+            }}
+          >
+            <GraduationCap size={28} color="#f97316" />
+          </div>
+        </div>
+
+        <div>
+          <h1
+            style={{
+              fontSize: "2.2rem",
+              fontWeight: 700,
+              color: textPrimary,
+              margin: 0,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Teacher Dashboard
+          </h1>
+          <p style={{ fontSize: "0.85rem", color: textSecondary, margin: 0 }}>
+            AI-Powered Learning Platform
+          </p>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <motion.button
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setDarkMode(!darkMode)}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            background: darkMode ? "#334155" : "#fff",
+            border: `1px solid ${borderColor}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
+          }}
+        >
+          {darkMode ? <Sun size={18} color="#fbbf24" /> : <Moon size={18} color="#6b7280" />}
+        </motion.button>
+
+        {onSettings && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={onSettings}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "8px 16px",
+              borderRadius: 12,
+              background: darkMode ? "#334155" : "#fff",
+              border: `1px solid ${borderColor}`,
+              cursor: "pointer",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+              color: textSecondary,
+              fontFamily: "inherit",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
+            }}
+          >
+            <Settings size={16} />
+            Settings
+          </motion.button>
+        )}
+
+        {onLogout && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={onLogout}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "8px 16px",
+              borderRadius: 12,
+              background: darkMode ? "#334155" : "#fff",
+              border: `1px solid ${borderColor}`,
+              cursor: "pointer",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+              color: textSecondary,
+              fontFamily: "inherit",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
+            }}
+          >
+            Logout
+          </motion.button>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
   // ── Section detail ──
   if (view === "section" && activeSection) {
     return (
-      <div style={{ background: bg, minHeight: "100vh", padding: "1.5rem" }}>
-        <AnimatePresence>
-          {feedback && <motion.div {...fadeUp} className={`alert alert-${feedback.type}`} style={{ marginBottom: 16 }}>{feedback.text}</motion.div>}
-        </AnimatePresence>
-        <SectionDetailPage
-          lesson={activeSection.lesson}
-          sectionIndex={activeSection.sectionIndex}
-          onBack={() => { setView("course"); setActiveSection(null); }}
-          showFeedback={showFeedback}
-          onApproved={loadCourses}
-        />
+       <div style={{ background: bg, minHeight: "100vh" }}>
+        <div style={{ padding: "2rem 2rem", maxWidth: 1200, margin: "0 auto" }}>
+          <TeacherTopHeader />
+            <AnimatePresence>
+              {feedback && <motion.div {...fadeUp} className={`alert alert-${feedback.type}`} style={{ marginBottom: 16 }}>{feedback.text}</motion.div>}
+            </AnimatePresence>
+            <SectionDetailPage
+              lesson={activeSection.lesson}
+              sectionIndex={activeSection.sectionIndex}
+              onBack={() => { setView("course"); setActiveSection(null); }}
+              showFeedback={showFeedback}
+              onApproved={loadCourses}
+              darkMode={darkMode}
+              cardBg={cardBg}
+              textPrimary={textPrimary}
+              textSecondary={textSecondary}
+              borderColor={borderColor}
+            />
+        </div>
       </div>
     );
   }
@@ -385,11 +525,24 @@ const materialSteps: FlowStep[] = [
     const materials = course?.materials ?? [];
 
     return (
-      <div style={{ background: bg, minHeight: "100vh", padding: "1.5rem" }}>
-        <AnimatePresence>
-          {feedback && <motion.div {...fadeUp} className={`alert alert-${feedback.type}`} style={{ marginBottom: 16 }}>{feedback.text}</motion.div>}
-        </AnimatePresence>
-        <motion.div {...fadeUp}>
+  <div style={{ background: bg, minHeight: "100vh" }}>
+    <div style={{ padding: "2rem 2rem", maxWidth: 1200, margin: "0 auto" }}>
+      <TeacherTopHeader />
+
+      <AnimatePresence>
+        {feedback && (
+          <motion.div
+            {...fadeUp}
+            className={`alert alert-${feedback.type}`}
+            style={{ marginBottom: 16 }}
+          >
+            {feedback.text}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <motion.div {...fadeUp}>
+
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, fontSize: "0.82rem", color: textSecondary }}>
             <button onClick={() => setView("home")} style={{ background: "none", border: "none", cursor: "pointer", color: textSecondary, fontFamily: "inherit", fontSize: "0.82rem" }}>← All courses</button>
             <span>/</span>
@@ -431,14 +584,23 @@ const materialSteps: FlowStep[] = [
                   key={lesson.lesson_id}
                   lesson={lesson}
                   onPublished={loadCourses}
-                  onOpenSection={(lesson, idx) => { setActiveSection({ lesson, sectionIndex: idx }); setView("section"); }}
+                  onOpenSection={(lesson, idx) => {
+                    setActiveSection({ lesson, sectionIndex: idx });
+                    setView("section");
+                  }}
                   showFeedback={showFeedback}
+                  darkMode={darkMode}
+                  cardBg={cardBg}
+                  textPrimary={textPrimary}
+                  textSecondary={textSecondary}
+                  borderColor={borderColor}
                 />
               ))}
             </div>
           )}
         </motion.div>
       </div>
+    </div>
     );
   }
 
@@ -470,157 +632,7 @@ const materialSteps: FlowStep[] = [
       <div style={{ position: "relative", zIndex: 1, padding: "2rem 2rem", maxWidth: 1200, margin: "0 auto" }}>
 
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -16 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: "2.5rem",
-            gap: 12,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ position: "relative" }}>
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: "linear-gradient(135deg, #fb923c, #ec4899)",
-                  borderRadius: 20,
-                  filter: "blur(12px)",
-                  opacity: 0.45,
-                }}
-              />
-              <div
-                style={{
-                  position: "relative",
-                  background: darkMode ? "#1e293b" : "#fff",
-                  padding: 14,
-                  borderRadius: 20,
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
-                }}
-              >
-                <GraduationCap size={28} color="#f97316" />
-              </div>
-            </div>
-
-            <div>
-              <h1
-                style={{
-                  fontSize: "2.2rem",
-                  fontWeight: 700,
-                  color: textPrimary,
-                  margin: 0,
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                Teacher Dashboard
-              </h1>
-              <p
-                style={{
-                  fontSize: "0.85rem",
-                  color: textSecondary,
-                  margin: 0,
-                }}
-              >
-                AI-Powered Learning Platform
-              </p>
-            </div>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <motion.button
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setDarkMode(!darkMode)}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: "50%",
-                background: darkMode ? "#334155" : "#fff",
-                border: `1px solid ${borderColor}`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
-              }}
-            >
-              {darkMode ? (
-                <Sun size={18} color="#fbbf24" />
-              ) : (
-                <Moon size={18} color="#6b7280" />
-              )}
-            </motion.button>
-
-            {onSettings && (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={onSettings}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "8px 16px",
-                  borderRadius: 12,
-                  background: darkMode ? "#334155" : "#fff",
-                  border: `1px solid ${borderColor}`,
-                  cursor: "pointer",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  color: textSecondary,
-                  fontFamily: "inherit",
-                  boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
-                }}
-              >
-                <Settings size={16} />
-                Settings
-              </motion.button>
-            )}
-
-            {onLogout && (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={onLogout}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "8px 16px",
-                  borderRadius: 12,
-                  background: darkMode ? "#334155" : "#fff",
-                  border: `1px solid ${borderColor}`,
-                  cursor: "pointer",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  color: textSecondary,
-                  fontFamily: "inherit",
-                  boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
-                }}
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                  <polyline points="16 17 21 12 16 7" />
-                  <line x1="21" y1="12" x2="9" y2="12" />
-                </svg>
-                Logout
-              </motion.button>
-            )}
-          </div>
-        </motion.div>
+        <TeacherTopHeader />
 
         {/* Feedback */}
         <AnimatePresence>

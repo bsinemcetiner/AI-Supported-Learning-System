@@ -7,6 +7,11 @@ interface LessonSectionReviewProps {
   onPublished: () => void;
   onOpenSection: (lesson: Lesson, sectionIndex: number) => void;
   showFeedback: (type: "success" | "error" | "info", text: string) => void;
+  darkMode: boolean;
+  cardBg: string;
+  textPrimary: string;
+  textSecondary: string;
+  borderColor: string;
 }
 
 export function LessonSectionReview({
@@ -14,6 +19,11 @@ export function LessonSectionReview({
   onPublished,
   onOpenSection,
   showFeedback,
+  darkMode,
+  cardBg,
+  textPrimary,
+  textSecondary,
+  borderColor,
 }: LessonSectionReviewProps) {
   const [sections, setSections] = useState<Section[]>([]);
   const [totalSections, setTotalSections] = useState(0);
@@ -48,27 +58,77 @@ export function LessonSectionReview({
 
   const approvedCount = sections.filter((s) => s.approved).length;
   const draftCount = sections.filter((s) => !!s.draft?.trim()).length;
-  const pendingCount = totalSections - approvedCount - (draftCount - approvedCount > 0 ? draftCount - approvedCount : 0);
+  const readyOnlyCount = sections.filter((s) => !!s.draft?.trim() && !s.approved).length;
+  const pendingCount = totalSections - approvedCount - readyOnlyCount;
   const allApproved = totalSections > 0 && approvedCount === totalSections;
   const progressPct = totalSections > 0 ? Math.round((approvedCount / totalSections) * 100) : 0;
 
   function getStatusText() {
-    if (totalSections === 0) return null;
-    if (approvedCount === 0 && draftCount === 0) return { icon: "⏱", text: "Start by opening a section and generating a preview.", color: "#92400e", bg: "#fef3c7", border: "#fde68a" };
-    if (approvedCount === 0 && draftCount > 0) return { icon: "✨", text: "Some drafts are ready. Review them and approve the good ones.", color: "#1e40af", bg: "#eff6ff", border: "#bfdbfe" };
-    if (approvedCount > 0 && !allApproved) return { icon: "⏱", text: "Some sections are approved. You can keep reviewing or publish approved ones now.", color: "#92400e", bg: "#fff7ed", border: "#fed7aa" };
-    if (allApproved) return { icon: "✅", text: "All sections are approved. Ready to publish!", color: "#065f46", bg: "#ecfdf5", border: "#6ee7b7" };
-    return null;
+  if (totalSections === 0) return null;
+
+  if (approvedCount === 0 && draftCount === 0) {
+    return {
+      icon: "⏱",
+      text: "Start by opening a section and generating a preview.",
+      color: darkMode ? "#fde68a" : "#92400e",
+      bg: darkMode ? "rgba(251,191,36,0.10)" : "#fef3c7",
+      border: darkMode ? "rgba(251,191,36,0.25)" : "#fde68a",
+    };
   }
 
-  if (!loaded) {
-    return (
-      <div style={{ background: "#fff", borderRadius: 20, border: "1px solid rgba(0,0,0,0.07)", padding: "1.25rem 1.5rem", boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
-        <div style={{ fontWeight: 700, fontSize: "1rem", color: "#111827" }}>{lesson.week_title}</div>
-        <div style={{ fontSize: "0.85rem", color: "#9ca3af", marginTop: 4 }}>Loading sections...</div>
-      </div>
-    );
+  if (approvedCount === 0 && draftCount > 0) {
+    return {
+      icon: "✨",
+      text: "Some drafts are ready. Review them and approve the good ones.",
+      color: darkMode ? "#bfdbfe" : "#1e40af",
+      bg: darkMode ? "rgba(59,130,246,0.12)" : "#eff6ff",
+      border: darkMode ? "rgba(59,130,246,0.25)" : "#bfdbfe",
+    };
   }
+
+  if (approvedCount > 0 && !allApproved) {
+    return {
+      icon: "⏱",
+      text: "Some sections are approved. You can keep reviewing or publish approved ones now.",
+      color: darkMode ? "#fdba74" : "#92400e",
+      bg: darkMode ? "rgba(251,146,60,0.10)" : "#fff7ed",
+      border: darkMode ? "rgba(251,146,60,0.30)" : "#fed7aa",
+    };
+  }
+
+  if (allApproved) {
+    return {
+      icon: "✅",
+      text: "All sections are approved. Ready to publish!",
+      color: darkMode ? "#86efac" : "#065f46",
+      bg: darkMode ? "rgba(16,185,129,0.12)" : "#ecfdf5",
+      border: darkMode ? "rgba(16,185,129,0.30)" : "#6ee7b7",
+    };
+  }
+
+  return null;
+}
+
+  if (!loaded) {
+  return (
+    <div
+      style={{
+        background: cardBg,
+        borderRadius: 20,
+        border: `1px solid ${borderColor}`,
+        padding: "1.25rem 1.5rem",
+        boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
+      }}
+    >
+      <div style={{ fontWeight: 700, fontSize: "1rem", color: textPrimary }}>
+        {lesson.week_title}
+      </div>
+      <div style={{ fontSize: "0.85rem", color: textSecondary, marginTop: 4 }}>
+        Loading sections...
+      </div>
+    </div>
+  );
+}
 
   const status = getStatusText();
 
@@ -76,10 +136,20 @@ export function LessonSectionReview({
   const iconGradient = "linear-gradient(135deg, #fb923c, #ec4899)";
 
   return (
-    <div style={{ background: "#fff", borderRadius: 20, border: "1px solid rgba(0,0,0,0.07)", boxShadow: "0 4px 20px rgba(0,0,0,0.06)", overflow: "hidden", fontFamily: "inherit" }}>
+
+      <div
+        style={{
+          background: cardBg,
+          borderRadius: 20,
+          border: `1px solid ${borderColor}`,
+          boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
+          overflow: "hidden",
+          fontFamily: "inherit",
+        }}
+      >
 
       {/* Header */}
-      <div style={{ padding: "1.25rem 1.5rem", borderBottom: "1px solid rgba(0,0,0,0.06)", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 14 }}>
+      <div style={{ padding: "1.25rem 1.5rem", borderBottom: `1px solid ${borderColor}`, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 14 }}>
         <div style={{ flex: 1, minWidth: 260 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
             <div style={{ width: 40, height: 40, borderRadius: 12, background: iconGradient, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -89,14 +159,14 @@ export function LessonSectionReview({
               </svg>
             </div>
             <div>
-              <p style={{ fontSize: "1rem", fontWeight: 700, color: "#111827", margin: 0, lineHeight: 1.3 }}>{lesson.week_title}</p>
-              <p style={{ fontSize: "0.8rem", color: "#9ca3af", margin: 0, marginTop: 2 }}>📄 {lesson.original_filename}</p>
+              <p style={{ fontSize: "1rem", fontWeight: 700, color: textPrimary, margin: 0, lineHeight: 1.3 }}>{lesson.week_title}</p>
+              <p style={{ fontSize: "0.8rem", color: textSecondary, margin: 0, marginTop: 2 }}>📄 {lesson.original_filename}</p>
             </div>
           </div>
 
           {/* Progress bar */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ flex: 1, maxWidth: 260, height: 7, background: "#f3f4f6", borderRadius: 99, overflow: "hidden" }}>
+            <div style={{ flex: 1, maxWidth: 260, height: 7, background: darkMode ? "rgba(255,255,255,0.12)" : "#f3f4f6", borderRadius: 99, overflow: "hidden" }}>
               <div style={{
                 height: "100%",
                 width: `${progressPct}%`,
@@ -105,7 +175,7 @@ export function LessonSectionReview({
                 transition: "width 0.4s ease",
               }} />
             </div>
-            <span style={{ fontSize: "0.8rem", color: "#6b7280", whiteSpace: "nowrap", fontWeight: 500 }}>
+            <span style={{ fontSize: "0.8rem", color: textSecondary, whiteSpace: "nowrap", fontWeight: 500 }}>
               {approvedCount}/{totalSections} approved
             </span>
           </div>
@@ -153,13 +223,33 @@ export function LessonSectionReview({
       )}
 
       {/* Stats pills */}
-      <div style={{ padding: "0.9rem 1.5rem", borderBottom: "1px solid rgba(0,0,0,0.05)", display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <div style={{ padding: "0.9rem 1.5rem", borderBottom:  `1px solid ${borderColor}`, display: "flex", gap: 8, flexWrap: "wrap" }}>
         {[
-          { label: `Total: ${totalSections}`, bg: "#f3f4f6", color: "#374151", border: "#e5e7eb" },
-          { label: `Approved: ${approvedCount}`, bg: "#ecfdf5", color: "#065f46", border: "#6ee7b7", icon: "✓" },
-          { label: `Draft ready: ${draftCount}`, bg: "#eff6ff", color: "#1e40af", border: "#bfdbfe", icon: "✨" },
-          { label: `Still pending: ${totalSections - approvedCount - draftCount + approvedCount}`, bg: "#fef3c7", color: "#92400e", border: "#fde68a", icon: "⏱" },
-        ].map((pill) => (
+  {
+    label: `Total: ${totalSections}`,
+    bg: darkMode ? "rgba(148,163,184,0.12)" : "#f3f4f6",
+    color: darkMode ? "#cbd5e1" : "#374151",
+    border: darkMode ? "rgba(148,163,184,0.25)" : "#e5e7eb",
+  },
+  {
+    label: `Approved: ${approvedCount}`,
+    bg: darkMode ? "rgba(16,185,129,0.12)" : "#ecfdf5",
+    color: darkMode ? "#86efac" : "#065f46",
+    border: darkMode ? "rgba(16,185,129,0.30)" : "#6ee7b7",
+  },
+  {
+    label: `Draft ready: ${readyOnlyCount}`,
+    bg: darkMode ? "rgba(59,130,246,0.12)" : "#eff6ff",
+    color: darkMode ? "#bfdbfe" : "#1e40af",
+    border: darkMode ? "rgba(59,130,246,0.30)" : "#bfdbfe",
+  },
+  {
+    label: `Still pending: ${pendingCount}`,
+    bg: darkMode ? "rgba(251,191,36,0.12)" : "#fef3c7",
+    color: darkMode ? "#fde68a" : "#92400e",
+    border: darkMode ? "rgba(251,191,36,0.30)" : "#fde68a",
+  },
+].map((pill) => (
           <span key={pill.label} style={{
             background: pill.bg, color: pill.color,
             border: `1px solid ${pill.border}`,
@@ -178,8 +268,19 @@ export function LessonSectionReview({
           const isApproved = section.approved;
           const isReady = hasDraft && !isApproved;
 
-          const borderColor = isApproved ? "#10b981" : isReady ? "#60a5fa" : "rgba(0,0,0,0.07)";
-          const bgColor = isApproved ? "#f0fdf4" : "#fff";
+          const sectionBorderColor = isApproved
+          ? "#10b981"
+          : isReady
+          ? "#60a5fa"
+          : borderColor;
+
+        const bgColor = isApproved
+          ? darkMode
+            ? "rgba(16,185,129,0.12)"
+            : "#f0fdf4"
+          : darkMode
+          ? "rgba(15,23,42,0.55)"
+          : "#fff";
           const badgeBg = isApproved ? "#dcfce7" : isReady ? "#dbeafe" : "#f3f4f6";
           const badgeColor = isApproved ? "#166534" : isReady ? "#1e40af" : "#6b7280";
           const badgeText = isApproved ? "Approved" : isReady ? "Draft ready" : "Needs preview";
@@ -192,7 +293,7 @@ export function LessonSectionReview({
               onClick={() => onOpenSection(lesson, index)}
               style={{
                 background: bgColor,
-                border: `1.5px solid ${borderColor}`,
+                border: `1.5px solid ${sectionBorderColor}`,
                 borderRadius: 16,
                 padding: "1rem 1.1rem",
                 cursor: "pointer",
@@ -208,7 +309,7 @@ export function LessonSectionReview({
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = "translateY(0)";
                 e.currentTarget.style.boxShadow = "none";
-                e.currentTarget.style.borderColor = borderColor;
+                e.currentTarget.style.borderColor = sectionBorderColor;
               }}
             >
               {/* Approved checkmark */}
@@ -231,13 +332,13 @@ export function LessonSectionReview({
               </div>
 
               {/* Title */}
-              <p style={{ fontSize: "1rem", fontWeight: 700, color: "#111827", margin: 0, lineHeight: 1.3 }}>
+              <p style={{ fontSize: "1rem", fontWeight: 700, color: textPrimary, margin: 0, lineHeight: 1.3 }}>
                 {section.title}
               </p>
 
               {/* Summary */}
               {section.summary && (
-                <p style={{ fontSize: "0.8rem", color: "#6b7280", margin: 0, lineHeight: 1.55 }}>
+                <p style={{ fontSize: "0.8rem", color: textSecondary, margin: 0, lineHeight: 1.55 }}>
                   {section.summary.length > 70 ? section.summary.slice(0, 70) + "..." : section.summary}
                 </p>
               )}
