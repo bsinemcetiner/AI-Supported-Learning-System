@@ -8,6 +8,7 @@ import ChatPage from "./pages/ChatPage";
 import TeacherPage from "./pages/TeacherPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import SettingsModal from "./components/settings/SettingsModal";
+import NotificationBell from "./components/notification/NotificationBell";
 
 import "./styles/theme.css";
 
@@ -464,6 +465,17 @@ export default function App() {
           background: "linear-gradient(135deg, #f8fafc 0%, #eff6ff 50%, #fdf4ff 100%)",
         }}
       >
+      <div
+        style={{
+          position: "absolute",
+          top: 18,
+          right: 24,
+          zIndex: 300,
+        }}
+      >
+        <NotificationBell />
+      </div>
+
         {/* Dashboard mounted kalsın, state kaybolmasın */}
         <div
           style={{
@@ -472,7 +484,7 @@ export default function App() {
             display: activeChatId && activeChat ? "none" : "block",
           }}
         >
-          <div style={{ maxWidth: 1100, margin: "0 auto", padding: "2rem 2.5rem" }}>
+          <div style={{ maxWidth: 1100, margin: "0 auto", padding: "2rem 4.5rem 2rem 2.5rem" }}>
             <DashboardPage
               teachingMode={teachingMode}
               teachingTone={teachingTone}

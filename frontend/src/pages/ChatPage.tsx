@@ -12,12 +12,7 @@ interface ChatPageProps {
   onBack: () => void;
 }
 
-interface NotificationItem {
-  id: string;
-  message: string;
-  time: string;
-  isRead: boolean;
-}
+
 
 interface SlideBase {
   type: string;
@@ -338,10 +333,7 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
   const [animatedFirstMessage, setAnimatedFirstMessage] = useState("");
   const [animatedChatId, setAnimatedChatId] = useState<string | null>(null);
 
-  // --- YENİ: Bildirim Durumları ---
-  const [showNotifications, setShowNotifications] = useState(false);
-  const notificationRef = useRef<HTMLDivElement>(null);
- const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const messages = chat.messages ?? [];
@@ -365,16 +357,7 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
     return () => clearInterval(interval);
   }, [chatId, messages.length, animateInitialMessage]);
 
-  // Bildirim panelini dışarı tıklandığında kapatmak için
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
-        setShowNotifications(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -384,43 +367,7 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
   }
 
   const courseLabel = chat.course_id ? chat.course_id.split("::")[1] ?? chat.course_id : null;
-  useEffect(() => {
-  async function fetchNotifications() {
-    try {
-      const token = localStorage.getItem("token");
 
-      const res = await fetch("http://127.0.0.1:8011/api/notifications/", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) return;
-
-      const data = await res.json();
-
-      const mapped = (data.notifications || data || []).map((n: any) => ({
-        id: String(n.id),
-        message: n.message || n.title || "New notification",
-        time: n.created_at
-          ? new Date(n.created_at).toLocaleString()
-          : "",
-        isRead: n.is_read ?? false,
-      }));
-
-      setNotifications(mapped);
-    } catch (err) {
-      console.error("Notification fetch error:", err);
-    }
-  }
-
-  fetchNotifications();
-
-  const interval = setInterval(fetchNotifications, 15000);
-
-  return () => clearInterval(interval);
-}, []);
-  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "#f8fafc" }}>
@@ -444,42 +391,6 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {/* --- YENİ: ZİL İKONU VE BİLDİRİM PANELİ --- */}
-          <div ref={notificationRef} style={{ position: "relative" }}>
-            <button
-              onClick={() => setShowNotifications(!showNotifications)}
-              style={{ width: 38, height: 38, borderRadius: "12px", border: "1px solid #e5e7eb", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative", transition: "all 0.2s" }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
-              {unreadCount > 0 && (
-                <div style={{ position: "absolute", top: -4, right: -4, background: "#ef4444", color: "#fff", fontSize: "10px", fontWeight: 800, width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" }}>
-                  {unreadCount}
-                </div>
-              )}
-            </button>
-
-            {showNotifications && (
-              <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 10, width: 280, background: "#fff", borderRadius: 16, boxShadow: "0 10px 25px rgba(0,0,0,0.1)", border: "1px solid #f3f4f6", overflow: "hidden", animation: "slideDown 0.2s ease-out" }}>
-                <div style={{ padding: "12px 16px", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#fafafa" }}>
-                  <span style={{ fontWeight: 700, fontSize: "0.85rem", color: "#111827" }}>Notifications</span>
-                  <span style={{ fontSize: "0.7rem", color: "#f97316", fontWeight: 600, cursor: "pointer" }}>Read All</span>
-                </div>
-                <div style={{ maxHeight: 300, overflowY: "auto" }}>
-                  {notifications.length > 0 ? (
-                    notifications.map((n) => (
-                      <div key={n.id} style={{ padding: "12px 16px", borderBottom: "1px solid #f8fafc", transition: "background 0.2s", cursor: "pointer", background: n.isRead ? "transparent" : "#fff7ed" }}>
-                        <p style={{ margin: "0 0 4px", fontSize: "0.82rem", color: "#374151", lineHeight: 1.4 }}>{n.message}</p>
-                        <p style={{ margin: 0, fontSize: "0.7rem", color: "#9ca3af" }}>{n.time}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <div style={{ padding: "30px 16px", textAlign: "center", color: "#9ca3af", fontSize: "0.82rem" }}>Yeni bildirim yok</div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
           {hasExchange && !streaming && (
             <button onClick={onRegenerate} style={{ padding: "7px 14px", borderRadius: 10, border: "1px solid #e5e7eb", background: "#fff", color: "#374151", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>

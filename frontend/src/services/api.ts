@@ -5,6 +5,7 @@ import type {
   TeachingMode,
   TeachingTone,
   Material,
+  NotificationItem,
 } from "../types";
 
 const BASE = "http://127.0.0.1:8011/api";
@@ -416,5 +417,20 @@ export const settings = {
     request<{ message: string }>("/settings/password", {
       method: "PATCH",
       body: JSON.stringify({ current_password, new_password }),
+    }),
+};
+
+export const notifications = {
+  getAll: () =>
+    request<NotificationItem[]>("/notifications/"),
+
+    markAllRead: () =>
+      request<{ ok: boolean }>("/notifications/read-all", {
+        method: "PATCH",
+     }),
+
+  markOneRead: (notification_id: string) =>
+    request<{ message: string }>(`/notifications/${notification_id}/read`, {
+      method: "PATCH",
     }),
 };
