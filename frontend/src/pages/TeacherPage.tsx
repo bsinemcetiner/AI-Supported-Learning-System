@@ -390,7 +390,7 @@ function TeacherTopHeader() {
             Teacher Dashboard
           </h1>
           <p style={{ fontSize: "0.85rem", color: textSecondary, margin: 0 }}>
-            AI-Powered Learning Platform
+            Learning Assistant
           </p>
         </div>
       </div>

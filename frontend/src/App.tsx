@@ -233,6 +233,138 @@ function StudentSidebar({
     </div>
   );
 }
+function LogoutConfirmModal({
+  onCancel,
+  onConfirm,
+}: {
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(15,23,42,0.45)",
+        backdropFilter: "blur(8px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 9999,
+        padding: "1rem",
+      }}
+      onClick={onCancel}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 420,
+          background: "#fff",
+          borderRadius: 28,
+          padding: "2rem",
+          boxShadow: "0 24px 80px rgba(15,23,42,0.28)",
+          border: "1px solid rgba(255,255,255,0.75)",
+          textAlign: "center",
+          animation: "logoutPop 0.18s ease-out",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          style={{
+            width: 74,
+            height: 74,
+            borderRadius: 24,
+            background: "linear-gradient(135deg, #fff7ed, #fdf2f8)",
+            border: "1px solid #fed7aa",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 1.1rem",
+            boxShadow: "0 8px 24px rgba(249,115,22,0.18)",
+          }}
+        >
+          <span style={{ fontSize: "2.2rem" }}>👋</span>
+        </div>
+
+        <h2
+          style={{
+            fontSize: "1.45rem",
+            fontWeight: 800,
+            color: "#111827",
+            margin: "0 0 0.5rem",
+            letterSpacing: "-0.02em",
+          }}
+        >
+          Log out of LASSIE?
+        </h2>
+
+        <p
+          style={{
+            fontSize: "0.92rem",
+            color: "#6b7280",
+            lineHeight: 1.65,
+            margin: "0 0 1.5rem",
+          }}
+        >
+          Your current session will end. You can sign in again anytime with your account.
+        </p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <button
+            onClick={onCancel}
+            style={{
+              padding: "12px 16px",
+              borderRadius: 14,
+              border: "1.5px solid #e5e7eb",
+              background: "#fff",
+              color: "#374151",
+              fontSize: "0.92rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            Stay
+          </button>
+
+          <button
+            onClick={onConfirm}
+            style={{
+              padding: "12px 16px",
+              borderRadius: 14,
+              border: "none",
+              background: "linear-gradient(135deg, #f97316, #ec4899)",
+              color: "#fff",
+              fontSize: "0.92rem",
+              fontWeight: 800,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              boxShadow: "0 8px 20px rgba(249,115,22,0.28)",
+            }}
+          >
+            Yes, log out
+          </button>
+        </div>
+
+        <style>
+          {`
+            @keyframes logoutPop {
+              from {
+                opacity: 0;
+                transform: scale(0.96) translateY(8px);
+              }
+              to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+              }
+            }
+          `}
+        </style>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -245,6 +377,7 @@ export default function App() {
   const [dashView, setDashView] = useState<"dashboard" | "browse">("dashboard");
   const [teachingMode, setTeachingMode] = useState<TeachingMode>("direct");
   const [teachingTone, setTeachingTone] = useState<TeachingTone>("Professional Tutor");
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (isAdmin) return;
@@ -281,6 +414,15 @@ export default function App() {
     tokenStore.clear(); setUser(null); setChatMap({});
     setActiveChatId(null); setDashboardCourseId(null); setSettingsOpen(false);
   }
+
+function requestLogout() {
+  setLogoutConfirmOpen(true);
+}
+
+function confirmLogout() {
+  setLogoutConfirmOpen(false);
+  handleLogout();
+}
 
   async function handleOpenChat(
   chatId: string,
@@ -423,11 +565,17 @@ export default function App() {
         <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #fff7ed 0%, #fdf2f8 50%, #f5f3ff 100%)" }}>
           <TeacherPage
               username={user.username}
-              onLogout={handleLogout}
+              onLogout={requestLogout}
               onSettings={() => setSettingsOpen(true)}
           />
         </div>
         {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} onProfileUpdated={(fn) => setUser((p) => p ? { ...p, full_name: fn } : p)} />}
+        {logoutConfirmOpen && (
+          <LogoutConfirmModal
+            onCancel={() => setLogoutConfirmOpen(false)}
+            onConfirm={confirmLogout}
+          />
+        )}
       </>
     );
   }
@@ -452,7 +600,7 @@ export default function App() {
         setActiveChatId(null);
         setDashboardCourseId(null);
       }}
-      onLogout={handleLogout}
+      onLogout={requestLogout}
       onSettings={() => setSettingsOpen(true)}
     />
 
@@ -476,7 +624,7 @@ export default function App() {
         <NotificationBell />
       </div>
 
-        {/* Dashboard mounted kalsın, state kaybolmasın */}
+
         <div
           style={{
             height: "100%",
@@ -498,7 +646,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Chat üstte açılsın ama dashboard unmount olmasın */}
+
         {activeChatId && activeChat && (
           <div style={{ position: "absolute", inset: 0 }}>
             <ChatPage
@@ -519,6 +667,13 @@ export default function App() {
       <SettingsModal
         onClose={() => setSettingsOpen(false)}
         onProfileUpdated={(fn) => setUser((p) => (p ? { ...p, full_name: fn } : p))}
+      />
+    )}
+
+    {logoutConfirmOpen && (
+      <LogoutConfirmModal
+        onCancel={() => setLogoutConfirmOpen(false)}
+        onConfirm={confirmLogout}
       />
     )}
   </>
