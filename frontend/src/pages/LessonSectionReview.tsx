@@ -29,6 +29,7 @@ export function LessonSectionReview({
   const [totalSections, setTotalSections] = useState(0);
   const [publishing, setPublishing] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [publishedCount, setPublishedCount] = useState(0);
 
   useEffect(() => { loadSections(); }, [lesson.lesson_id]);
 
@@ -47,6 +48,7 @@ export function LessonSectionReview({
     setPublishing(true);
     try {
       const result = await lessonsApi.publishSections(lesson.lesson_id);
+      setPublishedCount(approvedCount);
       showFeedback("success", `${result.section_count} section(s) published for students.`);
       onPublished();
     } catch (e: any) {
@@ -62,6 +64,8 @@ export function LessonSectionReview({
   const pendingCount = totalSections - approvedCount - readyOnlyCount;
   const allApproved = totalSections > 0 && approvedCount === totalSections;
   const progressPct = totalSections > 0 ? Math.round((approvedCount / totalSections) * 100) : 0;
+  const hasPublishedSections = publishedCount > 0;
+  const allCurrentApprovedPublished = approvedCount > 0 && publishedCount >= approvedCount;
 
   function getStatusText() {
   if (totalSections === 0) return null;
@@ -184,33 +188,58 @@ export function LessonSectionReview({
         {/* Publish button */}
         <button
           onClick={handlePublish}
-          disabled={publishing || approvedCount === 0}
+          disabled={publishing || approvedCount === 0 || allCurrentApprovedPublished}
           style={{
-            background: approvedCount === 0 ? "#f3f4f6" : allApproved ? "linear-gradient(135deg, #10b981, #059669)" : "linear-gradient(135deg, #f97316, #ec4899)",
+            background:
+              approvedCount === 0
+                ? "#f3f4f6"
+                : allCurrentApprovedPublished
+                ? "linear-gradient(135deg, #10b981, #059669)"
+                : allApproved
+                ? "linear-gradient(135deg, #10b981, #059669)"
+                : "linear-gradient(135deg, #f97316, #ec4899)",
+
             color: approvedCount === 0 ? "#9ca3af" : "#fff",
             border: "none", borderRadius: 14,
             padding: "11px 22px",
             fontSize: "0.9rem", fontWeight: 700,
-            cursor: approvedCount === 0 ? "not-allowed" : "pointer",
+            cursor:
+              approvedCount === 0 || allCurrentApprovedPublished
+                ? "not-allowed"
+                : "pointer",
             whiteSpace: "nowrap",
             transition: "all 0.2s",
             fontFamily: "inherit",
-            boxShadow: approvedCount === 0 ? "none" : "0 4px 16px rgba(249,115,22,0.3)",
+            boxShadow:
+              approvedCount === 0 || allCurrentApprovedPublished
+                ? "none"
+                : "0 4px 16px rgba(249,115,22,0.3)",
             display: "flex", alignItems: "center", gap: 8,
           }}
         >
-          {publishing ? (
-            "Publishing..."
-          ) : approvedCount === 0 ? (
-            "Approve first"
-          ) : (
-            <>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-              </svg>
-              Publish {approvedCount} Section{approvedCount > 1 ? "s" : ""}
-            </>
-          )}
+         {publishing ? (
+          "Publishing..."
+        ) : approvedCount === 0 ? (
+          "Approve first"
+        ) : allCurrentApprovedPublished ? (
+          <>✅ Published {publishedCount} Section{publishedCount > 1 ? "s" : ""}</>
+        ) : hasPublishedSections && approvedCount > publishedCount ? (
+          <>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
+            Publish {approvedCount - publishedCount} New Section{approvedCount - publishedCount > 1 ? "s" : ""}
+          </>
+        ) : (
+          <>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
+            Publish {approvedCount} Section{approvedCount > 1 ? "s" : ""}
+          </>
+        )}
         </button>
       </div>
 
