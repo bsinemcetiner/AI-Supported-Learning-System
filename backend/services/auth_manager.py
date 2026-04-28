@@ -13,6 +13,9 @@ from models.user import User
 # Store OTPs in memory: { email: { otp, expires_at } }
 _otp_store: dict = {}
 
+# Emails that passed OTP verification but have not completed signup yet
+_verified_emails: set[str] = set()
+
 
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
@@ -46,7 +49,7 @@ def send_otp_email(to_email: str, otp: str):
       <div style="font-size:40px;font-weight:bold;letter-spacing:10px;
                   color:#c84b11;margin:24px 0;text-align:center;">{otp}</div>
       <p style="color:#888;font-size:13px;">
-        This code is valid for 10 minutes. Do not share it with anyone.
+        This code is valid for 60 seconds. Do not share it with anyone.
       </p>
     </div>
     """
@@ -61,7 +64,7 @@ def send_otp_email(to_email: str, otp: str):
 def request_otp(email: str):
     """Send OTP to email. Returns (success, message, role)."""
     email = email.lower().strip()
-
+    _verified_emails.discard(email)
     role = get_role_from_email(email)
     if not role:
         return False, "Invalid email. Students must use @std.ieu.edu.tr, teachers must use @ieu.edu.tr.", None
@@ -77,7 +80,7 @@ def request_otp(email: str):
     otp = str(random.randint(100000, 999999))
     _otp_store[email] = {
         "otp": otp,
-        "expires_at": datetime.utcnow() + timedelta(minutes=10),
+        "expires_at": datetime.utcnow() + timedelta(seconds=60),
     }
 
     try:
@@ -85,7 +88,7 @@ def request_otp(email: str):
     except Exception as e:
         return False, f"Failed to send email: {str(e)}", None
 
-    return True, "OTP sent.", role
+    return True, "OTP sent. This code is valid for 60 seconds.", role
 
 
 def verify_otp(email: str, otp: str):
@@ -100,11 +103,13 @@ def verify_otp(email: str, otp: str):
     if record["otp"] != otp:
         return False, "Incorrect code."
 
+    _verified_emails.add(email)
     del _otp_store[email]
     return True, "Email verified."
 
-
 def signup_user(full_name: str, username: str, password: str, role: str, email: str = None):
+    email = email.lower().strip() if email else None
+
     db: Session = SessionLocal()
     try:
         existing_user = db.query(User).filter(User.username == username).first()
@@ -113,6 +118,9 @@ def signup_user(full_name: str, username: str, password: str, role: str, email: 
 
         if role not in ["student", "teacher"]:
             return False, "Role must be either 'student' or 'teacher'."
+
+        if not email or email not in _verified_emails:
+            return False, "Please verify your email before signing up."
 
         new_user = User(
             full_name=full_name,
@@ -127,7 +135,10 @@ def signup_user(full_name: str, username: str, password: str, role: str, email: 
         db.commit()
         db.refresh(new_user)
 
+        _verified_emails.discard(email)
+
         return True, "Account created successfully."
+
     finally:
         db.close()
 

@@ -124,10 +124,28 @@ export const auth = {
       body: JSON.stringify({ username, password }),
     }),
 
-  signup: (full_name: string, username: string, password: string, role: string) =>
+  sendOtp: (email: string) =>
+    request<{ message: string; role: string }>("/auth/send-otp", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
+  verifyOtp: (email: string, otp: string) =>
+    request<{ message: string }>("/auth/verify-otp", {
+      method: "POST",
+      body: JSON.stringify({ email, otp }),
+    }),
+
+  signup: (
+    full_name: string,
+    username: string,
+    password: string,
+    role: string,
+    email: string
+  ) =>
     request<{ message: string }>("/auth/signup", {
       method: "POST",
-      body: JSON.stringify({ full_name, username, password, role }),
+      body: JSON.stringify({ full_name, username, password, role, email }),
     }),
 };
 
