@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { LassieLogo } from "../LassieLogo";
 import type { User, ChatMap, TeachingMode, TeachingTone } from "../../types";
 
 interface SidebarProps {
@@ -176,12 +177,7 @@ async function markAllRead() {
       {/* Header */}
       <div style={{ background: "linear-gradient(135deg, #fff7ed, #fdf2f8)", padding: "1.5rem", borderBottom: "1px solid #fed7aa" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 52, height: 52, background: "#fff", borderRadius: 18, boxShadow: "0 4px 14px rgba(249,115,22,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-              <path d="M6 12v5c3 3 9 3 12 0v-5"/>
-            </svg>
-          </div>
+          <LassieLogo size={52} radius={18} />
           <div>
             <h1 style={{ fontWeight: 800, color: "#f97316", fontSize: "1.25rem", letterSpacing: "-0.02em", margin: 0, lineHeight: 1.1 }}>LASSIE</h1>
             <p style={{ fontSize: "0.78rem", color: "rgba(249,115,22,0.7)", margin: 0, marginTop: 2 }}>Learning Assistant</p>

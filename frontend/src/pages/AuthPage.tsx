@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { LassieLogo } from "../components/LassieLogo";
 import type { User } from "../types";
 import { auth as authApi, token as tokenStore, adminLogin } from "../services/api";
 
@@ -148,11 +149,8 @@ export default function AuthPage({ onLogin, onAdminLogin }: AuthPageProps) {
       <div style={{ width: "100%", maxWidth: 500, display: "flex", flexDirection: "column", alignItems: "center", gap: 0, position: "relative", zIndex: 1 }}>
 
         {/* Logo */}
-        <div style={{ width: 80, height: 80, background: "#fff", borderRadius: 24, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 32px rgba(249,115,22,0.2)", marginBottom: "1.25rem" }}>
-          <svg width="44" height="44" viewBox="0 0 24 24" fill="none">
-            <path d="M22 10v6M2 10l10-5 10 5-10 5z" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M6 12v5c3 3 9 3 12 0v-5" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+        <div style={{ marginBottom: "1.25rem" }}>
+          <LassieLogo size={86} radius={26} />
         </div>
 
         {/* LASSIE */}

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
+import { LassieLogo } from "../components/LassieLogo";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  GraduationCap, BookOpen, Upload, FileText, CheckCircle2,
+  BookOpen, Upload, FileText, CheckCircle2,
   Send, Sparkles, TrendingUp, BookMarked, ChevronRight,
   Plus, Layers, Users, Moon, Sun, Settings
 } from "lucide-react";
@@ -374,29 +375,7 @@ function TeacherTopHeader() {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <div style={{ position: "relative" }}>
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: "linear-gradient(135deg, #fb923c, #ec4899)",
-              borderRadius: 20,
-              filter: "blur(12px)",
-              opacity: 0.45,
-            }}
-          />
-          <div
-            style={{
-              position: "relative",
-              background: darkMode ? "#1e293b" : "#fff",
-              padding: 14,
-              borderRadius: 20,
-              boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
-            }}
-          >
-            <GraduationCap size={28} color="#f97316" />
-          </div>
-        </div>
+        <LassieLogo size={72} radius={20} darkMode={darkMode} />
 
         <div>
           <h1
@@ -434,7 +413,11 @@ function TeacherTopHeader() {
             boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
           }}
         >
-          {darkMode ? <Sun size={18} color="#fbbf24" /> : <Moon size={18} color="#6b7280" />}
+          {darkMode ? (
+            <Sun size={18} color="#fbbf24" />
+          ) : (
+            <Moon size={18} color="#6b7280" />
+          )}
         </motion.button>
 
         {onSettings && (

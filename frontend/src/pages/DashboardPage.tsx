@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { LassieLogo } from "../components/LassieLogo";
 import { courses as coursesApi, lessons as lessonsApi, chats as chatsApi } from "../services/api";
 import type { Course, TeachingMode, TeachingTone } from "../types";
 import type { Lesson, Section } from "../services/api";
@@ -490,7 +491,26 @@ async function startLessonChat(lesson: Lesson) {
       <div>
         {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>{error}</div>}
         <div style={{ marginBottom: "2rem" }}>
-          <h1 style={{ fontSize: "2.2rem", fontWeight: 800, color: "#0f172a", margin: "0 0 8px", letterSpacing: "-0.02em" }}>Browse All Courses</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
+          <LassieLogo size={58} radius={18} />
+
+          <div>
+            <h1
+              style={{
+                fontSize: "2.2rem",
+                fontWeight: 800,
+                color: "#0f172a",
+                margin: "0 0 4px",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              Browse All Courses
+            </h1>
+            <p style={{ fontSize: "0.9rem", color: "#64748b", margin: 0 }}>
+              Find new courses with LASSIE
+            </p>
+          </div>
+        </div>
           <div style={{ position: "relative" }}>
             <div style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)" }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -550,14 +570,41 @@ async function startLessonChat(lesson: Lesson) {
       {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>{error}<button onClick={() => setError("")} style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer" }}>✕</button></div>}
 
       {/* Welcome */}
-      <div style={{ marginBottom: "2rem" }}>
-        <h1 style={{ fontSize: "2.5rem", fontWeight: 800, margin: "0 0 6px", letterSpacing: "-0.03em" }}>
-          <span style={{ background: "linear-gradient(135deg, #f97316, #ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-            Welcome back, {username}!
-          </span>
-        </h1>
-        <p style={{ fontSize: "1rem", color: "#64748b", margin: 0 }}>Continue your learning journey</p>
-      </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 18,
+            marginBottom: "2rem",
+          }}
+        >
+          <LassieLogo size={74} radius={22} />
+
+          <div>
+            <h1
+              style={{
+                fontSize: "2.5rem",
+                fontWeight: 800,
+                margin: "0 0 6px",
+                letterSpacing: "-0.03em",
+              }}
+            >
+              <span
+                style={{
+                  background: "linear-gradient(135deg, #f97316, #ec4899)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                }}
+              >
+                Welcome back, {username}!
+              </span>
+            </h1>
+
+            <p style={{ fontSize: "1rem", color: "#64748b", margin: 0 }}>
+              Continue your learning journey with LASSIE
+            </p>
+          </div>
+        </div>
 
       {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 14, marginBottom: "2rem" }}>

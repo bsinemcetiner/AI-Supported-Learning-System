@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { LassieLogo } from "./components/LassieLogo";
 import { token as tokenStore, chats as chatsApi } from "./services/api";
 import type { User, ChatMap, TeachingMode, TeachingTone } from "./types";
 
@@ -88,15 +89,10 @@ function StudentSidebar({
       fontFamily: "inherit", overflowY: "auto",
     }}>
 
-      {/* Header - turuncu gradient */}
+
       <div style={{ background: "linear-gradient(135deg, #fff7ed, #fdf2f8)", padding: "1.25rem 1.5rem", borderBottom: "1px solid #fed7aa" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 48, height: 48, background: "#fff", borderRadius: 16, boxShadow: "0 4px 14px rgba(249,115,22,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-              <path d="M6 12v5c3 3 9 3 12 0v-5"/>
-            </svg>
-          </div>
+          <LassieLogo size={48} radius={16} />
           <div>
             <h1 style={{ fontWeight: 800, color: "#f97316", fontSize: "1.2rem", letterSpacing: "-0.02em", margin: 0, lineHeight: 1.1 }}>LASSIE</h1>
             <p style={{ fontSize: "0.72rem", color: "rgba(249,115,22,0.65)", margin: 0, marginTop: 2 }}>Learning Assistant</p>
