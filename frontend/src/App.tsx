@@ -283,7 +283,7 @@ function LogoutConfirmModal({
             boxShadow: "0 8px 24px rgba(249,115,22,0.18)",
           }}
         >
-          <span style={{ fontSize: "2.2rem" }}>👋</span>
+          <LassieLogo size={74} radius={24} />
         </div>
 
         <h2
