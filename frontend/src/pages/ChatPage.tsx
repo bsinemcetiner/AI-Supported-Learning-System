@@ -139,6 +139,10 @@ function isJsonContent(content: string): boolean {
   const t = content.trim(); return t.startsWith("[") || t.startsWith("{");
 }
 
+function isRichLessonContent(content: string): boolean {
+  return Boolean(extractSections(content) || extractSlides(content));
+}
+
 function formatUserDisplayContent(content: string): string {
   if (content.startsWith("📷 Image question")) {
     return content.replace("📷 Image question", "").trim();
@@ -482,12 +486,19 @@ function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
 
         {messages.map((msg, i) => {
           const firstAssistantIndex = messages.findIndex((m) => m.role === "assistant");
-          const isFirstAssistant =
-              msg.role === "assistant" &&
-              firstAssistantIndex === i &&
-              animateInitialMessage &&
-              isJsonContent(msg.content || "");
-          const displayContent = isFirstAssistant && animatedChatId === chatId && !isJsonContent(msg.content || "") ? animatedFirstMessage : msg.content;
+
+        const isFirstAssistant =
+          msg.role === "assistant" &&
+          firstAssistantIndex === i &&
+          isRichLessonContent(msg.content || "");
+
+        const displayContent =
+          isFirstAssistant &&
+          animateInitialMessage &&
+          animatedChatId === chatId &&
+          !isJsonContent(msg.content || "")
+            ? animatedFirstMessage
+            : msg.content;
           const imagePreviewUrl = ((msg as any).imagePreviewUrl || (msg as any).image_url) as string | undefined;
 
           if (isFirstAssistant) return (

@@ -365,6 +365,152 @@ function LogoutConfirmModal({
   );
 }
 
+function DeleteChatConfirmModal({
+  chatTitle,
+  onCancel,
+  onConfirm,
+}: {
+  chatTitle: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(15,23,42,0.45)",
+        backdropFilter: "blur(8px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 9999,
+        padding: "1rem",
+      }}
+      onClick={onCancel}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 430,
+          background: "#fff",
+          borderRadius: 28,
+          padding: "2rem",
+          boxShadow: "0 24px 80px rgba(15,23,42,0.28)",
+          border: "1px solid rgba(255,255,255,0.75)",
+          textAlign: "center",
+          animation: "deleteChatPop 0.18s ease-out",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          style={{
+            width: 74,
+            height: 74,
+            borderRadius: 24,
+            background: "linear-gradient(135deg, #fff1f2, #fef2f2)",
+            border: "1px solid #fecaca",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 1.1rem",
+            boxShadow: "0 8px 24px rgba(239,68,68,0.16)",
+            fontSize: "2rem",
+          }}
+        >
+          🗑️
+        </div>
+
+        <h2
+          style={{
+            fontSize: "1.4rem",
+            fontWeight: 800,
+            color: "#111827",
+            margin: "0 0 0.55rem",
+            letterSpacing: "-0.02em",
+          }}
+        >
+          Delete this chat?
+        </h2>
+
+        <p
+          style={{
+            fontSize: "0.92rem",
+            color: "#6b7280",
+            lineHeight: 1.65,
+            margin: "0 0 0.5rem",
+          }}
+        >
+          <strong style={{ color: "#374151" }}>{chatTitle}</strong> will be permanently removed.
+        </p>
+
+        <p
+          style={{
+            fontSize: "0.88rem",
+            color: "#9ca3af",
+            lineHeight: 1.55,
+            margin: "0 0 1.5rem",
+          }}
+        >
+          This action cannot be undone.
+        </p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <button
+            onClick={onCancel}
+            style={{
+              padding: "12px 16px",
+              borderRadius: 14,
+              border: "1.5px solid #e5e7eb",
+              background: "#fff",
+              color: "#374151",
+              fontSize: "0.92rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            Cancel
+          </button>
+
+          <button
+            onClick={onConfirm}
+            style={{
+              padding: "12px 16px",
+              borderRadius: 14,
+              border: "none",
+              background: "linear-gradient(135deg, #ef4444, #f97316)",
+              color: "#fff",
+              fontSize: "0.92rem",
+              fontWeight: 800,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              boxShadow: "0 8px 20px rgba(239,68,68,0.24)",
+            }}
+          >
+            Yes, delete
+          </button>
+        </div>
+
+        <style>
+          {`
+            @keyframes deleteChatPop {
+              from {
+                opacity: 0;
+                transform: scale(0.96) translateY(8px);
+              }
+              to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+              }
+            }
+          `}
+        </style>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -378,6 +524,10 @@ export default function App() {
   const [teachingMode, setTeachingMode] = useState<TeachingMode>("direct");
   const [teachingTone, setTeachingTone] = useState<TeachingTone>("Professional Tutor");
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+    const [deleteChatTarget, setDeleteChatTarget] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   useEffect(() => {
     if (isAdmin) return;
@@ -440,9 +590,19 @@ function confirmLogout() {
   setActiveChatId(chatId);
 }
 
-  async function handleDeleteChat(chatId: string) {
-  const ok = window.confirm("Delete this chat?");
-  if (!ok) return;
+function handleDeleteChat(chatId: string) {
+  const chat = chatMap[chatId];
+
+  setDeleteChatTarget({
+    id: chatId,
+    title: chat?.title || "Untitled chat",
+  });
+}
+
+async function confirmDeleteChat() {
+  if (!deleteChatTarget) return;
+
+  const chatId = deleteChatTarget.id;
 
   try {
     await chatsApi.delete(chatId);
@@ -459,9 +619,10 @@ function confirmLogout() {
   } catch (e) {
     console.error(e);
   } finally {
+    setDeleteChatTarget(null);
     await loadChats();
   }
-  }
+}
   async function handleSendMessage(
   chat_id: string,
   content: string,
@@ -716,12 +877,13 @@ function confirmLogout() {
       />
     )}
 
-    {logoutConfirmOpen && (
-      <LogoutConfirmModal
-        onCancel={() => setLogoutConfirmOpen(false)}
-        onConfirm={confirmLogout}
+    {deleteChatTarget && (
+      <DeleteChatConfirmModal
+        chatTitle={deleteChatTarget.title}
+        onCancel={() => setDeleteChatTarget(null)}
+        onConfirm={confirmDeleteChat}
       />
     )}
-  </>
+      </>
   );
 }
