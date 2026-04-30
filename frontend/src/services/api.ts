@@ -117,6 +117,52 @@ export async function* streamRequest(
   }
 }
 
+export async function* streamFormRequest(
+  path: string,
+  form: FormData
+): AsyncGenerator<string> {
+  const headers: Record<string, string> = {};
+
+  const t = token.get();
+  if (t) headers["Authorization"] = `Bearer ${t}`;
+
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers,
+    body: form,
+  });
+
+  if (!res.ok || !res.body) {
+    const err = await res.text().catch(() => "Stream failed");
+    throw new Error(err || "Stream failed");
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+
+      try {
+        const json = JSON.parse(line.slice(6));
+        if (json.delta) yield json.delta;
+        if (json.done) return;
+      } catch {
+        // ignore malformed stream lines
+      }
+    }
+  }
+}
+
 export const auth = {
   login: (username: string, password: string) =>
     request<TokenResponse>("/auth/login", {
@@ -341,6 +387,15 @@ export const chats = {
 
   sendStream: (chat_id: string, content: string) =>
     streamRequest(`/chats/${chat_id}/messages`, { content, stream: true }),
+
+  sendImageQuestionStream: (chat_id: string, question: string, image: File) => {
+      const form = new FormData();
+      form.append("question", question);
+      form.append("stream", "true");
+      form.append("image", image);
+
+      return streamFormRequest(`/chats/${chat_id}/image-question`, form);
+  },
 
   regenerateStream: (chat_id: string) =>
     streamRequest(`/chats/${chat_id}/regenerate`, {}),

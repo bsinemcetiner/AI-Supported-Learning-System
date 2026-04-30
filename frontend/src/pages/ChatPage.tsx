@@ -7,7 +7,7 @@ interface ChatPageProps {
   chat: Chat;
   streaming: boolean;
   animateInitialMessage?: boolean;
-  onSend: (content: string) => void;
+  onSend: (content: string, image?: File | null) => void;
   onRegenerate: () => void;
   onBack: () => void;
 }
@@ -137,6 +137,28 @@ function extractSections(raw: string): PublishedSection[] | null {
 
 function isJsonContent(content: string): boolean {
   const t = content.trim(); return t.startsWith("[") || t.startsWith("{");
+}
+
+function formatUserDisplayContent(content: string): string {
+  if (content.startsWith("📷 Image question")) {
+    return content.replace("📷 Image question", "").trim();
+  }
+
+  if (!content.startsWith("📷 Image-based question")) {
+    return content;
+  }
+
+  const marker = "Student question:";
+  const markerIndex = content.indexOf(marker);
+
+  if (markerIndex === -1) return content;
+
+  const afterMarker = content.slice(markerIndex + marker.length);
+  const textExtractedIndex = afterMarker.indexOf("Text extracted");
+
+  return textExtractedIndex === -1
+    ? afterMarker.trim()
+    : afterMarker.slice(0, textExtractedIndex).trim();
 }
 
 function HeroImage({ keyword }: { keyword: string }) {
@@ -332,6 +354,8 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
   const [input, setInput] = useState("");
   const [animatedFirstMessage, setAnimatedFirstMessage] = useState("");
   const [animatedChatId, setAnimatedChatId] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
 
 
@@ -359,12 +383,51 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
 
 
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const val = input.trim();
-    if (!val || streaming) return;
-    setInput(""); onSend(val);
+function handleSubmit(e: React.FormEvent) {
+  e.preventDefault();
+
+  const val = input.trim();
+
+  if (!val || streaming) return;
+
+  const imageToSend = selectedImage;
+
+  console.log("ChatPage imageToSend:", imageToSend);
+
+  onSend(val, imageToSend);
+
+  setInput("");
+  setSelectedImage(null);
+
+  if (fileInputRef.current) {
+    fileInputRef.current.value = "";
   }
+}
+
+function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+  const file = e.target.files?.[0];
+
+  if (!file) return;
+
+  const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+
+  if (!allowedTypes.includes(file.type)) {
+    alert("Please select a JPEG, PNG, or WEBP image.");
+    e.target.value = "";
+    return;
+  }
+
+  const maxSizeMb = 5;
+  const maxSizeBytes = maxSizeMb * 1024 * 1024;
+
+  if (file.size > maxSizeBytes) {
+    alert(`Image size must be smaller than ${maxSizeMb} MB.`);
+    e.target.value = "";
+    return;
+  }
+
+  setSelectedImage(file);
+}
 
   const courseLabel = chat.course_id ? chat.course_id.split("::")[1] ?? chat.course_id : null;
 
@@ -410,16 +473,21 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
               </svg>
             </div>
             <div style={{ textAlign: "center" }}>
-              <p style={{ fontSize: "1.2rem", fontWeight: 700, color: "#111827", margin: "0 0 6px" }}>Konuşmanız burada başlar</p>
-              <p style={{ fontSize: "0.9rem", color: "#9ca3af", margin: 0 }}>Bu ders hakkında her şeyi sorabilirsiniz.</p>
+              <p style={{ fontSize: "1.2rem", fontWeight: 700, color: "#111827", margin: "0 0 6px" }}>Your conversation starts here.</p>
+              <p style={{ fontSize: "0.9rem", color: "#9ca3af", margin: 0 }}>You can ask anything about this lesson.</p>
             </div>
           </div>
         )}
 
         {messages.map((msg, i) => {
           const firstAssistantIndex = messages.findIndex((m) => m.role === "assistant");
-          const isFirstAssistant = msg.role === "assistant" && firstAssistantIndex === i;
+          const isFirstAssistant =
+              msg.role === "assistant" &&
+              firstAssistantIndex === i &&
+              animateInitialMessage &&
+              isJsonContent(msg.content || "");
           const displayContent = isFirstAssistant && animatedChatId === chatId && !isJsonContent(msg.content || "") ? animatedFirstMessage : msg.content;
+          const imagePreviewUrl = ((msg as any).imagePreviewUrl || (msg as any).image_url) as string | undefined;
 
           if (isFirstAssistant) return (
             <div key={i} style={{ width: "100%" }}>
@@ -427,7 +495,7 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
                 <div style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg,#f97316,#ec4899)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z" /></svg>
                 </div>
-                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em" }}>Ders İçeriği</span>
+                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em" }}>Lesson Content</span>
               </div>
               <RichLessonView content={displayContent || ""} />
             </div>
@@ -440,9 +508,56 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z" /></svg>
                 </div>
               )}
-              <div style={{ maxWidth: "75%", padding: "12px 16px", borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: msg.role === "user" ? "linear-gradient(135deg,#f97316,#ec4899)" : "#fff", color: msg.role === "user" ? "#fff" : "#111827", fontSize: "0.92rem", lineHeight: 1.65, boxShadow: msg.role === "user" ? "0 4px 14px rgba(249,115,22,0.3)" : "0 1px 6px rgba(0,0,0,0.06)", border: msg.role === "assistant" ? "1px solid #f3f4f6" : "none" }}>
+              <div
+                  style={{
+                    maxWidth: msg.role === "user" && imagePreviewUrl ? 460 : "75%",
+                    minWidth: msg.role === "user" && imagePreviewUrl ? 320 : undefined,
+                    padding: "12px 16px",
+                    borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                    background: msg.role === "user" ? "linear-gradient(135deg,#f97316,#ec4899)" : "#fff",
+                    color: msg.role === "user" ? "#fff" : "#111827",
+                    fontSize: "0.92rem",
+                    lineHeight: 1.65,
+                    boxShadow: msg.role === "user" ? "0 4px 14px rgba(249,115,22,0.3)" : "0 1px 6px rgba(0,0,0,0.06)",
+                    border: msg.role === "assistant" ? "1px solid #f3f4f6" : "none",
+                  }}
+                >
+                {msg.role === "user" && imagePreviewUrl && (
+                  <button
+                    type="button"
+                    onClick={() => window.open(imagePreviewUrl, "_blank", "noopener,noreferrer")}
+                    title="Open image"
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      padding: 0,
+                      margin: "0 0 8px",
+                      border: "none",
+                      background: "transparent",
+                      cursor: "zoom-in",
+                    }}
+                  >
+                    <img
+                      src={imagePreviewUrl}
+                      alt="Uploaded screenshot"
+                      style={{
+                        display: "block",
+                        width: "100%",
+                        maxHeight: 260,
+                        objectFit: "contain",
+                        borderRadius: 12,
+                        border: "1px solid rgba(255,255,255,0.45)",
+                        background: "#fff",
+                      }}
+                    />
+                  </button>
+                )}
                 {displayContent ? (
-                  msg.role === "user" ? <p style={{ margin: 0 }}>{displayContent}</p> : (
+                  msg.role === "user" ? (
+                  <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+                    {formatUserDisplayContent(displayContent || "")}
+                  </p>
+                ) : (
                     <ReactMarkdown components={{
                       p: ({ children }) => <p style={{ margin: "0.35rem 0", lineHeight: 1.65 }}>{children}</p>,
                       h1: ({ children }) => <h1 style={{ fontSize: "1.1rem", fontWeight: 700, margin: "0.7rem 0 0.35rem", color: "#111827" }}>{children}</h1>,
@@ -463,25 +578,226 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
       </div>
 
       {/* --- INPUT AREA --- */}
+              {/* --- INPUT AREA --- */}
       <div style={{ padding: "1rem 1.5rem", background: "#fff", borderTop: "1px solid #f3f4f6" }}>
-        <form onSubmit={handleSubmit} style={{ display: "flex", alignItems: "flex-end", gap: 10, background: "#f8fafc", borderRadius: 20, border: "1.5px solid #e5e7eb", padding: "8px 8px 8px 16px" }}>
-          <textarea placeholder="Ders hakkında bir şeyler sor..." value={input} rows={1} disabled={streaming}
+        {selectedImage && (
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 8,
+              padding: "7px 10px",
+              borderRadius: 12,
+              background: "#fff7ed",
+              border: "1px solid #fed7aa",
+              color: "#9a3412",
+              fontSize: "0.78rem",
+              fontWeight: 600,
+              maxWidth: "100%",
+            }}
+          >
+            <span>📷</span>
+
+            <span
+              style={{
+                maxWidth: 260,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {selectedImage.name}
+            </span>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedImage(null);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+              }}
+              disabled={streaming}
+              style={{
+                border: "none",
+                background: "transparent",
+                color: "#ef4444",
+                cursor: streaming ? "not-allowed" : "pointer",
+                fontWeight: 800,
+                fontSize: "0.9rem",
+              }}
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        <form
+          onSubmit={handleSubmit}
+          style={{
+            display: "flex",
+            alignItems: "flex-end",
+            gap: 10,
+            background: "#f8fafc",
+            borderRadius: 20,
+            border: "1.5px solid #e5e7eb",
+            padding: "8px 8px 8px 10px",
+          }}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={handleImageChange}
+            style={{ display: "none" }}
+          />
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={streaming}
+            title="Upload image"
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 13,
+              border: "1px solid #e5e7eb",
+              background: selectedImage ? "#fff7ed" : "#fff",
+              color: selectedImage ? "#f97316" : "#64748b",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: streaming ? "not-allowed" : "pointer",
+              flexShrink: 0,
+            }}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+          </button>
+
+          <textarea
+            placeholder={
+              selectedImage
+                ? "What would you like to ask about this image?"
+                : "Ask something about the lesson..."
+            }
+            value={input}
+            rows={1}
+            disabled={streaming}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(e as any); } }}
-            style={{ flex: 1, resize: "none", border: "none", background: "transparent", outline: "none", fontSize: "0.95rem", color: "#111827", fontFamily: "inherit", lineHeight: 1.5, maxHeight: 120, padding: "4px 0" }} />
-          <button type="submit" disabled={streaming || !input.trim()} style={{ width: 40, height: 40, borderRadius: 14, border: "none", background: streaming || !input.trim() ? "#e5e7eb" : "linear-gradient(135deg,#f97316,#ec4899)", display: "flex", alignItems: "center", justifyContent: "center", cursor: streaming || !input.trim() ? "not-allowed" : "pointer", flexShrink: 0, boxShadow: streaming || !input.trim() ? "none" : "0 4px 14px rgba(249,115,22,0.35)" }}>
-            {streaming ? <div style={{ width: 16, height: 16, border: "2px solid #9ca3af", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /> : <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit(e as any);
+              }
+            }}
+            style={{
+              flex: 1,
+              resize: "none",
+              border: "none",
+              background: "transparent",
+              outline: "none",
+              fontSize: "0.95rem",
+              color: "#111827",
+              fontFamily: "inherit",
+              lineHeight: 1.5,
+              maxHeight: 120,
+              padding: "4px 0",
+            }}
+          />
+
+          <button
+            type="submit"
+            disabled={streaming || !input.trim()}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 14,
+              border: "none",
+              background:
+                streaming || !input.trim()
+                  ? "#e5e7eb"
+                  : "linear-gradient(135deg,#f97316,#ec4899)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: streaming || !input.trim() ? "not-allowed" : "pointer",
+              flexShrink: 0,
+              boxShadow:
+                streaming || !input.trim()
+                  ? "none"
+                  : "0 4px 14px rgba(249,115,22,0.35)",
+            }}
+          >
+            {streaming ? (
+              <div
+                style={{
+                  width: 16,
+                  height: 16,
+                  border: "2px solid #9ca3af",
+                  borderTopColor: "transparent",
+                  borderRadius: "50%",
+                  animation: "spin 0.8s linear infinite",
+                }}
+              />
+            ) : (
+              <svg
+                width="17"
+                height="17"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#fff"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+            )}
           </button>
         </form>
-        <p style={{ fontSize: "0.72rem", color: "#9ca3af", textAlign: "center", marginTop: 8 }}>Göndermek için Enter'a basın · Yeni satır için Shift+Enter</p>
+
+        <p
+          style={{
+            fontSize: "0.72rem",
+            color: "#9ca3af",
+            textAlign: "center",
+            marginTop: 8,
+          }}
+        >
+          Press Enter to send · Shift+Enter for a new line
+        </p>
       </div>
 
       {/* --- ANIMATIONS --- */}
       <style>{`
-        @keyframes spin{to{transform:rotate(360deg)}}
-        @keyframes slideDown{
-          from{opacity:0; transform:translateY(-10px)}
-          to{opacity:1; transform:translateY(0)}
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
       `}</style>
     </div>

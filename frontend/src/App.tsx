@@ -462,26 +462,72 @@ function confirmLogout() {
     await loadChats();
   }
   }
-  async function handleSendMessage(chat_id: string, content: string) {
-    setStreaming(true);
-    setChatMap((prev) => {
-      const cur = prev[chat_id];
-      return { ...prev, [chat_id]: { ...cur, messages: [...(cur?.messages ?? []), { role: "user", content }, { role: "assistant", content: "" }] } };
-    });
-    try {
-      const { streamRequest } = await import("./services/api");
-      for await (const delta of streamRequest(`/chats/${chat_id}/messages`, { content, stream: true })) {
-        setChatMap((prev) => {
-          const cur = prev[chat_id];
-          const msgs = [...(cur?.messages ?? [])];
-          const last = msgs[msgs.length - 1];
-          if (last?.role === "assistant") msgs[msgs.length - 1] = { ...last, content: (last.content ?? "") + delta };
-          return { ...prev, [chat_id]: { ...cur, messages: msgs } };
-        });
-      }
-    } catch (e) { console.error(e); }
-    finally { setStreaming(false); await loadChats(); }
-  }
+  async function handleSendMessage(
+  chat_id: string,
+  content: string,
+  image?: File | null
+) {
+  console.log("App received image:", image);
+
+  setStreaming(true);
+
+  const userDisplayContent = content;
+  const imagePreviewUrl = image ? URL.createObjectURL(image) : null;
+
+  setChatMap((prev) => {
+    const cur = prev[chat_id];
+
+    return {
+      ...prev,
+      [chat_id]: {
+        ...cur,
+        messages: [
+          ...(cur?.messages ?? []),
+          {
+            role: "user",
+            content: userDisplayContent,
+            ...(imagePreviewUrl ? { imagePreviewUrl } : {}),
+          } as any,
+          { role: "assistant", content: "" },
+        ],
+      },
+    };
+  });
+
+  try {
+    const stream = image
+      ? chatsApi.sendImageQuestionStream(chat_id, content, image)
+      : chatsApi.sendStream(chat_id, content);
+
+    for await (const delta of stream) {
+      setChatMap((prev) => {
+        const cur = prev[chat_id];
+        const msgs = [...(cur?.messages ?? [])];
+        const last = msgs[msgs.length - 1];
+
+        if (last?.role === "assistant") {
+          msgs[msgs.length - 1] = {
+            ...last,
+            content: (last.content ?? "") + delta,
+          };
+        }
+
+        return {
+          ...prev,
+          [chat_id]: {
+            ...cur,
+            messages: msgs,
+          },
+        };
+      });
+    }
+  } catch (e) {
+    console.error(e);
+  } finally {
+  setStreaming(false);
+  await loadChats();
+}
+}
 
   async function handleRegenerate(chat_id: string) {
     setStreaming(true);
@@ -654,7 +700,7 @@ function confirmLogout() {
               chat={activeChat}
               streaming={streaming}
               animateInitialMessage={animatedInitialChatId === activeChatId}
-              onSend={(c) => handleSendMessage(activeChatId, c)}
+              onSend={(content, image) => handleSendMessage(activeChatId, content, image)}
               onRegenerate={() => handleRegenerate(activeChatId)}
               onBack={() => setActiveChatId(null)}
             />

@@ -11,3 +11,7 @@ python-multipart
 sentence-transformers
 groq
 python-dotenv
+easyocr
+opencv-python-headless
+numpy
+python-multipart

@@ -1,9 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
 from fastapi.responses import StreamingResponse
 from services.lesson_manager import get_lesson_by_id, get_student_visible_explanation
+from services.ocr_service import ocr_service
 from pydantic import BaseModel
 from typing import Optional
 import json
+from pathlib import Path
+import uuid
 
 from sqlalchemy.orm import Session, joinedload
 
@@ -15,6 +18,15 @@ from services import ai_engine
 
 router = APIRouter(prefix="/chats", tags=["chats"])
 rag = RAGManager()
+
+CHAT_IMAGE_UPLOAD_DIR = Path("uploads/chat_images")
+CHAT_IMAGE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+IMAGE_EXTENSIONS_BY_CONTENT_TYPE = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
 
 def _get_lesson_ai_params(db: Session, lesson_id: Optional[str]) -> dict:
     if not lesson_id:
@@ -44,6 +56,13 @@ def _serialize_chat(chat: Chat) -> dict:
                 "role": m.sender,
                 "content": m.content,
                 "created_at": m.created_at.isoformat() if m.created_at else None,
+                "image_url": (
+                    f"http://127.0.0.1:8011/{m.image_path}"
+                    if getattr(m, "image_path", None)
+                    else None
+                ),
+                "image_original_name": getattr(m, "image_original_name", None),
+                "extracted_image_text": getattr(m, "extracted_image_text", None),
             }
             for m in chat.messages
         ],
@@ -169,6 +188,13 @@ class SendMessageRequest(BaseModel):
     content: str
     stream: bool = True
 
+ALLOWED_IMAGE_CONTENT_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+}
+
+MAX_IMAGE_SIZE_MB = 5
 
 @router.post("/{chat_id}/messages")
 def send_message(
@@ -287,6 +313,212 @@ def send_message(
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
+@router.post("/{chat_id}/image-question")
+async def send_image_question(
+    chat_id: int,
+    question: str = Form(...),
+    stream: bool = Form(True),
+    image: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    db_user = _get_db_user(db, current_user["username"])
+
+    chat = (
+        db.query(Chat)
+        .options(joinedload(Chat.messages))
+        .filter(Chat.id == chat_id, Chat.user_id == db_user.id)
+        .first()
+    )
+
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+
+    if image.content_type not in ALLOWED_IMAGE_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail="Only JPEG, PNG, and WEBP image files are allowed."
+        )
+
+    file_bytes = await image.read()
+
+    max_size_bytes = MAX_IMAGE_SIZE_MB * 1024 * 1024
+    if len(file_bytes) > max_size_bytes:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Image size must be smaller than {MAX_IMAGE_SIZE_MB} MB."
+        )
+
+    clean_question = question.strip()
+    if not clean_question:
+        raise HTTPException(
+            status_code=400,
+            detail="Question cannot be empty."
+        )
+
+    extracted_text = ocr_service.extract_text(
+        file_bytes=file_bytes,
+        filename=image.filename or "uploaded_image.png"
+    ).strip()
+
+    extension = IMAGE_EXTENSIONS_BY_CONTENT_TYPE.get(image.content_type, ".png")
+    stored_filename = f"{uuid.uuid4().hex}{extension}"
+    stored_path = CHAT_IMAGE_UPLOAD_DIR / stored_filename
+
+    with open(stored_path, "wb") as f:
+        f.write(file_bytes)
+
+    image_path = f"uploads/chat_images/{stored_filename}"
+
+    user_message = Message(
+        chat_id=chat.id,
+        sender="user",
+        content=clean_question,
+        image_path=image_path,
+        image_original_name=image.filename,
+        extracted_image_text=extracted_text,
+    )
+
+    db.add(user_message)
+    db.commit()
+
+    if chat.title == "New Chat":
+        chat.title = clean_question[:40]
+        db.commit()
+
+    db.refresh(chat)
+
+    chat = (
+        db.query(Chat)
+        .options(joinedload(Chat.messages))
+        .filter(Chat.id == chat_id, Chat.user_id == db_user.id)
+        .first()
+    )
+
+    lesson_params = _get_lesson_ai_params(db, chat.lesson_id)
+
+    image_context = f"""
+    The student uploaded an image/screenshot.
+
+    OCR text extracted from the uploaded image:
+    {extracted_text}
+
+    Important rules:
+    - The student's question is about the uploaded image.
+    - Use the OCR text above as the primary source.
+    - Do NOT answer from previous chat messages, lesson materials, or course materials unless the student explicitly asks to connect the image with the lesson.
+    - If the OCR text is incomplete or unclear, say that the screenshot text is partly unclear and explain only what can be read.
+    """.strip()
+
+    question_lower = clean_question.lower()
+
+    wants_course_connection = any(
+        phrase in question_lower
+        for phrase in [
+            "according to the lesson",
+            "according to course",
+            "course material",
+            "lesson material",
+            "relate to the lesson",
+            "connect to the lesson",
+            "compare with the lesson",
+        ]
+    )
+
+    if wants_course_connection:
+        lesson_context = _get_chat_context(db, chat, clean_question)
+
+        if lesson_context and lesson_context.strip():
+            context = f"""
+    Uploaded image context:
+    {image_context}
+
+    Relevant course / lesson context:
+    {lesson_context}
+
+    Use the uploaded image as the main source. Use the course context only to support or connect the explanation.
+    """.strip()
+        else:
+            context = image_context
+    else:
+        context = image_context
+
+    messages_for_ai = [
+        {
+            "role": "user",
+            "content": f"""
+    The student uploaded an image/screenshot and asked:
+
+    {clean_question}
+
+    OCR text extracted from the uploaded image:
+
+    {extracted_text}
+
+    Answer based on the uploaded image content.
+    """.strip(),
+        }
+    ]
+
+    if not stream:
+        reply = ai_engine.generate_ai_response(
+            messages=messages_for_ai,
+            context=context,
+            teaching_style=chat.tone,
+            mode=chat.mode,
+            custom_prompt=lesson_params["custom_prompt"],
+            feedback_history=lesson_params["feedback_history"],
+        )
+
+        assistant_message = Message(
+            chat_id=chat.id,
+            sender="assistant",
+            content=reply,
+        )
+
+        db.add(assistant_message)
+        db.commit()
+
+        return {
+            "role": "assistant",
+            "content": reply,
+            "extracted_text": extracted_text,
+        }
+
+    def event_stream():
+        full_reply = ""
+        last_text = ""
+
+        for cumulative in ai_engine.stream_ai_response(
+            messages=messages_for_ai,
+            context=context,
+            teaching_style=chat.tone,
+            mode=chat.mode,
+            custom_prompt=lesson_params["custom_prompt"],
+            feedback_history=lesson_params["feedback_history"],
+        ):
+            delta = cumulative[len(last_text):]
+            last_text = cumulative
+            full_reply += delta
+
+            if delta:
+                yield f"data: {json.dumps({'delta': delta})}\n\n"
+
+        db2 = next(get_db())
+        try:
+            assistant_message = Message(
+                chat_id=chat.id,
+                sender="assistant",
+                content=full_reply,
+            )
+            db2.add(assistant_message)
+            db2.commit()
+        finally:
+            db2.close()
+
+        yield f"data: {json.dumps({'done': True, 'extracted_text': extracted_text})}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 @router.post("/{chat_id}/regenerate")
 def regenerate(

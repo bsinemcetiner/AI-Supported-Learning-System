@@ -41,6 +41,14 @@ export type TeachingTone =
 export interface Message {
   role: Role;
   content: string;
+  created_at?: string | null;
+
+  image_url?: string | null;
+  image_original_name?: string | null;
+  extracted_image_text?: string | null;
+
+  // Frontend-only temporary preview before/while backend saves the image
+  imagePreviewUrl?: string;
 }
 
 export interface Chat {

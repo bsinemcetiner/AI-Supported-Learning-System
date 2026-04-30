@@ -13,3 +13,7 @@ class Message(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     chat = relationship("Chat", back_populates="messages")
+
+    image_path = Column(String(500), nullable=True)
+    image_original_name = Column(String(255), nullable=True)
+    extracted_image_text = Column(Text, nullable=True)
