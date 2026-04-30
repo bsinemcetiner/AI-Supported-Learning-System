@@ -871,9 +871,16 @@ async function confirmDeleteChat() {
     </div>
 
     {settingsOpen && (
-      <SettingsModal
-        onClose={() => setSettingsOpen(false)}
-        onProfileUpdated={(fn) => setUser((p) => (p ? { ...p, full_name: fn } : p))}
+  <SettingsModal
+    onClose={() => setSettingsOpen(false)}
+    onProfileUpdated={(fn) => setUser((p) => (p ? { ...p, full_name: fn } : p))}
+  />
+)}
+
+    {logoutConfirmOpen && (
+      <LogoutConfirmModal
+        onCancel={() => setLogoutConfirmOpen(false)}
+        onConfirm={confirmLogout}
       />
     )}
 
@@ -884,6 +891,6 @@ async function confirmDeleteChat() {
         onConfirm={confirmDeleteChat}
       />
     )}
-      </>
-  );
+    </>
+    );
 }
