@@ -356,6 +356,7 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
   const [animatedChatId, setAnimatedChatId] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
 
 
@@ -525,7 +526,7 @@ function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
                 {msg.role === "user" && imagePreviewUrl && (
                   <button
                     type="button"
-                    onClick={() => window.open(imagePreviewUrl, "_blank", "noopener,noreferrer")}
+                    onClick={() => setPreviewImageUrl(imagePreviewUrl)}
                     title="Open image"
                     style={{
                       display: "block",
@@ -780,6 +781,61 @@ function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
           Press Enter to send · Shift+Enter for a new line
         </p>
       </div>
+
+      {previewImageUrl && (
+      <div
+        onClick={() => setPreviewImageUrl(null)}
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(15, 23, 42, 0.78)",
+          backdropFilter: "blur(6px)",
+          zIndex: 9999,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "2rem",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setPreviewImageUrl(null)}
+          style={{
+            position: "absolute",
+            top: 20,
+            right: 24,
+            width: 42,
+            height: 42,
+            borderRadius: "50%",
+            border: "1px solid rgba(255,255,255,0.35)",
+            background: "rgba(255,255,255,0.12)",
+            color: "#fff",
+            fontSize: "1.4rem",
+            fontWeight: 700,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          ×
+        </button>
+
+        <img
+          src={previewImageUrl}
+          alt="Uploaded screenshot preview"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            maxWidth: "92vw",
+            maxHeight: "86vh",
+            objectFit: "contain",
+            borderRadius: 14,
+            background: "#fff",
+            boxShadow: "0 24px 80px rgba(0,0,0,0.45)",
+          }}
+        />
+      </div>
+    )}
 
       {/* --- ANIMATIONS --- */}
       <style>{`
