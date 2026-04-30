@@ -321,6 +321,26 @@ const materialSteps: FlowStep[] = [
     return file.name.replace(/\.pdf$/i, "") || `Week ${i + 1}`;
   }
 
+  function removeSelectedLessonFile(indexToRemove: number) {
+  if (!files) return;
+
+  const dt = new DataTransfer();
+
+  Array.from(files).forEach((file, index) => {
+    if (index !== indexToRemove) {
+      dt.items.add(file);
+    }
+  });
+
+  setFiles(dt.files.length > 0 ? dt.files : null);
+
+  const input = document.getElementById("lesson-upload") as HTMLInputElement | null;
+  if (input) {
+    input.files = dt.files;
+    if (dt.files.length === 0) input.value = "";
+  }
+  }
+
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
     if (!files || !uploadCourseId) return;
@@ -334,18 +354,63 @@ const materialSteps: FlowStep[] = [
     setFiles(null); setWeekTitle(""); await loadCourses(); setLoading(false);
   }
 
-  async function handleUploadMaterial(e: React.FormEvent) {
-    e.preventDefault();
-    if (!materialFiles || !materialCourseId) return;
-    setLoading(true);
-    let added = 0;
-    for (const f of Array.from(materialFiles)) {
-      try { await coursesApi.uploadMaterial(materialCourseId, f); added++; }
-      catch (e: any) { showFeedback("error", `${f.name}: ${e.message}`); }
+function removeSelectedMaterialFile(indexToRemove: number) {
+  if (!materialFiles) return;
+
+  const dt = new DataTransfer();
+
+  Array.from(materialFiles).forEach((file, index) => {
+    if (index !== indexToRemove) {
+      dt.items.add(file);
     }
-    showFeedback("success", `${added} material(s) uploaded.`);
-    setMaterialFiles(null); await loadCourses(); setLoading(false);
+  });
+
+  setMaterialFiles(dt.files.length > 0 ? dt.files : null);
+
+  const input = document.getElementById("material-upload") as HTMLInputElement | null;
+  if (input) {
+    input.files = dt.files;
+    if (dt.files.length === 0) input.value = "";
   }
+}
+
+  async function handleUploadMaterial(e: React.FormEvent) {
+  e.preventDefault();
+  if (!materialFiles || !materialCourseId) return;
+
+  setLoading(true);
+
+  let added = 0;
+  const failed: string[] = [];
+
+  try {
+    for (const f of Array.from(materialFiles)) {
+      try {
+        await coursesApi.uploadMaterial(materialCourseId, f);
+        added++;
+      } catch (e: any) {
+        failed.push(`${f.name}: ${e.message}`);
+      }
+    }
+
+    if (added > 0) {
+      showFeedback("success", `${added} material(s) uploaded.`);
+    }
+
+    if (failed.length > 0) {
+      showFeedback("error", failed.join(" | "));
+    }
+
+    if (added === 0 && failed.length === 0) {
+      showFeedback("info", "No material was uploaded.");
+    }
+
+    setMaterialFiles(null);
+    await loadCourses();
+  } finally {
+    setLoading(false);
+  }
+}
 
   async function handleDeleteMaterial(course_id: string, file_hash: string) {
     try { await coursesApi.deleteMaterial(course_id, file_hash); showFeedback("success", "Deleted."); await loadCourses(); }
@@ -1009,14 +1074,57 @@ function TeacherTopHeader() {
                       </div>
                     </div>
                     {files && files.length > 0 && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                        {Array.from(files).map((f, i) => (
-                          <div key={i} style={{ background: "#fff7ed", borderRadius: 9, padding: "0.45rem 0.9rem", fontSize: "0.84rem", border: "1px solid #fed7aa", display: "flex", alignItems: "center", gap: 7 }}>
-                            <FileText size={13} color="#f97316" /> {f.name}
+                          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                            {Array.from(files).map((f, i) => (
+                              <div
+                                key={`${f.name}-${i}`}
+                                style={{
+                                  background: "#fff7ed",
+                                  borderRadius: 9,
+                                  padding: "0.45rem 0.9rem",
+                                  fontSize: "0.84rem",
+                                  border: "1px solid #fed7aa",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  gap: 10,
+                                  color: darkMode ? "#fdba74" : "#374151",
+                                }}
+                              >
+                                <span style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+                                  <FileText size={13} color="#f97316" style={{ flexShrink: 0 }} />
+                                  <span
+                                    style={{
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    {f.name}
+                                  </span>
+                                </span>
+
+                                <button
+                                  type="button"
+                                  onClick={() => removeSelectedLessonFile(i)}
+                                  disabled={loading}
+                                  style={{
+                                    border: "none",
+                                    background: "transparent",
+                                    color: "#ef4444",
+                                    cursor: loading ? "not-allowed" : "pointer",
+                                    fontWeight: 800,
+                                    fontSize: "0.95rem",
+                                    flexShrink: 0,
+                                  }}
+                                  title="Remove file"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    )}
+                        )}
                     <div style={{ background: darkMode ? "rgba(251,146,60,0.08)" : "#fff7ed", border: "1px solid #fed7aa", borderRadius: 12, padding: "0.75rem 1rem", fontSize: "0.82rem", color: "#ea580c" }}>
                       ✨ After upload, open the course and review the generated sections one by one.
                     </div>
@@ -1066,6 +1174,58 @@ function TeacherTopHeader() {
                         </label>
                       </div>
                     </div>
+                    {materialFiles && materialFiles.length > 0 && (
+                              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                                {Array.from(materialFiles).map((f, i) => (
+                                  <div
+                                    key={`${f.name}-${i}`}
+                                    style={{
+                                      background: "#fff7ed",
+                                      borderRadius: 9,
+                                      padding: "0.45rem 0.9rem",
+                                      fontSize: "0.84rem",
+                                      border: "1px solid #fed7aa",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "space-between",
+                                      gap: 10,
+                                      color: darkMode ? "#fdba74" : "#374151",
+                                    }}
+                                  >
+                                    <span style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+                                      <FileText size={13} color="#f97316" style={{ flexShrink: 0 }} />
+                                      <span
+                                        style={{
+                                          overflow: "hidden",
+                                          textOverflow: "ellipsis",
+                                          whiteSpace: "nowrap",
+                                        }}
+                                      >
+                                        {f.name}
+                                      </span>
+                                    </span>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => removeSelectedMaterialFile(i)}
+                                      disabled={loading}
+                                      style={{
+                                        border: "none",
+                                        background: "transparent",
+                                        color: "#ef4444",
+                                        cursor: loading ? "not-allowed" : "pointer",
+                                        fontWeight: 800,
+                                        fontSize: "0.95rem",
+                                        flexShrink: 0,
+                                      }}
+                                      title="Remove file"
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                     <button className="btn btn-primary" type="submit" disabled={loading || !materialFiles || materialFiles.length === 0} style={{ alignSelf: "flex-start" }}>
                       {loading ? "Uploading…" : "⬆️ Upload Material(s)"}
                     </button>

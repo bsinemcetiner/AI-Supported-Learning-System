@@ -495,15 +495,17 @@ export const settings = {
 
 export const notifications = {
   getAll: () =>
-    request<NotificationItem[]>("/notifications/"),
+    request<{ notifications: NotificationItem[]; unread_count: number }>(
+      "/notifications/"
+    ),
 
-    markAllRead: () =>
-      request<{ ok: boolean }>("/notifications/read-all", {
-        method: "PATCH",
-     }),
+  markAllRead: () =>
+    request<{ ok: boolean }>("/notifications/read-all", {
+      method: "PATCH",
+    }),
 
   markOneRead: (notification_id: string) =>
-    request<{ message: string }>(`/notifications/${notification_id}/read`, {
+    request<{ ok: boolean }>(`/notifications/${notification_id}/read`, {
       method: "PATCH",
     }),
 };

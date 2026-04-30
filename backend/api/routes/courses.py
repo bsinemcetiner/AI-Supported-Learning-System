@@ -15,22 +15,56 @@ from services.course_manager import (
 )
 from services.rag_manager import RAGManager
 from services.ocr_service import ocr_service
+from api.routes.notifications import create_notification
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 rag = RAGManager()
+
+def _serialize_material(m):
+    return {
+        "original_filename": m.original_filename,
+        "stored_path": m.stored_path,
+        "file_hash": m.file_hash,
+        "uploaded_at": m.uploaded_at.isoformat() if m.uploaded_at else None,
+    }
+
+
+def _serialize_course_with_materials(db: Session, course):
+    from models import CourseMaterial
+
+    materials = (
+        db.query(CourseMaterial)
+        .filter(CourseMaterial.course_id == course.course_id)
+        .order_by(CourseMaterial.uploaded_at.desc())
+        .all()
+    )
+
+    return {
+        "course_id": course.course_id,
+        "course_name": course.course_name,
+        "teacher_username": course.teacher_username,
+        "created_at": course.created_at.isoformat() if course.created_at else None,
+        "materials": [_serialize_material(m) for m in materials],
+    }
 
 
 class CreateCourseRequest(BaseModel):
     course_name: str
 
 
-# ── GET /courses ── tüm kurslar (öğrenci için)
 @router.get("/")
 def list_all_courses(
     _: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return get_all_courses(db)
+    from models.course import Course
+
+    courses = db.query(Course).all()
+
+    return {
+        c.course_id: _serialize_course_with_materials(db, c)
+        for c in courses
+    }
 
 
 # ── GET /courses/assigned ── öğrencinin atanmış kursları
@@ -48,7 +82,11 @@ def list_assigned_courses(
     role = current_user["role"] if isinstance(current_user, dict) else current_user.role
 
     if role == "teacher":
-        return get_teacher_courses(db, username)
+        courses = db.query(Course).filter(Course.teacher_username == username).all()
+        return {
+            c.course_id: _serialize_course_with_materials(db, c)
+            for c in courses
+        }
 
     user = db.query(User).filter(User.username == username).first()
     if not user:
@@ -83,13 +121,23 @@ def list_assigned_courses(
     return result
 
 
-# ── GET /courses/mine ── öğretmenin kendi kursları
 @router.get("/mine")
 def list_my_courses(
     current_user: dict = Depends(require_teacher),
     db: Session = Depends(get_db)
 ):
-    return get_teacher_courses(db, current_user["username"])
+    from models.course import Course
+
+    courses = (
+        db.query(Course)
+        .filter(Course.teacher_username == current_user["username"])
+        .all()
+    )
+
+    return {
+        c.course_id: _serialize_course_with_materials(db, c)
+        for c in courses
+    }
 
 
 # ── POST /courses ── yeni kurs oluştur
@@ -140,19 +188,41 @@ async def upload_material(
     if not add_ok:
         raise HTTPException(status_code=409, detail=add_msg)
 
-    rag_result = rag.add_document(
-        text=text,
-        source_name=file.filename,
-        course_id=course_id,
-        teacher_username=current_user["username"],
-    )
+    notification_created = False
 
-    return {
-        "filename": file.filename,
-        "chunks": rag_result["chunks"],
-        "skipped": rag_result["skipped"],
-    }
+    try:
+        create_notification(
+            db=db,
+            course_id=course_id,
+            title="New material uploaded",
+            message=f"A new material has been uploaded: {file.filename}",
+            created_by=current_user["username"],
+            type="material_uploaded",
+        )
+        notification_created = True
+    except Exception as e:
+        print("Material notification error:", e)
 
+    try:
+        rag_result = rag.add_document(
+            text=text,
+            source_name=file.filename,
+            course_id=course_id,
+            teacher_username=current_user["username"],
+        )
+    except Exception as e:
+        print("Material RAG indexing error:", e)
+        rag_result = {
+            "chunks": 0,
+            "skipped": True,
+        }
+
+        return {
+            "filename": file.filename,
+            "chunks": rag_result["chunks"],
+            "skipped": rag_result["skipped"],
+            "notification_created": notification_created,
+        }
 
 # ── GET /courses/{course_id}/materials/{file_hash}/view ── PDF görüntüle
 @router.get("/{course_id}/materials/{file_hash}/view")
