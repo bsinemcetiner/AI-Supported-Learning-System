@@ -103,7 +103,9 @@ class CreateChatRequest(BaseModel):
     tone: str = "Professional Tutor"
     starter_message: Optional[str] = None
 
-
+@router.get("/streak")
+def get_streak(current_user=Depends(get_current_user)):
+    return {"streak": 0}
 @router.post("/", status_code=201)
 def create_chat(
     body: CreateChatRequest,

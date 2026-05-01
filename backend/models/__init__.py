@@ -7,3 +7,4 @@ from .chat import Chat
 from .message import Message
 from .admin import Admin
 from .student_course import StudentCourseAssignment
+from .calendar_event import CalendarEvent

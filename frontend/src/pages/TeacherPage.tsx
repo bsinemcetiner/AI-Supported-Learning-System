@@ -1,3 +1,4 @@
+import { TeacherCalendar } from "../components/TeacherCalendar";
 import { useEffect, useState } from "react";
 import { LassieLogo } from "../components/LassieLogo";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,7 +12,7 @@ import type { Course, Material } from "../types";
 import type { Lesson } from "../services/api";
 import { LessonSectionReview } from "./LessonSectionReview";
 import { SectionDetailPage } from "./SectionDetailPage";
-import { TeacherCalendar } from "./TeacherCalendar";
+
 type View = "home" | "course" | "section";
 type HomeTab = "quick-start" | "courses" | "create" | "upload" | "upload_material";
 type ActiveSection = { lesson: Lesson; sectionIndex: number };
@@ -1241,4 +1242,3 @@ function TeacherTopHeader() {
   );
 }
 
-// ── Teacher Calendar Component ────────────────────────────────────────────────
