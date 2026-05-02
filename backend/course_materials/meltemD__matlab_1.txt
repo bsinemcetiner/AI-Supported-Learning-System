@@ -1,0 +1,602 @@
+Chapter 6
+Descriptive Statistics
+Applied Statistics and Probability 
+for Engineers
+Seventh Edition
+Douglas C. Montgomery    George C. Runger
+Copyright © 2019 John Wiley & Sons, Inc. All Rights Reserved 
+
+Variable
+Definition:
+• A variable is a specific characteristic (such as 
+age or weight) of an individual or object.
+• Examples:
+– Income
+– Voting rate
+– GPA
+– Gender
+– occupation
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+Ch. 1-
+2
+Classification of Variables
+Variable
+Categorical Numerical 
+Discrete Continuous
+Examples:
+◼ Marital Status
+◼ Are you registered to 
+vote?
+◼ Eye Color
+      (Defined categories or 
+groups)
+Examples:
+◼ Number of Children
+◼ Defects per hour
+      (Counted items)
+Examples:
+◼ Weight
+◼ Voltage
+    (Measured characteristics)
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+Data
+• Values of the variables are called data
+• Data is classified into two groups:
+– Qualitative data
+• Cannot be expressed by numerical values. Categories are 
+used to describe.
+– Quantitative data
+• Can be obtained by counting or measuring and expressed 
+by numerical values.
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+Ch. 1-
+4
+Numerical measures 
+• The following section is concerned with two 
+numerical ways of describing quantitative 
+variables, namely
+– measures of location and 
+– measures of dispersion. 
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+Ch. 2-
+5
+Numerical meaures 
+• Measures of location are often referred to 
+as averages. 
+• The purpose of a measure of location is to
+pinpoint the center of a distribution of data. 
+• An average is a measure of location that 
+shows the central value of the data. 
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+Ch. 2-
+6
+Copyright © 2017 Pearson Education Ltd. All rights reserved. 1 - 7
+Measures of Location: 
+The Sample Mean and Median
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall Sample size
+n
+xxx
+n
+x
+x n21
+n
+1i
+i +++==
+
+= 
+Observed 
+values
+N
+xxx
+N
+x
+μ N21
+N
+1i
+i +++==
+
+= 
+Population size
+Population 
+values
+Arithmetic Mean
+Copyright © 2017 Pearson Education Ltd. All rights reserved. 1 - 9
+Definition 1.1
+
+Sample Mean
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+Ch. 2-
+10
+
+Properties of the Arithmetic Mean
+• The most common measure of central tendency.
+• Every set of interval-scale or ratio-scale data has a mean.
+• Affected by extreme values.
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+(continued
+)
+0  1   2   3   4   5   6   7   8   9   10
+Mean = 3
+0  1   2   3   4   5   6   7   8   9   10
+Mean = 4
+35
+15
+5
+54321 ==++++
+45
+20
+5
+104321 ==++++
+Ch. 2-
+11
+Properties of the Arithmetic Mean
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+Ch. 2-
+12
+
+Median
+• In an 
+ordered list
+, the median is the “middle” 
+number (50% above, 50% below)
+ 
+ 
+• The median is the middle observation of a set of observations that 
+are arranged in increasing (or decreasing) order. 
+• Not affected by extreme values
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+0  1   2   3   4   5   6   7   8   9   10
+Median = 3
+0  1   2   3   4   5   6   7   8   9   10
+Median = 3
+Ch. 2-
+13
+Copyright © 2017 Pearson Education Ltd. All rights reserved. 1 - 14
+Definition 1.2
+
+Median
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+Ch. 2-
+15
+
+Quartiles
+• Quartiles split the ranked data into 4 segments with an 
+equal number of values per segment (note that the 
+widths of the segments may be different)
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+25% 25% 25% 25%
+◼ The first quartile, Q1, is the value for which 25% of the 
+observations are smaller and 75% are larger
+◼ Q2 is the same as the median (50% are smaller, 50% 
+are larger)
+◼ Only 25% of the observations are greater than the 
+third quartile
+Q1 Q2 Q3
+Ch. 2-
+16
+Quartile Formulas
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+Find a quartile by determining the value in the 
+appropriate position in the ranked data, where
+  First quartile position:  Q1 = 0.25(n+1)
+  Second quartile position:    Q2 = 0.50(n+1)
+     (the median position)
+ Third quartile position:   Q3 = 0.75(n+1)
+    where  n  is the number of observed values
+Ch. 2-
+17
+Quartiles
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+(n = 9)
+    Q1 = is in the    0.25(9+1) = 2.5 position  of the ranked data
+ so use the value half way between the 2nd and 3rd values,
+       so          Q1 = 12.5
+Sample Ranked Data:  11   12   13   16   16   17   18   21   22  
+◼ Example: Find the first quartile
+Ch. 2-
+18
+Mode
+• A measure of central tendency
+• Value that occurs most often
+• Not affected by extreme values
+• Used for either numerical or categorical data
+• There may may be no mode
+• There may be several modes
+0   1   2   3   4   5   6   7   8   9   10   11   12   13   14   
+Mode = 9
+0   1   2   3   4   5   6
+No Mode
+Shape of a Distribution
+• Describes how data are distributed
+• Measures of shape
+– Symmetric or skewed
+Mean = MedianMean < Median Median < Mean
+Right-SkewedLeft-Skewed Symmetric
+Copyright © 2017 Pearson Education Ltd. All rights reserved.
+Measures of Variability
+Variability
+• Variability indicates how spread out the scores 
+are 
+– When there are large differences among scores, the 
+data are said to contain a lot of variability
+• Consistency is the opposite of the variability.
+• We like consistency because 
+– we like what to expect and
+– consistency minimizes uncertainty
+• We like consistency in people, events and 
+data.
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+Variability
+• The greater the variability the less accurrately 
+data are summarized by the measure of central 
+tendency.
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+High variability
+Low predictability
+Low variability
+High predictability
+
+Variability and central tendency
+• Mean is a central tendency measure
+• Distributions with the same mean, may have different variability:
+• 0, 2, 6, 10, 12
+• 8, 7, 6, 5, 4
+• 6, 6, 6, 6, 6
+• Which has the most variability?
+• The measurement error in the first data set is much higher and 
+mean is the less representative.
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+Range
+• Simplest measure of variation
+• The greater the spread of the data from the center of the 
+distribution, the larger the range will be.
+• Difference between the largest and the smallest observations:
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+Range = Xlargest –  Xsmallest
+0   1   2   3   4   5   6   7   8   9   10   11   12    13   14   
+Range = 14 - 1 = 13
+Example:
+Disadvantages of the Range
+• Although the range measures the total spread of the 
+data, the range may be an unsatisfactory measure of 
+variability (spread) because outliers, either very high 
+or very low observations, influence it.
+• One way to avoid this difficulty is to arrange the data 
+in ascending or descending order, discard a few of 
+the highest and a few of the lowest numbers, and find 
+the range of those remaining.
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+Disadvantages of the Range
+• Ignores the way in which data are distributed
+• Sensitive to outliers
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+7     8     9     10    11    12
+Range = 12 - 7 = 5
+7     8     9    10     11    12
+Range = 12 - 7 = 5
+1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,3,3,3,3,4,5
+1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,3,3,3,3,4,120
+Range = 5 - 1 = 4
+Range = 120 - 1 = 119
+Interquartile Range
+• Can eliminate some outlier problems by 
+using the interquartile range.
+• The interquartile range (IQR) measures the 
+spread in the middle 50% of the data.
+• Eliminate high- and low-valued observations 
+and calculate the range of the middle 50% of 
+the data.
+• Interquartile range = 3rd quartile – 1st quartile
+           IQR = Q3 – Q1
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+Variance
+• Although 
+range and 
+interquartile 
+range measure the spread of data, 
+both measures take into account only two of the data values. 
+• We need a measure that would 
+average the total distance between 
+each of the data values and the mean.
+• But for all data sets, this sum will always equal zero because the 
+mean is the center of the data. 
+• If the data value is less than the mean, the difference between the 
+data value and the mean would be negative.
+• If each of these differences is squared, then each observation (both 
+above and below the mean) contributes to the sum of the squared 
+terms. 
+•
+ The
+ average of the sum of squared terms is called the 
+variance
+.
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+Copyright © 2017 Pearson Education Ltd. All rights reserved.
+Definition 1.3 
+
+Degrees of Freedom
+
+Advantages of Variance and 
+Standard Deviation
+• Each value in the data set is used in the 
+calculation
+• Values far from the mean are given extra 
+weight 
+  (because deviations from the mean are squared)
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+Example 
+Copyright © 2017 Pearson Education Ltd. All rights reserved.
+
+Example 1.4
+Copyright © 2017 Pearson Education Ltd. All rights reserved.
+
+Graphical summary 
+• The importance of characterizing or summarizing the 
+nature of collections of data should be obvious. 
+• Often a summary of a collection of data via a graphical 
+display can provide insight regarding the system from 
+which the data were taken. 
+– Scatterplot
+– Stem and Leaf Display
+– Histogram
+– Box Plot
+Copyright © 2017 Pearson Education Ltd. All rights reserved. 1 - 36
+Scatterplot
+• Data for which items consists of a pair of values is 
+called bivariate. 
+• The graphical summary for bivariate data is a 
+scatterplot.
+• Display of a scatterplot:
+ 
+
+Looking at Scatterplots
+• If the dots on the scatterplot are spread out in 
+“random scatter,” then the two variables are not 
+well related to each other.
+• If the dots on the scatterplot are spread around a 
+straight line, then one variable may be used to 
+help predict the value of the other variable.
+Copyright © 2017 Pearson Education Ltd. All rights reserved.
+Table Tensile strength
+
+Copyright © 2017 Pearson Education Ltd. All rights reserved.
+Figure  Scatter plot of tensile 
+strength and cotton percentages
+
+Copyright © 2017 Pearson Education Ltd. All rights reserved. 1 - 41
+Table 1.4  Car Battery Life
+Table 1.4 specifies the “life” of 40 similar car batteries recorded to 
+the nearest tenth of a year. 
+Stem-and-Leaf Plot
+• A simple way to summarize a data set.
+• Each item in the sample is divided into two parts: a stem, 
+consisting of the leftmost one or two digits, and the leaf, 
+which consists of the next digit.
+• In any given problem, we must decide on the appropriate 
+stem values. This decision is made somewhat arbitrarily, 
+although we are guided by the size of our sample. 
+• It is a compact way to represent the data.
+• It also gives us some indication of the shape of our data.
+Copyright © 2017 Pearson Education Ltd. All rights reserved. 1 - 43
+Table 1.5  Stem-and-Leaf Plot of 
+Battery Life
+• First, split each observation into two parts consisting of a stem and a 
+leaf such that the stem represents the digit preceding the decimal and 
+the leaf corresponds to the decimal part of the number. 
+• In other words, for the number 3.7, the digit 3 is designated the stem 
+and the digit 7 is the leaf. 
+• The stem-and-leaf plot of Table 1.5 contains only four stems and 
+consequently does not provide an adequate picture of the 
+distribution. 
+• To remedy this problem, we need to increase the number of 
+stems in our plot. 
+• One simple way to accomplish this is to write each stem value 
+twice and then record the leaves 0, 1, 2, 3, and 4 opposite the 
+appropriate stem value where it appears for the first time, and the 
+leaves 5, 6, 7, 8, and 9 opposite this same stem value where it 
+appears for the second time.
+Copyright © 2017 Pearson Education Ltd. All rights reserved.
+Copyright © 2017 Pearson Education Ltd. All rights reserved.
+Table 1.6  Double-Stem-and-Leaf 
+Plot of Battery Life
+
+Frequency Distribution
+• A frequency distribution is a list or a table …
+– containing class groupings (categories or ranges within which 
+the data fall) .
+– and the corresponding frequencies with which data fall within 
+each class or category
+• A frequency distribution is a way to summarize data
+• The distribution condenses the raw data into a more useful form
+and allows for a quick visual interpretation of the data
+• Each class grouping has the same width
+◼ Use at least 5 but no more than 15-20 intervals
+◼ Intervals never overlap
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+Copyright © 2017 Pearson Education Ltd. All rights reserved.
+Table 1.7  Relative Frequency 
+Distribution of Battery Life
+
+Frequency Distribution Example
+Example: A manufacturer of insulation 
+randomly selects 20 winter days and records 
+the daily high temperature
+ data:    
+     24, 35, 17, 21, 24, 37, 26, 46, 58, 30, 
+     32, 13, 12, 38, 41, 43, 44, 27, 53, 27
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+• Sort raw data in ascending order:
+12, 13, 17, 21, 24, 24, 26, 27, 27, 30, 32, 35, 37, 38, 41, 43, 44, 46, 53, 58
+• Find range: 58 - 12 = 46
+• Select number of classes: 5 (usually between 5 and 15)
+• Compute interval width: 10  (46/5 then round up)
+• Determine interval boundaries: 10 but less than 20, 20 but 
+less than 30, . . . , 60 but less than 70
+• Count observations & assign to classes
+(continued)
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+Frequency Distribution Example
+Interval                        Frequency
+10 but less than 20        3               .15                  15
+20 but less than 30       6                .30                 30
+30 but less than 40       5                .25                 25              
+40 but less than 50        4                .20                20
+50 but less than 60       2                .10                 10             
+                Total        20              1.00              100
+Relative
+Frequency Percentage
+Data in ordered array:
+12, 13, 17, 21, 24, 24, 26, 27, 27, 30, 32, 35, 37, 38, 41, 43, 44, 46, 53, 58
+(continued)
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+Frequency Distribution Example
+Histogram
+• A graph of the data in a frequency distribution is 
+called a histogram 
+• The interval endpoints are shown on the 
+horizontal axis
+• the vertical axis is either frequency, relative 
+frequency, or percentage 
+• Bars of the appropriate heights are used to represent 
+the number of observations within each class 
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+Histogram: Daily High Temperature
+0
+3
+6
+5
+4
+2
+0
+0
+1
+2
+3
+4
+5
+6
+7
+0 10 20 30 40 50 60
+Frequency
+Temperature in Degrees
+Histogram Example
+(No gaps 
+between 
+bars)
+Interval
+10 but less than 20          3
+20 but less than 30          6
+30 but less than 40          5
+40 but less than 50          4
+50 but less than 60          2
+Frequency
+0       10      20     30     40      50     60      70
+Copyright © 2013 Pearson Education, Inc. Publishing as Prentice Hall
+Copyright © 2017 Pearson Education Ltd. All rights reserved.
+Table 1.7  Relative Frequency 
+Distribution of Battery Life
+
+Copyright © 2017 Pearson Education Ltd. All rights reserved.
+Figure 1.6  Relative frequency 
+histogram
+
+Copyright © 2017 Pearson Education Ltd. All rights reserved.
+Figure 1.7  Estimating frequency 
+distribution
+
+Copyright © 2017 Pearson Education Ltd. All rights reserved.
+Figure 1.8  Skewness of data
+A distribution is said to be symmetric if it can be folded along a vertical axis so 
+that the two sides coincide. In Figure 1.8(b) we see that the distribution is 
+symmetric.
+A distribution that lacks symmetry with respect to a vertical axis is said to be 
+skewed. 
+The distribution illustrated in Figure 1.8(a) is said to be skewed to the right since it 
+has a long right tail and a much shorter left tail, while in Figure 1.8(c) it is skewed 
+to the left.
+Box-and-Whisker plot or Box 
+plot
+• A boxplot is a graphic that presents the median, 
+the first and third quartiles, and any outliers 
+present in the sample.
+• The interquartile range (IQR) is the difference 
+between the third quartile and the first quartile.  
+This is the distance needed to span the middle 
+half of the data.
+Creating a Boxplot
+➢ Compute the median and the first and third quartiles of the 
+sample.  Indicate these with horizontal lines.  Draw vertical 
+lines to complete the box.
+➢ Find the largest sample value that is no more than 1.5 IQR 
+above the third quartile, and the smallest sample value that is 
+no more than 1.5 IQR below the first quartile.  Extend 
+vertical lines (whiskers) from the quartile lines to these 
+points.
+➢ Points more than 1.5 IQR above the third quartile, or more 
+than 1.5 IQR below the first quartile are designated as 
+outliers.  Plot each outlier individually.
+Anatomy of a Boxplot
+
+Example 5 cont.
+❖ Notice there are no outliers in these data.
+❖ Looking at the four pieces of the boxplot, we 
+can tell that the sample values are 
+comparatively densely packed between the 
+median and the third quartile.  
+❖ The lower whisker is a bit longer than the upper 
+one, indicating that the data has a slightly 
+longer lower tail than an upper tail.
+❖ The distance between the first quartile and the 
+median is greater than the distance between the 
+median and the third quartile.
+❖ This boxplot suggests that the data are skewed 
+to the left.
+
+Comparative Boxplots
+• Sometimes we want to compare more than one 
+sample.
+• We can place the boxplots of the two (or more)  
+samples side-by-side.  
+• This will allow us to compare how the medians 
+differ between samples, as well as the first and 
+third quartile.
+• It also tells us about the difference in spread 
+between the two samples.
+Copyright © 2017 Pearson Education Ltd. All rights reserved.
+Table 1.8  Nicotine Data for 
+Example 1.5
+Example 1.5: Nicotine content was measured in a random sample of 40 
+cigarettes. The data are displayed in Table 1.8.
+Copyright © 2017 Pearson Education Ltd. All rights reserved.
+Figure 1.9  Box-and-whisker plot 
+for Example 1.5
+
+Copyright © 2017 Pearson Education Ltd. All rights reserved.
+Figure 1.10  Stem-and-Leaf plot 
+for the nicotine data
+
+Probability Plots
+• A probability plot is a graphical method for determining whether sample data 
+conform to a hypothesized distribution based on a subjective visual examination of the 
+data
+• To construct a probability plot:
+– Rank the data observations in the sample from smallest to largest:   x(1), x(2),…, x(n).
+– The observed value x(j) is plotted against the observed cumulative frequency (j – 0.5)/n.
+– The paired numbers are plotted on the probability paper of the proposed distribution.
+• If the plotted points deviate a straight line, then the hypothesized distribution 
+adequately describes the data.
+Example 6.7 | Battery Life
+
+Normal Probability Plot
+
+Summary
+• Numerical measures
+– Mean, median, quartile, mode
+– Range, interquartile range, variance, standard deviation
+• Graphical methods
+– Scatterplot
+– Stem and leaf diagram
+– Histogram
+– Box plot
+– Probability plot
+Copyright © 2017 Pearson Education Ltd. All rights reserved. 1 - 68

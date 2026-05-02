@@ -309,9 +309,11 @@ export const chats = {
   create: (opts: {
     course_id?: string;
     lesson_id?: string;
+    section_index?: number | null;
     title?: string;
     mode?: TeachingMode;
     tone?: TeachingTone;
+    starter_message?: string;
   }) =>
     request<{ chat_id: string }>("/chats/", {
       method: "POST",

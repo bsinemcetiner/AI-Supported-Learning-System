@@ -301,6 +301,30 @@ function LearningObjectives({ objectives }: { objectives: string[] }) {
   );
 }
 
+function CopyableCodeBlock({ children }: { children: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div style={{ position: "relative", margin: "10px 0", borderRadius: 10, overflow: "hidden", border: "1px solid #e2e8f0" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#1e293b", padding: "6px 14px" }}>
+        <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontFamily: "monospace", fontWeight: 600, letterSpacing: "0.04em" }}>code</span>
+        <button
+          onClick={() => { navigator.clipboard.writeText(children); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+          style={{ display: "flex", alignItems: "center", gap: 5, background: copied ? "#22c55e" : "#334155", border: "none", borderRadius: 6, padding: "3px 10px", cursor: "pointer", color: "#fff", fontSize: "0.72rem", fontWeight: 600, transition: "background 0.2s" }}
+        >
+          {copied ? (
+            <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Copied!</>
+          ) : (
+            <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</>
+          )}
+        </button>
+      </div>
+      <pre style={{ margin: 0, padding: "14px 16px", background: "#0f172a", overflowX: "auto" }}>
+        <code style={{ fontFamily: "'Fira Code', 'Cascadia Code', 'Consolas', monospace", fontSize: "0.85rem", color: "#e2e8f0", lineHeight: 1.7, whiteSpace: "pre" }}>{children}</code>
+      </pre>
+    </div>
+  );
+}
+
 function RichLessonView({ content }: { content: string }) {
   const sections = extractSections(content);
   if (sections) {
@@ -350,6 +374,12 @@ function RichLessonView({ content }: { content: string }) {
       ul: ({ children }) => <ul style={{ paddingLeft: "1.3rem", margin: "0.35rem 0" }}>{children}</ul>,
       li: ({ children }) => <li style={{ marginBottom: "0.2rem" }}>{children}</li>,
       strong: ({ children }) => <strong style={{ fontWeight: 700 }}>{children}</strong>,
+      pre: ({ children }) => <>{children}</>,
+      code: ({ className, children, ...props }) => {
+        const isBlock = !props.node?.position || String(children).includes("\n");
+        if (isBlock) return <CopyableCodeBlock>{String(children).replace(/\n$/, "")}</CopyableCodeBlock>;
+        return <code style={{ background: "#f3f4f6", padding: "0.12rem 0.35rem", borderRadius: 6, fontSize: "0.85rem", fontFamily: "monospace", color: "#374151" }}>{children}</code>;
+      },
     }}>{content}</ReactMarkdown>
   );
 }
@@ -577,7 +607,12 @@ function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
                       ul: ({ children }) => <ul style={{ paddingLeft: "1.3rem", margin: "0.35rem 0" }}>{children}</ul>,
                       ol: ({ children }) => <ol style={{ paddingLeft: "1.3rem", margin: "0.35rem 0" }}>{children}</ol>,
                       li: ({ children }) => <li style={{ marginBottom: "0.2rem" }}>{children}</li>,
-                      code: ({ children }) => <code style={{ background: "#f3f4f6", padding: "0.12rem 0.35rem", borderRadius: 6, fontSize: "0.85rem", fontFamily: "monospace", color: "#374151" }}>{children}</code>,
+                      code: ({ className, children, ...props }) => {
+                        const isBlock = !props.node?.position || String(children).includes("\n");
+                        if (isBlock) return <CopyableCodeBlock>{String(children).replace(/\n$/, "")}</CopyableCodeBlock>;
+                        return <code style={{ background: "#f3f4f6", padding: "0.12rem 0.35rem", borderRadius: 6, fontSize: "0.85rem", fontFamily: "monospace", color: "#374151" }}>{children}</code>;
+                      },
+                      pre: ({ children }) => <>{children}</>,
                       strong: ({ children }) => <strong style={{ fontWeight: 700, color: "#111827" }}>{children}</strong>,
                     }}>{displayContent}</ReactMarkdown>
                   )

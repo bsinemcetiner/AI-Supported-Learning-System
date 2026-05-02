@@ -1,0 +1,461 @@
+Lecture 01: File System and 
+Commands
+CE350: Linux Utilities and Shell Scripting
+Çağlar Durmaz
+Previously on UNIX
+● Course introduction, file system navigation, bash, anatomy of the command, 
+absolute and relative paths. 
+● Make sure you watch it on Panopto, if you have missed it. 
+● Exercises?
+Previously on UNIX
+● Course introduction, file system navigation, bash, anatomy of the command, 
+absolute and relative paths. 
+● Make sure you watch it on Panopto, if you have missed it. 
+● Exercises?
+● There is a program on the command line for almost every desktop application. 
+Find following command line applications: a web browser, music player, 
+instant messaging, e-mail, text editor, download manager, torrent client, 
+calendar, role playing game. 
+ls in detail
+● Giving the ls command lists the contents of the current directory. 
+● We can supply a path as an argument to list the file and directories in that 
+path. 
+● The path is usually a directory, but it can also be a file. 
+● Why would we need to list only one file? 
+● If we need to get information about a file, like its size, permissions, etc., we 
+can use the -l option of the ls command. 
+● Check out the following screenshot. 
+ls in detail
+● The first column, -rw-r--r-- shows the access permissions, which we will 
+discuss in detail later. 
+● The next one (1) shows the file’s number of hard links. 
+● The next two columns show the user and the group who owns the file. 
+● The column with a large number 1099646 is the file size in bytes. 
+● It is followed by the date of the last modification, and the name of the file. 
+● This is very much like right clicking a file, choosing properties, which brings up 
+a window with all this information. 
+ls in detail
+● It is very hard to decide how large the file is: 1099646 bytes. Is it around 
+1MB? 
+● We can use the “human readable” option, h, to reprint the output. (Yes it is 
+1.1MB)
+● There are other options as well. 
+● The following table is from Shotts Jr. (2012). 
+Viewing Files
+● Now that we can navigate the filesystem, let’s concentrate on files. 
+● There are a lot of file types, like photos, music, office documents, etc. 
+● We know their types by looking at their file extensions (JPG, MP3, DOCX)
+● In Linux, the extension is not required. You can use the file command to 
+determine a file’s type.
+● In Linux, “everything is a file”. ( Here, it would be better to quote the following: 
+“Everything is a file descriptor or a process”, ref: Linus Torvalds, 
+https://yarchive.net/comp/linux/everything_is_file.html )
+Viewing Files
+● As computer scientists, you are aware that there are text files, which are in 
+human readable text format, like txt, cpp, and there are binary files, where we 
+cannot see the contents without a program, like an image viewer, which 
+understands their content. 
+● You can see the file contents on the command line in a few different ways. I’ll 
+start with the cat command. 
+Viewing Files
+● The cat command actually concatenates and prints files. It is mostly used to 
+combine two or more files. 
+● The output of this combination is printed to the screen. 
+● If only one file is given, that file is written to the screen. We will just abuse that 
+feature. 
+● So, let’s assume that there are two text files, one called dorian.txt, which 
+contains a sample paragraph from Oscar Wilde’s The Picture of Dorian Gray, 
+and one called getopt_long.c, which is a C file that we will use in the following 
+weeks. 
+Viewing Files
+● We can easily see the contents of dorian.txt with the cat command, because 
+the file is short, only eight lines. 
+● The screen has 25 lines to 80 columns by default, so the file fits the screen.
+● Unfortunately, the same cannot be said about the getopt_long.c file, which 
+has fiftyseven lines. 
+● The output fills the screen and only the last 25 lines can be seen. 
+● You can use Shift + Page Up and Shift + Page Down to scroll the output, but 
+it has a limit. If the file is longer than the limit, we would be missing 
+information. 
+Viewing Files
+● Let me introduce: more. 
+● If file is longer than the screen size, more displays until the screen is filled, 
+and waits for the user to press ENTER to continue line by line. 
+● You can load a file by simply passing the path as an argument:
+more getopt_long.c
+● You can quit with the q key. 
+Viewing Files: less is more
+● less can show the contents of a file one screen at a time, allows you to go 
+back and forth, search the file, etc. 
+● You can use the up and down arrow keys, or the page up and down keys. 
+● You can quit with the q key. 
+● You can load a file by passing the path as an argument:
+less getopt_long.c
+● We can search within the text as follows:
+Viewing Files: less is more
+● Once you load a file, you can use the forward slash key, /, to enter a string to 
+search (Shift+7 on Turkish layout). 
+● This starts a text input line on the bottom left corner. 
+● For example, enter const as a search string if you have getopt_long.c open 
+and hit ENTER. 
+● The matched words will be highlighted. 
+● If you want to move to the next match, just hit / followed by an ENTER without 
+entering a search string. 
+● Notice that man command uses this interface to display a command’s manual 
+page. You can use these features there, as well.
+A new command: wc
+● How did I know that getopt_long.c contained 57 lines? 
+● There is a command called wc that counts words, lines, characters or bytes. 
+● By default it shows lines, words and bytes contained in the input file. 
+● The -l option displays only the number of lines. 
+Command Line vs. Graphical User Interface
+● You might still think that using a mouse is easier. 
+…, how could we copy all the HTML files from one directory to another, but only 
+copy files that do not exist in the destination directory or are newer than the versions 
+in the destination directory? 
+from “The Linux Command Line”, by William E. Shotts, Jr. 2012
+Wildcards
+● Before we begin, we need to learn about the wildcards. 
+● They are a feature of the shell that help us select a group of files by using 
+special characters. 
+● In the following weeks, we will learn about regular expressions (RE). 
+● Wildcards and RE are different, but use similar special characters. 
+● It is easy to get them mixed up. So it is important that you understand the 
+wildcards well.
+● Here is the basic wildcards from Shotts’ book. 
+
+Wildcards
+● Let’s try a few examples. We will be using ls. 
+● The star, *, matches any number of characters. 
+● So if you want to list all the files that end with jpg:
+ls *jpg
+● You can use it between strings, like files that start with slides and end with 
+pdf can be listed as:
+ls slides*pdf
+Wildcards
+● The question mark, ?, matches a single character. 
+● You can use it to say that you expect any character in that position of the 
+string. For example 
+ls ka?a
+selects files such as kaza, kara, kaya, kaba, … 
+● You can use as many as required:
+ls *.p??
+selects files such as slide00.pdf, sshot.png
+Wildcards
+● The square brackets [], matches one character from a set of characters. 
+● For example: 
+ls s[aei]z 
+selects files such as saz, sez, siz, but not soz, suz. 
+● Here is a very common way to use it:
+ls [Pp]roblem[Ss]olving.pdf
+● You can also use exclamation mark, !, to negate the selection. 
+ls s[!aei]z 
+this time file names saz, sez, siz will not be selected, but files such as soz, 
+suz will be selected.
+More Wildcards
+● There are other wildcards that might improve your selection possibilities. 
+● Similar to matching a single character from a set of characters, we can also 
+match set of characters. 
+● The curly braces define a list of strings that you can use to match.
+ls f{oo,aa,umble}* 
+matches file names that start with f, continued with one of the strings in the 
+curly braces, and end with any character (*). 
+More Wildcards
+● It is also possible to match a range of characters.
+● What if you want to select file names that start with an alphabetic character, 
+followed by a number and ends with png? 
+ls [abcdefghijklmnopqrstuvwxyz][0123456789]png
+● The ranges save us the burden of long wildcards: 
+ls [a-z][0-9]png
+● What if we want to use both uppercase and lowercase letters?
+ls [a-zA-Z][0-9]png
+More Wildcards
+● Class definitions, as given in (Shotts, Jr., 2012).
+● If the full range is required, then you can use the class definitions. If another 
+range is required, such as i to m, or 3 to 7, then the range syntax can be 
+used. 
+● Here’s the same command using class definitions:
+ls [[:lower:]][[:digit:]]png
+
+Basic Commands
+● We now know how to navigate the filesystem, list directories, select or view 
+files. Let’s take a look at other commands that we need to learn. 
+● mkdir: Create a new directory by giving the path of the new directory:
+mkdir ce350
+mkdir /home/koguz/Desktop/hw01
+● You can also give more than one path. In that case, mkdir will create all of 
+them
+mkdir dir1 dir2 dir3 dir4
+Basic Commands
+● cp: copies files and directories. 
+● You can copy one or more files to a new path. 
+cp file1 file2
+● The command above copies file1 to file2. Notice that both of these are 
+actually relative paths. There will be a copy of file1 in the same directory, and 
+its name will be file2. 
+Basic Commands
+● The following command copies file1 to the /usr/bin directory. 
+cp /home/koguz/file1 /usr/bin
+● Since a new name is not supplied, the file will be copied using its original 
+name. The absolute path of the new file will be /usr/bin/file1. 
+● It is also possible to copy a list of files to a new directory. Since there will be 
+more than one file, the destination path must be a directory. 
+cp file1 file2 file3 /etc/files 
+Basic Commands
+● When files are copied, the copies take on the default attributes of the user 
+performing the copy. Their permissions will be updated. 
+● Here are a few options:
+○ The -a (--archive) option copies the files and directories and all of their attributes, including 
+ownerships and permissions. 
+○ The -i (--interactive) option enables interactive mode. In this case, cp will ask for confirmation 
+to overwrite an existing file. If you do not supply this option, cp will silently overwrite the files. 
+○ The -v (--verbose) option enables the verbose mode, where cp prints informative messages 
+as the copy is performed. 
+○ The -u (--update) option is the update mode, cp only copies if the files do not exist in the 
+destination path, or are newer than the existing corresponding files. 
+Basic Commands
+● How to copy a directory? 
+● The -r (--recursive) option is the recursive mode, copies files and directories. 
+● To copy the /home/koguz/Desktop directory to /home/koguz/backup, 
+give the following command:
+cp -r /home/koguz/Desktop /home/koguz/backup
+Basic Commands
+● Remember that the single dot (.) was the pointer for the current directory, 
+double dots (..) was the pointer for the parent directory. 
+● You can use them for relative paths in the cp command. 
+● The following command copies all files from /etc to current directory. Notice 
+the dot at the end of the command:
+cp /etc/* .
+Basic Commands
+● mv: moves files and directories from one path (=the source), to another path 
+(=the destination). 
+● It is like the cp command, it even shares its following options: -i, -u, -v
+● For example, the following command moves the file to a new location:
+mv file1 /usr/local/share
+● If the source and target directories are the same, then the file is renamed. 
+● The following command renames file1 to file2:
+mv file1 file2
+Basic Commands
+● A list of files can be moved into a directory as well.
+● The following command moves the files to directory dir1. This directory must 
+exist for this command to work.
+mv file1 file2 file3 dir1/
+Basic Commands
+● rm: Remove directories and files. 
+● To remove directories, the recursive option -r (--recursive) must be used.
+rm file1 file2
+rm -r dir1
+● Of course, the interactive and verbose options are also available.
+● There is also a -f (--force) option, where the non-existent files are silently 
+ignored and the interactive option is overwritten; which means rm never 
+prompts for confirmation. 
+Basic Commands
+● There is no “Recycle Bin” in Linux. 
+● If a file is removed, it is gone forever. 
+● You should be very careful with the remove command, especially when using 
+wildcards. 
+● Consider the situation when you want to delete all the HTML files, but instead 
+of using wildcard as *.html, a space is used between the star and the dot:
+rm * .html
+Basic Commands
+● To make sure that you are deleting the correct files when using a wildcard, 
+check the wildcard with the ls command first. 
+● If the correct files are listed, then you can use the rm command. 
+Hard and Soft Links
+● Files are made up of two parts: 
+○ the data part, containing the file’s content
+○ the name part, which holds the file’s name.
+● Since every file has a name, each file has a hard link by default. 
+● Remember that we use the long listing format with the ls command, the 
+second column shows the number of hard links of the file. 
+● When we create another hard link for the file, we create additional name parts 
+that all refer to the same data part. 
+Hard and Soft Links
+● The system assigns a chain of disk blocks to an inode, which is then 
+associated with the name part. 
+● Each hard link therefore refers to a specific inode containing the file’s 
+contents.
+● Let’s create a hard link for a file. 
+● To do so, we use the ln command.
+● Let’s create another link for dorian.txt and call it gray.txt
+ln dorian.txt gray.txt
+Hard and Soft Links
+● Now that we have created a new hard link, the long listing shows both of 
+these files. The hard link column is correctly listed as 2 for dorian.txt and 
+gray.txt.
+● However, how do we know that they are the same file? 
+● There can be two files that have the same time stamp, the same size, etc.
+● We can even have the same data contained in two different files. 
+● How can we check that they both point to the same file? 
+Hard and Soft Links
+● The -i (--inode) option of the ls command prints the index number of 
+each file.
+● What happens if you delete one of these files? 
+● When is the file really deleted? 
+Hard and Soft Links
+● The data part of the file is deleted when the last hard link to the file is deleted.
+● So, to completely remove a file, all of its hard links must be deleted. 
+● There are two important limitations to hard links:
+○ A hard link cannot reference a file outside its own file system. This means a link may not 
+reference a file that is not on the same partition as the link itself. 
+○ A hard link may not reference a directory. 
+Hard and Soft Links
+● Soft links (symbolic links) were created to overcome the limitations of the hard 
+links.
+● They work with a special type of file that contains a text pointer to the 
+referenced file or directory. 
+● The ln command, with the -s (--symbolic) option is used to create symbolic 
+links.
+ln -s dorian.txt lordhenry.txt
+Hard and Soft Links
+● The symbolic name is actually a path. 
+● The symbolic link will look for the file using this path. Therefore, if the target 
+file is moved (or deleted), the link will be broken. 
+● The size of the symbolic link is very small, since it is only a link, not the 
+original file. 
+Hard and Soft Links
+● Why do we need symbolic links? 
+● Suppose we have a library: libXfont.so.1.4.1 
+● When a program is compiled, it is usually linked to this shared object (or 
+dynamic library). 
+● However, updates are common, and the next minor version might be 
+libXfont.so.1.5.0
+● When this new minor update arrives, the executables won’t be able to locate 
+the shared object and will terminate with an error message. 
+Hard and Soft Links
+● As can be seen in the screenshot, most of the libraries are given a symbolic 
+link, with a major version number.
+● In this case, symbolic link libXfont.so.1 points to libXfont.so.1.4.1
+● When a new minor update arrives, libXfont.so.1 will point to the update. 
+● So the executables will run without noticing any change. 
+Command Types
+● An executable program: The command is an executable file, compiled 
+or interpreted (a script), that resides in a directory. The usual locations are 
+/bin, /usr/bin, etc. You can use the which command to locate the path of a 
+command.
+● A command built into shell itself: Similar to cd, there are some shell 
+built-in commands. 
+● A shell function: Functions are small bash scripts that are incorporated 
+into the shell. We will learn how to write and make them available to the shell.
+● An alias: We can derive new commands from existing ones. 
+Command Types
+● How do you know which is which? 
+● The easiest way is to use the type command. 
+Manuals
+● Manuals are the best references when you are stuck. 
+● There are manuals for the executable files, as we have seen earlier.
+● However, there are also manuals for administrative commands, programming 
+interfaces, file formats, etc. 
+● These are called sections and you refer to them as you wish. 
+● The following slide contains the list of sections from (Shotts, Jr, 2012). 
+Manuals
+● For example, there is a sleep function in C, and a sleep command as well. 
+● If we type man sleep, we get the sleep command manual page.
+● Since man supports many sections, it displays the first matched entry.
+● You can search using whatis command, which gives a short description of 
+the command. 
+● It also displays the manual page section number. 
+● To read the third section, the one about the C, we use the following 
+command:
+man 3 sleep 
+
+More commands for survival
+● We can copy, move, remove files, explore file system, etc.
+● But there are not fun if we can’t create files using other commands. 
+● The date command displays or sets time and date. 
+● The whoami command displays the username of the current user.
+● The uptime command shows how long the system has been running.
+● The uname command prints the operating system name.
+● The who command displays the list of users currently logged on to the 
+system.
+Compressing & Decompressing
+● You will need to compress and decompress using the command line. 
+● The ZIP format is not very common on Unix systems.
+● Mostly, tarballs (tar.gz) are used. 
+● A tarball is made up of an archive (tar) and a compression (gzip). 
+● It is also possible to use other compression formats, like bzip2. 
+● To create a tarball, use the tar command with options c,z,f
+○ c: create new archive
+○ z: using gzip
+○ f: file path
+● tar -czf tarball.tar.gz file1 file2
+Compressing & Decompressing
+● You can extract the archive using the -x option:
+tar -xzf tarball.tar.gz
+● If you want to list the contents of a tarball:
+tar -tvf tarball.tar.gz
+● Get familiar with tarballs, they’re almost the default on UNIX systems. 
+tar
+https://xkcd.com/1168/ 
+
+Compressing & Decompressing
+● You can use the familiar ZIP compression as well:
+zip file.zip file1 file2
+● You can uncompress with unzip:
+unzip myfile.zip
+● Notice that you need to use the recursive option with zip, if you want to 
+compress a directory with all subdirectories and files:
+zip -r file.zip theDirectory
+● See the manual pages for more information.
+Finding Files
+● You can use the find command to search a given directory, and its 
+subdirectories, for files based on a variety of attributes. 
+● The very basic form is as follows
+find /home/koguz
+● This finds “all files” in /home/koguz. Of course, we can include more options.
+● One of the options is the file type. You can use d for a directory, f for a regular 
+file, and l for a symbolic link.
+find /home/koguz -type d
+will only find the directories in the given path. 
+Finding Files
+● Another popular option is providing a name. You can use wildcards here as 
+well. 
+find /home/koguz -type f -name “*.txt”
+
+Finding Files
+● Another option is file size:
+find /home/koguz -type f -name “*.txt” -size +10k
+● You can use c for bytes, k for kilobytes, M for megabytes and G for gigabytes. 
+● You can use more options, but they are left for you, the audience, to find out. 
+Important Directories
+● Now that you know how to search, delete, move files, let’s quickly review 
+some important directories in a Linux distribution. 
+● /bin: contains binaries (programs) that must be present for the system to boot 
+and run. 
+● /boot: contains the Linux kernel, initial RAM disk image and the boot loader.
+● /dev: is a special directory that contains device nodes. Devices are files, too.
+● /etc: contains all of the system-wide configuration files. 
+● /home: contains the home directories of the users. 
+● /lib: contains the shared libraries
+● /media and /mnt: in modern systems, media, in older systems, mnt directory 
+was used to mount external drives. 
+Important Directories
+● /opt: is for installing optional software
+● /proc: is a special directory used by the kernel as a virtual file system. These 
+files contain peep holes into the kernel itself. The files are readable and will 
+give you a picture of how the kernel sees your computer. 
+● /root: is the home of the root user.
+● /sbin: contains system binaries that only the root has the right to run. 
+● /tmp: is for temporary storage used by different programs. It is emptied every 
+time the system boots. 
+● /usr: contains all programs and support files used by regular users.
+● /var: directory holds various databases, log files, user mail, etc. 
+Exercise CE350.01 (1)
+● Run every command in this presentation on your own Unix box (i.e., a 
+computer that runs a Unix-like operating system). 
+● Create a backup directory at your home. 
+● Copy all the files (not directories) that start with c in the /usr/bin directory to 
+backup directory at your home. 
+● Copy files that end with ‘a’ in the backup directory to the parent directory. 
+● Run the following command in home directory: touch k1 k2 k3 k4
+● Now, copy files k1, k2, k3, k4 to backup directory. 
+Exercise CE350.01 (2)
+● Answer the following questions:
+○ What does ls -alh do? Explain the options. 
+○ In wildcards, metacharacters mean something else, for example a star (*) matches any 
+number of characters. What happens when square brackets are used?
+○ How do you rename a file? Give an example.
+○ What is the command to ZIP a directory? 
+References
+● Quigley, E. (2005), UNIX Shells by Example
+● Shotts Jr., W. E. (2012), The Linux Command Line, A Complete Introduction.

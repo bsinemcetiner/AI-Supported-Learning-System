@@ -167,14 +167,16 @@ export default function DashboardPage({
 
 async function startLessonChat(lesson: Lesson) {
   try {
-    const starterMessage = sections
-      .map((s, i) => {
-        const text = s.draft?.trim() || s.summary?.trim() || "";
-        if (!text) return "";
-        return `## ${i + 1}. ${s.title}\n\n${text}`;
-      })
-      .filter(Boolean)
-      .join("\n\n---\n\n");
+    const validSections = sections.filter((s) => (s.draft?.trim() || s.summary?.trim()));
+    const starterMessage = JSON.stringify(
+      validSections.map((s) => ({
+        title: s.title,
+        draft: s.draft?.trim() || s.summary?.trim() || "",
+        section_index: s.section_index,
+        page_start: s.page_start,
+        page_end: s.page_end,
+      }))
+    );
 
     const { chat_id } = await chatsApi.create({
       course_id: lesson.course_id,

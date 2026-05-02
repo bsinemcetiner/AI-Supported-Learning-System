@@ -255,9 +255,17 @@ def send_message(
         chat.title = body.content[:40]
         db.commit()
 
+    # Skip the first assistant message (starter_message/lesson content) to avoid
+    # sending huge JSON context repeatedly. It is already used as course context.
+    messages_list = list(chat.messages)
+    first_assistant_idx = next(
+        (i for i, m in enumerate(messages_list) if m.sender == "assistant"),
+        None
+    )
     messages_for_ai = [
         {"role": m.sender, "content": m.content}
-        for m in chat.messages
+        for i, m in enumerate(messages_list)
+        if not (i == first_assistant_idx and len(m.content) > 500)
     ]
 
     if not body.stream:

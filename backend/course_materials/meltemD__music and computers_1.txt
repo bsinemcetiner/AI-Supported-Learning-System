@@ -1,0 +1,132 @@
+CE 476
+Music and Computers
+Week 4
+Recording & Playback Tools
+Summary
+• Microphones
+• Capsule design
+• Placement techniques
+• Synthesizers
+• MIDI controllers
+• SFX units
+• Speakers
+
+Microphones
+• Condenser with backplate & power source
+• Operates by sensing capacitance differences
+• Air pressure moves diaphragm
+• Capacitance differences create voltage
+• Sensitive: Thin diaphragm made of nylon foil →
+• Also due to electronic mechanism
+• Can pick up subtle nuances of an instrument, flat frequency 
+response, ideal for studio use
+
+Microphones
+• Dynamic mics with moving coil & magnet
+• Operates through magnetic induction
+• Air pressure moves diaphragm
+• Movement in the magnetic field creates voltage
+• Durable due to sturdy parts:
+• Coil wires made of metal or dense polymer
+• Diaphragm made of thicker nylon, to be able to stress coil wires
+• No delicate electronics
+• Higher frequencies are attenuated since the parts are heavier
+• Ideal for on-stage use or for studio environments with loud amplifiers
+
+Microphones – Capsule design
+• Pressure microphones
+• The diaphragm is exposed on the front. Every sound wave can reach the 
+front and move the diaphragm.
+• Pressure-gradient microphones
+• The diaphragm is exposed on the back and the front equally. The 
+microphone senses pressure differences between the two sides. Sounds 
+from either side are cancelled since the diaphragm receives equal 
+pressure from both front and back. 
+
+Microphones – Capsule design
+Huge improvement over pressure-gradient microphones: Delay
+The rear side of the diaphragm is equipped with ports that delay the 
+sound. Directivity is achieved:
+• Rear sounds will be attenuated since it 
+will reach either side at the same time
+• Frontal sounds will be strengthened 
+since the delay will be close to one 
+period
+Microphones
+Directivity is shown using polar patterns. 
+Some important polar patterns:
+https://www.youtube.com/watch?v=keBa2ocQInI
+Omnidirectional Bidirectional (Figure 8) Cardioid Supercardioid
+Microphone Techniques
+• Need to find the correct type & directionality based on context (e.g. 
+instrument, venue/location, event)
+• Microphone placement becomes crucial for stereo imaging. 
+AB (spaced pair), omnidirectional mics XY, cardioid mics
+
+Microphone Techniques
+ORTF
+ DIN NOS
+• Near-coincident placement variants
+• Different combinations of ambient and direct
+• Cardioid microphones
+Microphone Techniques
+MS (Mid-Side)
+• Adjustable stereo width, ideal for 
+situations where you might want to 
+change stereo imaging (e.g. film 
+production)
+• 𝑀 + 𝑆 → Left channel
+• 𝑀 − 𝑆 → Right channel
+
+Analog 
+Synthesizers
+• Input keys send control voltage
+• Voltage-controlled oscillators, 
+filters & amplifiers (VCO, VCF & 
+VCA)
+• Envelope generators for amplitude 
+& filter
+• Low-frequency oscillators (LFO) for 
+modulation purposes
+• Mixer
+• Output
+Minimoog Model D (1970)
+Digital 
+Synthesizers
+• Input keys send MIDI instructions
+• Oscillators for different kinds of waveforms
+• DSP units for filters, envelopes, LFOs and other sound effects
+• Mixer
+• Output (DAC)
+Yamaha DX7 (1983)
+MIDI Controllers
+• Interacts with digital audio units (digital 
+synths, mixers, SFX units, software)
+• Input can be:
+• The pitch, its velocity, its press/release if we use keyboard / pad input
+• Volume / filter control through knobs & sliders
+• Input is in the form of computer instructions. The processing and the output must be provided by 
+separate devices.
+Sound Effects Units
+• Delay
+• Tape delay: Magnetic loop with record/playback heads
+• Bucket-Brigade Device: Series of capacitors that hold signal for brief 
+periods of time
+• Reverb
+• Spring reverb - Springs in a small tank, vibrating due to signal - Example
+• Plate reverb - Large metal plate vibrating through signal Example
+• Amplifier
+• Electronic components to control current flow
+• … and many more!
+• Digital versions of all of these exist
+• Available as either parts of bigger systems or standalone devices
+Speakers
+• Once the signal reaches the speaker, it flows through the voice coil.
+• Due to the magnetic field, the voice coil moves back and forth.
+• The cone is attached to the 
+coil, moving along.
+• The moving cone pressures 
+the air, creating sound.
+• Note there are no “digital 
+speakers”, since air pressure 
+is always analog.

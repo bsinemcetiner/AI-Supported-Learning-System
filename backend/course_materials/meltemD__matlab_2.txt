@@ -1,0 +1,337 @@
+MATH 236
+Course Objective: This course aims at providing
+students skills on collecting, analyzing and
+interpreting statistical data.
+Instructor: Dr. Necla Koçhan
+Email: necla.kochan@ieu.edu.tr
+Text Book: Applied Statistics and Probability for
+Engineers, 7th edition, Douglas C. Montgomery
+George C. Runger
+1
+Help!
+Seek help in the following order:
+• Discussion with classmates.
+• Lecturer, by e-mail.
+• Lecturer, by appointment.
+• Other lecturers, by appointment.
+You Shall Not
+
+You Shall Not
+
+• Course Book
+5
+Applied Statistics and Probability 
+for Engineers
+Seventh Edition
+Douglas C. Montgomery    George C. Runger
+• Any Questions and comments?
+• Now it is your turn to 
+introduce yourself ….
+Hello!
+My name is …
+Chapter 1
+The Role of Statistics in Engineering
+Applied Statistics and Probability 
+for Engineers
+Seventh Edition
+Douglas C. Montgomery    George C. Runger
+Copyright © 2019 John Wiley & Sons, Inc. All Rights Reserved 7
+Chapter 1 Title Slide
+
+What Do Engineers Do?
+An engineer is someone who solves problems of interest to 
+society with the efficient application of scientific principles by:
+•  Refining existing product or process
+•  Designing new product or process
+8
+} that meets customers’ needs
+Section 1.1 The Engineering Method and Statistical Thinking
+Copyright © 2019 John Wiley & Sons, Inc. All Rights Reserved 
+The Engineering Method
+9
+Figure 1.1 The engineering method
+Section 1.1 The Engineering Method and Statistical Thinking
+Copyright © 2019 John Wiley & Sons, Inc. All Rights Reserved 
+Statistics Supports the Engineering Method
+• The field of statistics deals with the collection, presentation, 
+analysis, and use of data to:
+•  Make decisions
+•  Solve problems
+•  Design products and processes
+• It is the science of data.
+10
+Section 1.1 The Engineering Method and Statistical Thinking
+Copyright © 2019 John Wiley & Sons, Inc. All Rights Reserved 
+The Science of Statistics
+• Statistics is a meaningful, useful science whose 
+broad scope of applications to business, 
+government, engineering and the physical and the 
+social sciences is almost limitless.  
+• https://www.youtube.com/watch?v=wV0Ks7aS7YI
+Overview: Statistical Inference, Samples, 
+Populations, and the Role of Probability
+Why Statistics?
+• Deal with uncertainty in repeated scientific 
+measurements
+• Draw conclusions from data
+• Design valid experiments and draw reliable 
+conclusions
+• Be a well-informed member of society
+Dealing with Uncertainty
+Numbers and data are used to assist decision 
+making
+• Statistics is a tool to help process, summarize, analyze, 
+and interpret data 
+Copyright © 2010 Pearson Education, Inc. Publishing as Prentice Hall Ch. 1-14
+(continued)
+The Decision-Making Process
+Begin Here:
+Identify the
+ Problem
+Data
+Information
+Knowledge
+Decision
+Descriptive Statistics,
+Probability, 
+Computers
+Experience, Theory,
+Literature, Inferential
+Statistics, Computers
+Key Definitions
+■ A population (universe) is the collection of all 
+items or things under consideration
+■ A sample is a portion of the population 
+selected for analysis
+■ A parameter is a summary measure that 
+describes a characteristic of the population
+■ A statistic is a summary measure computed 
+from a sample to describe a characteristic of 
+the population
+Population vs. Sample
+Ch. 1-17
+a  b     c d 
+ef   gh i  jk l   m  n
+  o  p q   rs  t  u v  w
+      x   y      z
+Population Sample
+Values calculated using 
+population data are called 
+parameters
+Values computed from 
+sample data are called 
+statistics
+b     c  
+     g i         n
+  o      r     u
+         y      
+Examples of Populations
+• Names of all registered voters in the United States
+• Incomes of all families living in Daytona Beach
+• Annual returns of all stocks traded on the New 
+York Stock Exchange
+• Grade point averages of all the students in your 
+university
+Copyright © 2010 Pearson Education, Inc. Publishing as Prentice Hall Ch. 1-18
+More Examples
+• What is your example for a population?
+• Can you define a parameter for your population?
+• Do you know the exact value of this parameter?
+• Do you have a suggestion for a way of estimating 
+it?
+Copyright © 2017 Pearson Education Ltd. All rights reserved. 1 - 19
+Two Branches of Statistics
+■ Descriptive statistics
+■ Collecting, summarizing, and describing data
+■ Inferential statistics
+■ Drawing conclusions and/or making decisions 
+concerning a population based only on sample 
+data
+Descriptive Statistics
+• Collect data
+– e.g., Survey
+• Present data
+– e.g., Tables and graphs
+• Summarize data
+– e.g., Sample mean = 
+Copyright © 2010 Pearson Education, Inc. Publishing as Prentice Hall Ch. 1-21
+
+Inferential Statistics
+■ Estimation
+■ e.g., Estimate the population 
+mean weight using the sample 
+mean weight
+■ Hypothesis testing
+■ e.g., Test the claim that the 
+population mean weight is 140 
+pounds
+Inference is the process of drawing conclusions or 
+making decisions about a population based on 
+sample results
+
+Copyright © 2017 Pearson Education Ltd. All rights reserved. 1 - 23
+Figure 1.2  Fundamental relationship between 
+probability and inferential statistics 
+Elements in probability allow us to draw conclusions about 
+characteristics of hypothetical data taken from the population, 
+based on known features of the population.
+Reasons for Drawing a Sample
+■ Less time consuming than a census
+■ Less costly to administer than a census
+■ Less cumbersome and more practical to administer 
+than a census of the targeted population
+■ Nonprobability Sample
+■ Items included are chosen without regard to their probability of 
+occurrence
+■ Probability Sample
+■ Items in the sample are chosen on the basis of known 
+probabilities
+Types of Samples Used
+Probability Sampling
+■ Items in the sample are chosen based on 
+known probabilities
+Probability Samples
+Simple 
+Random Systematic Stratified Cluster
+Simple Random Samples
+■ Every individual or item from the frame has an 
+equal chance of being selected
+■ Selection may be with replacement or without 
+replacement
+■ Samples obtained from table of random 
+numbers or computer random number 
+generators
+
+Example 
+At a large university, there is a professor who is 
+interested in the average height of students at the 
+university.  She obtains a list of all 50,000 students 
+enrolled at the university and assigns a number to 
+each student.  
+A random number generator generates 100 
+numbers, and the students corresponding to those 
+numbers are selected to have their height 
+measured.  This is a simple random sample.  
+■ Decide on sample size: n
+■ Divide frame of N individuals into groups of k 
+individuals:  k=N/n
+■ Randomly select one individual from the 1st 
+group 
+■ Select every kth individual thereafter
+Systematic Samples
+N = 64
+n = 8
+k = 8
+First Group
+Stratified Samples
+■ Divide population into two or more subgroups (called 
+strata) according to some common characteristic
+■ A simple random sample is selected from each subgroup, 
+with sample sizes proportional to strata sizes
+■ Samples from subgroups are combined into one
+Population
+Divided
+into 4
+strata
+Sample
+
+Cluster Samples
+■ Population is divided into several “clusters,” 
+each representative of the population
+■ A simple random sample of clusters is selected
+■ All items in the selected clusters can be used, or items can be 
+chosen from a cluster using another probability sampling 
+technique
+Population 
+divided into 
+16 clusters. Randomly selected 
+clusters for sample
+What are data?
+■ “data” is a plural word
+■ Data are not information
+■ Data are a source of information.
+
+Basic Methods of Collecting Data
+Three basic methods of collecting data:
+• A retrospective study using historical data
+ Data collected in the past for other purposes.
+• An observational study
+ Data, presently collected, by a passive observer.
+• A designed experiment
+ Data collected in response to process input changes.
+33
+Section 1.2 Collecting Engineering Data
+Copyright © 2019 John Wiley & Sons, Inc. All Rights Reserved 
+• Statistical inference through the analysis of 
+observational studies or designed experiments is 
+used in many scientific areas. 
+• The data gathered may be discrete or continuous, 
+depending on the area of application.
+Copyright © 2017 Pearson Education Ltd. All 
+rights reserved. 1 - 34
+DATA TYPES 
+• Personnel responsible for the efficiency of a port 
+facility may be interested in the properties of the 
+number of oil tankers arriving each day at a 
+certain port city.
+• A chemical engineer may be interested in 
+conducting an experiment that will lead to 
+conditions where yield is maximized. Here, of 
+course, the yield may be in percent or 
+grams/pound.
+Copyright © 2017 Pearson Education Ltd. All 
+rights reserved. 1 - 35
+Discrete data
+• Distinct numbers with gaps between
+• e.g.
+•  Doors – 2, 3, 4, 5 …
+• … but not 2.39 or 3.86
+• Can you think of another?
+Continuous data
+• Any number in a given range
+• e.g.
+• Mileage – anything between 
+• 0                (brand new)
+• 200,000     (ready for the scrap heap)
+• Can you think of another?
+Levels of Measurement
+and Measurement Scales
+Interval Data
+Ordinal Data
+Nominal Data
+Highest Level
+Strongest forms 
+of measurement
+Higher Level
+Lowest Level
+Weakest form of 
+measurement
+Categories (no  
+ordering or direction)
+Ordered Categories 
+(rankings, order, or 
+scaling) 
+Differences between 
+measurements but 
+no true zero
+Ratio Data
+Differences 
+between 
+measurements, true 
+zero exists
+Thinking Challenge
+■Are They Categorical?  
+Numerical (Discrete or Continuous)?
+What Scale?
+4. Temperature
+36, 24, 0 etc.
+5. Siblings
+0-2, 3-5, 6+
+6. Letter Grade
+A, B, C etc.
+1. Gender
+Male, Female
+2. Weight
+123, 140.2 etc.
+3. Auto Speed
+78, 64, 45 etc.

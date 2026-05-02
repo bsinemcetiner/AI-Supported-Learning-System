@@ -1,0 +1,406 @@
+Lecture 04: Scripting
+CE350: Linux Utilities and Shell Scripting
+Çağlar Durmaz
+1
+Prepare for quiz!
+Quiz
+2
+Quiz#2
+Consider the “ls -l” output below. Using numerical mode, modify the permissions 
+for the file quiz.sh in the following way: add ‘execute’ permission for owner user, 
+remove ‘read’ permission for group.
+-rw-r--r-- 1 lecturer CE350  589 Feb 27  2019 quiz.sh
+You have 3 minutes. 
+3
+Previously on CE350
+● An introduction to bash. 
+● Redirection
+● Pipes
+● Command Substitution
+4
+Command Prompt
+● The prompt is defined as the PS1 environment variable.
+● We can change it by giving it a new value. 
+● It is the primary (first - PS1) prompt. 
+● If a command requires you to enter more commands, then the second 
+prompt, PS2 is shown. 
+● If the command is too long, you can use \ to continue on the next line. 
+5
+6
+7
+Scripting
+● In the simplest terms, a shell script is a file containing a series of commands.
+● The shell reads this file, and carries out the commands as if they have been 
+entered directly on the command line.
+● Shell scripts are text files, but it helps if the editor supports syntax 
+highlighting. 
+● Once you write the code, you have to give execute permissions. 
+● The third and final step is letting the shell access the script. 
+● Remember that the shell keeps a list of directories in the PATH variable. 
+● Or you can supply the path of the script. 
+8
+9
+10
+Scripting
+● Comments start with the sharp sign: #
+● The first line looks like a comment, but it is a special line. 
+● It’s called sh-bang, and it tells bash the absolute path of the executable that 
+will interpret the script.
+● Sh-bang is important because without it the shell would not know how to run 
+the script. You have to write it even though the shell itself will run it. 
+● The script for perl and python will also have a sh-bang line with the 
+absolute path to their executable files.  
+11
+Scripting
+● You can also use different shells to run a script.
+● Almost all Linux distributions have the sh shell. 
+● There might be very old scripts that have compatibility issues with bash.
+● Their sh-bang line will include /bin/sh.
+● In all your work (exams, homeworks, projects), if you are asked to 
+“write a script”, the first line must be the sh-bang line.
+● It is advised that you use long option names in the scripts. This is not 
+mandatory but helps readability. 
+12
+Scripting
+● You should use the secondary prompt to improve readability. 
+find playground \( -type f -not -perm 0600 -exec chmod 0600 ‘{}’ ‘;’ \) -or \( -type d -not -
+perm 0700 -exec chmod 0700 ‘{}’ ‘;’ \)
+13
+An overview on bash scripting syntax and 
+constructs:● shbang: #!
+● comment sign: #
+● metacharacters (wildcards): *, ?, …
+● displaying output: echo “Hello Linux World”
+● local variables, global variables
+● dollar sign $ to extract the value from a variable (variable substitution) : 
+$PATH
+● reading user input: read
+● command substitution: $(command ), ` command `
+● arrays, operators, integer arithmetic, positional parameters to store 
+arguments, conditional statements, loops, functions ...
+14
+Variables
+● A variable is a tag / label / identifier / name in the program that refers to a 
+corresponding memory location. 
+● Variable names start with an alphabetic or underscore character, followed by 
+any number of alphabetic, decimal digits, or an underscore character. 
+● Variable names are case sensitive. 
+● The simplest format for defining a local variable is to initialize it. 
+variableName=value
+decimalVariable=18
+15
+Variables
+● If the name of the variable is variableName, the reference to its value is 
+$variableName, which is the simplified form of ${variableName}.
+● There are two type of variables; local and environment
+○ Local: private to the shell in which they are created and not passed on to any process 
+spawned from that shell. 
+○ Environment: variables are passed from parent to child, child to grandchild… 
+● If an environment variable is set in the child shell, it is NOT passed back to 
+the parent. 
+● The env command will display the environment variables. 
+16
+17
+Variables
+● The built-in declare is used to create variables with options to control the 
+way the variable is set.
+● Without arguments, declare lists all set variables. 
+18
+Variables
+● Environment variables are capitalized by convention. 
+● Use export command, or declare with the -x parameter to make a variable 
+global. 
+● Let me remind you again: an environment variable in a child shell is not 
+passed to the parent. 
+19
+20
+Variables
+● Unsetting variables: both local and environment variables can be unset by 
+using the unset command, unless the variables are set as read-only. 
+● Printing the value of variables: The built-in echo command prints its 
+arguments to the standard output. 
+● echo, with the -e option, allows the use of numerous escape sequences that 
+control the appearance of the output. 
+● A popular one is to -n to suppress newline at the end of a line of output. 
+21
+Variables
+● The printf command: You can use the printf command to format the output. 
+$ printf "The number is %.2f\n" 100   # sample printf
+The number is 100.00                  # output
+● Quoting is used to protect special meta-characters from interpretation and 
+prevent parameter expansion. 
+● The following characters must be escaped with a backslash ( \ ):
+; & ( ) { } | < > $ * [ ] ?
+22
+Variables
+● Single quotes protect all meta-characters from interpretation.
+● Double quotes allow variable and command substitution, and protect any 
+other special meta-characters from being interpreted by the shell. 
+$ echo \$
+$ echo ’$*?’
+$ x=1
+$ echo "?*$ $x"  # prints: ?*$ 1
+23
+Arrays
+● Arrays allow you to collect a list of words into one variable name. 
+● They can be created by declare -a command or on the fly: x[0]=5
+$ declare -a myArray                                                            
+$ myArray=(first second third fourth)
+$ declare -a nums=(34 2 12 2)
+$ declare -a array=(ilker [2]=kaya [1]=korkmaz [3]=oguz)
+$ echo ${nums[0]} # first element 
+$ echo ${#array[0]} # length of first element
+$ echo ${#array} # length of first element
+$ echo ${#array[*]} # number of elements in array
+$ echo ${#array[@]} # number of elements in array                               
+$ echo ${array[*]} # all elements in array                                      
+$ echo ${array[@]} # all elements in array
+24
+Getting Input
+● The read command is a built-in to read input from the terminal or from a file.
+● The read command takes a line of input until a newline is reached.
+● If no parameters are given, the line read is assigned to REPLY built-in 
+variable.
+● You can also use the read command to cause a script to stop until the user 
+hits ENTER. 
+● Check the help file for more (help read).
+25
+Getting Input
+26
+Arithmetic with variables
+● Variables can be declared as integers with the declare -i command. If you 
+attempt to assign any string value, bash assigns 0 to the variable.
+● The let built-in evaluates arithmetic expressions. Evaluation only supports 
+integer arithmetic. Overflow is not checked. Division by 0 is trapped.
+● Instead of let, (( )) can also be used. 
+● Since bash only supports integer arithmetic, you can use bc or awk if you 
+need floating-point calculations.
+● bc is a language that supports arbitrary precision numbers with interactive 
+execution of statements. 
+27
+28
+29
+Positional Parameters and Command Line Arguments
+● Data can be passed into a script via the command line. 
+● Each word following the script name is an argument. 
+● Positional parameters are referred as $1, $2, … ,${10}, and so on… 
+● The set command resets the positional parameters and gives new values.
+● The $* and $@ differ only when enclosed in double quotes.
+● When $* is in double quotes parameter list becomes a single string. 
+● When $@ is in double quotes, each of the parameter is quoted. 
+30
+31
+32
+Evaluating Expressions
+● The built-in test evaluates a conditional expression.
+● test exits with a status of 0 (true) or 1 (false) depending on the expression. 
+● You can check the exit status with echo $? 
+● Expressions can be unary or binary. 
+● There are string and numerical operators as well. 
+● You can also use [ ] instead of test.
+● Make sure you read the help page for all details: help test
+33
+34
+35
+36
+37
+38
+Evaluating Expressions
+● A more modern version of test is the compound command: [[ expression ]]
+● The [[ ]] command is very similar to test, it supports all of its expressions 
+but adds an important new string comparison that uses regular expressions. 
+● The (( )) command is used to perform arithmetic truth tests.
+● In both of these compound commands, we use && and || instead of -a and -
+o in test for logical AND and OR operators. 
+39
+40
+● Bash has the familiar if clauses for flow control. 
+● You can use the conditional we have just talked about for branching. 
+● Here is the syntax:
+if CONDITIONAL
+then
+# expressions
+elif  CONDITIONAL
+then
+# expressions
+else
+# expressions
+fi
+Flow Control
+41
+42
+43
+44
+Flow Control
+● Bash provides two control operators that can perform branching, AND and OR
+command1 && command2
+command1 || command2
+● With the && operator, command1 is executed, and command2 is executed if 
+command1 is successful. 
+● With the || operator, command1 is executed, and command2 is executed if 
+command1 is not successful. 
+45
+Flow Control (case)
+Yes, the syntax is a little unorthodox, but this is 
+how you write a case in bash. 
+46
+47
+48
+Loops
+● The while loop requires a conditional.
+● As long as the condition holds, the loop runs. 
+while CONDITIONAL
+do
+LOOP BODY
+done
+● You can break out of the loop using break. 
+● It is also possible to skip the remainder of the loop with continue.
+● An until loop is the opposite of while.
+49
+50
+Loops
+● The heart of bash looping is the for loop.
+● It runs like foreach in other programming languages.
+● You need a list of values for for to loop. 
+● You can get the list from a command substitution, an array, etc.
+● for is commonly used with arrays. 
+51
+52
+53
+Loops
+● If you are using nested loops, break and continue can be given a numeric 
+integer argument so that control can go from the inner loop to an outer loop. 
+54
+Loops
+● You can redirect the output of a loop, pipe a loop, or send the loop to 
+background as follows:
+55
+Functions
+● Functions used in user scripts are executed in context of the current shell.
+● A child process is NOT spawned as it is when running an executable program. 
+● Because the function is executed within the current shell, the variable will be 
+known to both the function and the shell.
+● Any changes made to your environment in the function will also be available 
+to the shell.
+● The local variables in a function are private to that function and will 
+disappear after the function exits.
+● Functions may be stored in another file to be loaded (sourced) into scripts 
+when they will be used (see source command). 
+56
+Functions
+57
+Functions
+● Arguments can be passed to functions via positional parameters.
+● The positional parameters are private to the function and will not affect any 
+positional parameters used outside the function. 
+58
+59
+60
+Functions
+● The return command can be used to exit the function and return the control 
+to the program at the place where the function was invoked.
+● The return value of the function is actually the value of the exit status of the 
+last command in the script, unless a specific argument to the return 
+command is given. 
+● The argument of return must be an integer between 0 and 255. 
+61
+Handling Spaces
+● Here is your script:
+#!/bin/bash
+ls -l ${1}
+● What does it do? 
+● What if we have a file with spaces, such as “Project Report.pdf”
+● See what happens… 
+62
+63
+64
+Handling Spaces
+● What about with lists of parameters with blanks? 
+● You have to use $@ instead of $*. 
+● The parameter $* expands to the list of arguments supplied to the script. 
+● That is, if you run your script as 
+./my.sh these are arguments
+then 
+for item in $* 
+is expanded as 
+for item in these are arguments
+65
+Handling Spaces
+● You might be tempted to try the quotes as 
+for item in “$*”
+but this expands to 
+for item in “these are arguments” 
+and you will have a single value… 
+● So, the solution is to use $@ with quotes,
+for item in “$@”
+which expands to
+for item in “these” “are” “arguments”
+66
+Getting Default Values for Variables
+● If you would like to provide default values, you can use the ${:-} syntax 
+when referring to the parameter, and use it to supply a default value:
+FILEDIR=${1:-/tmp}
+● This operator says that if $1 is not set, or is null, then it will use what follows. 
+● Otherwise, it will use whatever value is set in $1. 
+● It can be used on any shell variable, not just the positional parameters. 
+● Notice that $1 is not assigned to /tmp, only a value is returned; either the 
+value set in $1, or --if there is nothing set-- /tmp. 
+67
+Setting Default Values for Variables
+● If you also would like to set a default value, if a variable is not set or is null, 
+then use the ${:=} operator. 
+cd ${HOME:=/tmp}
+● We probably have a value set of HOME, so this will change to real home 
+directory. If it wasn’t set, it would be set to /tmp, and we would be changing 
+directory into /tmp. 
+68
+Giving an Error Message for Unset Parameters
+● Use the ${:?} syntax when referring to the parameter. 
+● Bash will print an error message and then exit if the parameter is unset or 
+null.
+MYPARAM=${1:?"Error. You must supply a parameter"}
+● Here’s an output:
+$ MYPARAM=${1:?"Error. You must supply a parameter"}
+-bash: 1: Error. You must supply a parameter
+69
+Changing Pieces of a String
+Here are a few samples:
+$ echo ${HOME}
+/Users/koguz
+$ echo ${HOME:2:2}
+se
+$ echo ${HOME%uz}
+/Users/kog
+$ echo ${HOME/uz/az}
+/Users/kogaz
+Table from Bash Cookbook, page 109. 
+70
+Exercise CE350.03 (1)
+● Write a script that does the following:
+○ Ask the user’s name and surname.
+○ Greet the user by his/her first name.
+○ Ask the user’s year of birth and calculate the age. 
+○ Ask the user’s login name and print his/her ID (use id command)
+● Write a script that accepts any number of parameters. In the script
+○ Print the name of the script
+○ Print the number of parameters
+○ Print the first parameter
+○ Loop the parameters with both “$@” and “$*”
+71
+Exercise CE350.03 (2)
+● Write a calculator script that works as follows:
+○ It takes only three parameters, first number, operator, and the second number
+○ The operator can be p, m, x and d for plus, minus, multiplication and division.
+○ Only use bc with a scale of 2 with division
+○ For p, m and x use let
+● Write the following functions
+○ A function that returns the greater of two parameters
+○ A function that checks if a file exists at a path
+○ A function that checks if a path is a directory or a regular file
+○ A function that checks if a path is executable
+72
+References
+● Quigley, E. Unix Shells by Example, 2005
+● Shotts Jr., W. E., The Linux Command Line, 2012
+● Albing C., Vossen JP, Newham C., Bash Cookbook, 2007
+73

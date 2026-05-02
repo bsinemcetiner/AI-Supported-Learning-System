@@ -12,4 +12,5 @@ class CourseMaterial(Base):
     stored_path = Column(String, nullable=False)
     pdf_path = Column(String, nullable=True)
     file_hash = Column(String, nullable=False)
+    pdf_path = Column(String, nullable=True)
     uploaded_at = Column(DateTime, default=datetime.utcnow)

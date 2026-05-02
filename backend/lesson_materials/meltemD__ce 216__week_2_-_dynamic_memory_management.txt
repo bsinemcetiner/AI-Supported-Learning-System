@@ -1,0 +1,391 @@
+Lecture 02: Dynamic 
+Memory Management
+CE216: Fundamental Topics in Programming
+Asst. Prof. Dr. M. Çağkan Uludağlı
+Prepared by: Assoc. Prof. Dr. Kaya Oğuz
+Project
+● Start forming your project teams. 
+● A team can be 3 or 4 students. 
+● Teams of 2 or fewer, or 5 or more, are strictly not allowed. 
+● You can form your team with your friends only from the same section of the 
+course. 
+Introduction
+● When we talk about memory, we do not mention where in memory a value is 
+stored: this is usually managed for us behind the scenes. 
+● C has some keywords (such as register) to suggest the system to use CPU 
+registers for some variable, but the system still cannot be forced. 
+● So, when we create a variable, such as 
+int x = 12;
+where is the value 12 stored? 
+● We really don’t care, because what we care is that we have a variable that 
+can store a value, and we can use its name to access that value.
+Variables
+● The main components in a computer architecture are the memory and the 
+processor. 
+● The memory contains both instructions and data.
+● Processor provides operations for modifying the contents of the memory.
+● Variables are the abstractions for memory cells of the machine. 
+● Sometimes, the memory can directly store the abstraction, if it is an integer 
+for example. 
+● Sometimes, in the more complicated data types, we need a software mapping 
+function to support the abstraction. 
+Variables
+● A program variable is an abstraction of a computer memory cell, or a 
+collection of cells.
+● We often think of variables as names for memory locations. 
+● However, a variable can be characterized with the following attributes:
+○ Name
+○ Address
+○ Value
+○ Type
+○ Lifetime
+○ Scope
+● We’ll focus on the name, address, value and type for this lecture, you’ll learn 
+more in CE316. 
+Variables
+● A name is a string of characters to identify an entity in a program; for 
+example: our variables.
+● The address of a variable is the machine memory address with which it is 
+associated. 
+● The type of a variable determines the range of values the variable can store 
+and the set of operations that are defined for values of the type. 
+● The value of a variable is the contents of the memory cell, or cells associated 
+with the variable. 
+● So these are all bound to the variable when we create it by 
+int x = 12; 
+Memory
+● We are not in control of where the variable is stored. It is placed on an 
+available space on the memory.
+● This is because we do not have direct access to memory - that would have 
+caused a lot of trouble. 
+● The OS takes care of it for us. So, we ask for a memory space, and it 
+provides us with one. 
+● Here’s how int x = 12; looks like in the memory.
+○ Please note: while we use different visual representations, memory is actually one long array 
+of addresses. 
+Memory
+● I have overly simplified the 
+representation. 
+● First of all, each cell is usually 
+addressed with their bytes - that is 
+each byte has an address. 
+● Since an int is four bytes, we 
+should be using all the memory 
+space from 0x0013 to 0x0016 (both 
+inclusive). 
+● Let’s say this is an int that uses 1 
+byte. 
+Memory address Value Name
+0x0012
+0x0013 12 x
+0x0014
+0x0015
+0x0016
+Memory
+● When we create the variable x, the 
+memory address, as I’ve said 
+earlier, is set by the OS. 
+● We have no say in this. 
+● We cannot make up memory 
+addresses. 
+● C can help me see these 
+addresses, with the help of the &
+operator. 
+● So let me show you one. 
+Memory address Value Name
+0x0012
+0x0013 12 x
+0x0014
+0x0015
+0x0016
+The & operator
+Here’s the source code, and the 
+memory location every time I run the 
+same program (we use %p for 
+addresses).
+#include <stdio.h>
+int main(int argc, char** argv) {
+int x = 12;
+printf("%p\n", &x);
+return 0;
+}
+
+The * operator
+● Being able to access to memory addresses gives us an additional power to 
+manipulate variables by using their addresses, if we want to, along with their 
+names. 
+● C also gives you one additional power. 
+● You can create variables that can store these addresses! 
+● We call them pointers - an apartment name, so the speak, since they point to 
+a memory location. 
+● There is no special variable type for pointers. 
+● There are pointers to types of variables, as in an int pointer, float pointer, 
+char pointer, etc.
+● To create them, we use the * operator with the type. Let me demonstrate. 
+The * operator
+Here’s the source code. 
+Notice that I can find the address of a variable using the & operator, and assign it 
+to a pointer variable. We store the address in the variable px, an integer pointer 
+variable.
+#include <stdio.h>
+int main(int argc, char** argv) {
+int x = 12;
+int* px = &x;
+printf("using pointer: %p, using &: %p \n", px, &x);
+return 0;
+}
+
+The * operator
+● There is one more catch with the * operator. 
+● Just as we apply & to a variable and get its address, when we apply * to a 
+pointer variable, we access the value stored at that address. 
+● So, for the variable px in the previous code, we can access the value 12 
+simply by 
+printf("%d\n", *px);
+● Isn’t that nice… 
+Pointer to a pointer
+● We’ll get to this shortly, but just a reminder.
+● The variable px is still a variable, and it stored somewhere on the memory.
+● So px also has an address. We can get its address by &px. 
+● Yes, it is weird. But take a look at the table below.
+Memory address Value Name
+0x0012
+0x0013 12 x
+0x0014
+0x0015
+0x0016 0x0013 px
+Swapping variables
+● One particular way of using pointers is to use them to operate directly on 
+variables themselves.
+● “Swapping variables” is a common problem. 
+● For swapping, we need another variable, so that two variable values can be 
+swapped. In some scenarios, such as sorting, we need to swap variables all 
+the time.
+● It makes sense to create a swap function, but we “pass by value”, so the 
+variable values stay the same in the locality of the caller function, while 
+they are swapped in the swap function locality. 
+● Pointers can help. 
+Swapping variables
+● C uses “pass by value” - we are still passing values, but this time we will be 
+passing address values. 
+● The following is a regular function call which uses integer values:
+void swap(int a, int b) { … }
+● If we swap a and b, they are only swapped locally in the swap function. 
+● Here’s how we pass the addresses.
+void swap(int* pa, int* pb) { … }
+○ We may use a leading p for the name of the variable when they are pointers. It helps us to 
+remember that these are pointers and they store address values. 
+Swapping variables
+Here’s the source code for the swap function. For x = 12 and y = 14, you can 
+call this function as swap(&x, &y); and the values will be swapped! 
+void swap(int *a, int *b) {
+int temp = *a;
+*a = *b;
+*b = temp;
+return;
+}
+https://xkcd.com/138/
+Dynamic Memory Management
+● So far, we did not discuss anything about being dynamic. 
+● Dynamic means, we can do things as the program is running.
+● You did this before:
+○ You asked for the number of students,
+○ Then asked for their grades,
+○ Calculated their average grade, etc. 
+● When the user supplied a number for the number of students, say, 30 
+students, you have created an array of 30 integers, simply by the following 
+Java statement:
+int[] grades = new int[N];
+● N is set during runtime, so grades array is dynamically set.
+Dynamic Memory Management
+● The new operator is magical. It creates required memory for your array 
+without any other details.
+● There is no new operator in C.
+● Instead we have the malloc function. Short for memory allocation. 
+● Here’s the function:
+void * malloc(size_t size);
+● Simple. 
+● It returns a void pointer, so that we can cast it to any type we want to. 
+● Takes a single parameter, of type size_t, which is simply an unsigned int 
+type. 
+● We can use the sizeof operator to get the size! 
+Dynamic Memory Management
+● It is possible to get a memory space for an integer value as follows:
+int* px = (int*) malloc(sizeof(int));
+● Now you know why we love the new operator.
+● This returns a pointer to a memory location that can store an integer. 
+● We can then use it:
+*px = 12;
+Dynamic Memory Management
+● Of course, it does not makes sense to use it for a single variable.
+● We use it for arrays, so the allocation is simply
+int* grades = (int*) malloc(sizeof(int) * N);
+which would be the equivalent of the Java statement we have used earlier:
+int[] grades = new int[N];
+● Hold on! There are no brackets in the grades array? 
+● In C, arrays are pointers… sort of. 
+● Our textbook says “there is a strong relationship between pointers and arrays, 
+strong enough that [they] should be discussed simultaneously.”
+Arrays and Pointers
+● When we define an array, as in 
+int arr[10];
+then the array arr can be treated as a pointer - but only for the first element. 
+● If we print the variable arr using the pointer formatting, I’ll get the same value 
+as the address of arr[0]. 
+printf("%p\n", arr);
+printf("%p\n", &arr[0]);
+● They print the same thing! Let us see something more interesting. I’ll print the 
+address for each element in the arr[10] array. 
+Arrays and Pointers
+Here’s the source code. Please notice in the 
+output that the address values are incremented 
+by 4 - since each integer takes 4 bytes of space. 
+So, the next element is 4 bytes away, and they 
+are next to each other! 
+#include <stdio.h>
+int main(int argc, char** argv) {
+int arr[10];
+/* let's put this in a loop */
+int i = 0;
+for(i=0;i<10;i++) printf("%p\n", &arr[i]);
+return 0;
+}
+
+Arrays and Pointers
+● This means we can create an array dynamically as follows:
+int* grades = (int*) malloc(sizeof(int) * N);
+and then use grades like an array, as in
+grades[0] = 12;
+● This is also why we have the argv parameters as char** argv in main -
+since it is an array of arrays, an array of character arrays. 
+● Let’s talk about character arrays then. 
+Character Pointers
+● A string constant, written as "I am a string", is an array of characters.
+● In the internal representation, the array is terminated with the null character, 
+so that programs can find the end. 
+● There are differences to the creation of character arrays. 
+char amessage[] = "hello"; /* an array */
+char *pmessage = "hello"; /* a pointer */
+● The pointer version is still an array, of course, but C does not allow you to 
+change the char values, because it is in a read only part of the memory, and 
+the pointer points to that memory location. 
+● When defined as an array, as in amessage variable, you get a copy of the 
+character array which you can manipulate. 
+Multidimensional Arrays
+● Let’s first talk about multidimensional arrays. 
+● We can define fixed sized arrays, in two or more dimensions, as follows:
+char days[2][13] = {
+{0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
+{0, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
+};
+● You are already familiar with this concept from arrays in Java. 
+● These arrays have fixed sizes, what if we want each array to have a different 
+size? 
+● Let’s learn about pointer arrays. 
+Pointer Arrays
+● It is possible, of course, to have an array of pointers where each pointer 
+points to another array. 
+● For example, 
+int** parr = (int**) malloc(sizeof(int*)*N);
+● Now, this returns an array of N int* variables, or integer pointers. 
+● Since each element in this array is a pointer, we need to initialize them, too. 
+● Here’s a scenario:
+1. #include <stdio.h>
+2. #include <stdlib.h>
+3.
+4. int main(int argc, char** argv) {
+5. int i = 0;
+6. int j = 0;
+7. int N = 0;
+8. int M = 0;
+9. printf("Number of integer arrays: ");
+10. scanf("%d", &N);
+11. int** parr = (int**) malloc(sizeof(int*)*N);
+12. for(i=0;i<N;i++) {
+13. printf("Number of integers in array %d:", i+1);
+14. scanf("%d", &M);
+15. parr[i] = (int*) malloc(sizeof(int)*M);
+16. for(j=0;j<M;j++) {
+17. parr[i][j] = j;
+18. printf("%d ", parr[i][j]);
+19. }
+20. printf("\n");
+21. }
+22. }
+Pointer Arrays
+● Notice that, once I’m out of the j
+loop, I cannot find out how many 
+elements there are in each integer 
+array in the parr array, such as for 
+parr[i]. 
+● Let’s see the output.
+1. #include <stdio.h>
+2. #include <stdlib.h>
+3.
+4. int main(int argc, char** argv) {
+5. int i = 0;
+6. int j = 0;
+7. int N = 0;
+8. int M = 0;
+9. printf("Number of integer arrays: ");
+10. scanf("%d", &N);
+11. int** parr = (int**) malloc(sizeof(int*)*N);
+12. for(i=0;i<N;i++) {
+13. printf("Number of integers in array %d:", i+1);
+14. scanf("%d", &M);
+15. parr[i] = (int*) malloc(sizeof(int)*M);
+16. for(j=0;j<M;j++) {
+17. parr[i][j] = j;
+18. printf("%d ", parr[i][j]);
+19. }
+20. printf("\n");
+21. }
+22. }
+Pointer Arrays
+
+Pointers
+● …and that is the introduction to pointers! 
+● You may also use pointers to point other pointers, functions, other 
+complicated structures. 
+● For instance, struct type.
+● Let us briefly discuss structs, and we are done for today! 
+Structs
+● C does not have classes, but it has a very basic structure that can group
+variables: struct (or record, in other languages like Pascal).
+● A struct is basically a group of variables. 
+#include <stdio.h>
+struct point {
+int x;
+int y;
+};
+int main(int argc, char** argv) {
+struct point p;
+p.x = 12;
+p.y = 13;
+printf("(%d, %d)\n", p.x, p.y);
+}
+Structs
+● Structures can be nested.
+● One representation of a rectangle is a pair of points that denote the diagonally 
+opposite corners:
+struct rect{
+struct point pt1;
+struct point pt2;
+}
+● This structure has twopoint structs. If we declarescreen as
+struct rect screen
+then, screen.pt1.x, refers to the x coordinate of the pt1 corner member of 
+screen.
+
+Structs
+● You may access a variable inside the struct by the dot (p.x) notation. 
+● If the struct is a pointer (*p), then, we use the following:
+p->x = 12;
+p->y = 13;
+● Make sure you study all of these, including structs, because we will have a 
+lab session that uses all of them! 
+References
+● Concepts of Programming Languages, Ninth Edition, Robert W. Sebesta, 
+Pearson, ISBN 013-246558-2
+● The C Programming Language, Second Edition, Brian Kernighan and Dennis 
+M. Ritchie, Prentice Hall, ISBN 013-110362-8
