@@ -53,7 +53,7 @@ export default function DashboardPage({
   const [courseMap, setCourseMap] = useState<Record<string, Course>>({});
   const [allCourses, setAllCourses] = useState<Record<string, Course>>({});
   const [lessonsMap, setLessonsMap] = useState<Record<string, Record<string, Lesson>>>({});
-  const [activeTab, setActiveTab] = useState<CourseTab>("lessons");
+  const [activeTab, setActiveTab] = useState<CourseTab>(() => (localStorage.getItem("student_active_tab") as CourseTab) || "lessons");
   const [loading, setLoading] = useState(true);
   const [browseLoading, setBrowseLoading] = useState(false);
   const [lessonLoading, setLessonLoading] = useState(false);
@@ -68,6 +68,7 @@ export default function DashboardPage({
 
   // Section view state
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
+  const [pendingLessonId, setPendingLessonId] = useState<string | null>(() => localStorage.getItem("student_lesson_id"));
   const [sections, setSections] = useState<Section[]>([]);
   const [sectionsLoading, setSectionsLoading] = useState(false);
 
@@ -131,6 +132,7 @@ export default function DashboardPage({
 
   async function openLesson(lesson: Lesson) {
     setSelectedLesson(lesson);
+    localStorage.setItem("student_lesson_id", lesson.lesson_id);
     setSections([]);
     setSectionsLoading(true);
     try {
@@ -167,16 +169,14 @@ export default function DashboardPage({
 
 async function startLessonChat(lesson: Lesson) {
   try {
-    const validSections = sections.filter((s) => (s.draft?.trim() || s.summary?.trim()));
-    const starterMessage = JSON.stringify(
-      validSections.map((s) => ({
-        title: s.title,
-        draft: s.draft?.trim() || s.summary?.trim() || "",
-        section_index: s.section_index,
-        page_start: s.page_start,
-        page_end: s.page_end,
-      }))
-    );
+    const starterMessage = sections
+      .map((s, i) => {
+        const text = s.draft?.trim() || s.summary?.trim() || "";
+        if (!text) return "";
+        return `## ${i + 1}. ${s.title}\n\n${text}`;
+      })
+      .filter(Boolean)
+      .join("\n\n---\n\n");
 
     const { chat_id } = await chatsApi.create({
       course_id: lesson.course_id,
@@ -218,7 +218,7 @@ async function startLessonChat(lesson: Lesson) {
         {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>{error}</div>}
 
         {/* Back */}
-        <button onClick={() => setSelectedLesson(null)}
+        <button onClick={() => { setSelectedLesson(null); localStorage.removeItem("student_lesson_id"); }}
           style={{ display: "flex", alignItems: "center", gap: 8, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: "0.9rem", fontWeight: 500, marginBottom: "1.5rem", padding: 0 }}
           onMouseEnter={(e) => e.currentTarget.style.color = "#0f172a"}
           onMouseLeave={(e) => e.currentTarget.style.color = "#64748b"}>
@@ -373,7 +373,7 @@ async function startLessonChat(lesson: Lesson) {
         {/* Tabs */}
         <div style={{ display: "flex", gap: 8, marginBottom: "1.5rem", background: "#fff", borderRadius: 18, padding: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #e2e8f0" }}>
           {[{ key: "lessons", label: "📚 Lessons" }, { key: "materials", label: "📄 Materials" }].map((t) => (
-            <button key={t.key} onClick={() => setActiveTab(t.key as CourseTab)}
+            <button key={t.key} onClick={() => { setActiveTab(t.key as CourseTab); localStorage.setItem("student_active_tab", t.key); }}
               style={{ flex: 1, padding: "10px", borderRadius: 12, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: "0.9rem", fontWeight: 600, transition: "all 0.15s", background: activeTab === t.key ? "linear-gradient(135deg, #f97316, #ec4899)" : "transparent", color: activeTab === t.key ? "#fff" : "#64748b", boxShadow: activeTab === t.key ? "0 4px 12px rgba(249,115,22,0.3)" : "none" }}>
               {t.label}
             </button>

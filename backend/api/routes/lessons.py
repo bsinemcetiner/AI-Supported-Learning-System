@@ -25,6 +25,39 @@ from services.lesson_manager import (
 from services.rag_manager import RAGManager
 from models import Chat, Message, User
 from services import ai_engine
+
+
+def _stream_section_direct(system_prompt: str, section_text: str, section_title: str):
+    """Lightweight Groq call for section generation — skips the heavy ai_engine system prompt."""
+    import os
+    from groq import Groq
+    client = Groq(api_key=os.getenv("GROQ_API_KEY", "").strip())
+    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
+
+    # Trim section text to keep tokens low
+    text = section_text.strip()
+    if len(text) > 4000:
+        text = text[:4000] + "\n\n[Content truncated.]"
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": f"Section title: {section_title}\n\nSection content:\n{text}\n\nGenerate the lesson page JSON now."},
+    ]
+
+    stream = client.chat.completions.create(
+        model=model,
+        messages=messages,
+        temperature=0.4,
+        stream=True,
+        max_tokens=1800,
+    )
+
+    full = ""
+    for chunk in stream:
+        delta = chunk.choices[0].delta.content or ""
+        if delta:
+            full += delta
+            yield full
 from groq import Groq
 
 router = APIRouter(prefix="/lessons", tags=["lessons"])
@@ -394,17 +427,12 @@ def generate_section(lesson_id: str, section_index: int, current_user: dict = De
             style_only = style_only.replace(kw, "")
         json_prompt += f"\n\nADDITIONAL TEACHER INSTRUCTIONS:\n{style_only}"
 
-    messages = [{"role": "user", "content": f"Create the lesson page for section: {section_title}"}]
-
     def event_stream():
         import json as _json
 
         full_reply = ""
         last_text = ""
-        for cumulative in ai_engine.stream_ai_response(
-            messages=messages, context=section_text, teaching_style="Professional Tutor",
-            mode="direct", custom_prompt=json_prompt, feedback_history=feedback_history,
-        ):
+        for cumulative in _stream_section_direct(json_prompt, section_text, section_title):
             delta = cumulative[len(last_text):]
             last_text = cumulative
             full_reply += delta

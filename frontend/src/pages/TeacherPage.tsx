@@ -180,10 +180,25 @@ const fadeUp = {
   const [feedback, setFeedback] = useState<{ type: "success" | "error" | "info"; text: string } | null>(null);
   const [darkMode, setDarkMode] = useState(false);
 
-  const [view, setView] = useState<View>("home");
-  const [homeTab, setHomeTab] = useState<HomeTab>("quick-start");
-  const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+  const [view, __setView] = useState<View>(() => (localStorage.getItem("teacher_view") as View) || "home");
+  const [homeTab, __setHomeTab] = useState<HomeTab>(() => (localStorage.getItem("teacher_home_tab") as HomeTab) || "quick-start");
+  const [selectedCourseId, __setSelectedCourseId] = useState<string>(() => localStorage.getItem("teacher_course_id") || "");
   const [activeSection, setActiveSection] = useState<ActiveSection | null>(null);
+
+  function setSelectedCourseId(id: string) {
+    __setSelectedCourseId(id);
+    localStorage.setItem("teacher_course_id", id);
+  }
+
+  function setHomeTab(v: HomeTab) {
+    __setHomeTab(v);
+    localStorage.setItem("teacher_home_tab", v);
+  }
+
+  function setView(v: View) {
+    __setView(v);
+    localStorage.setItem("teacher_view", v);
+  }
 
   const [courseName, setCourseName] = useState("");
   const [uploadCourseId, setUploadCourseId] = useState("");
@@ -213,10 +228,33 @@ const fadeUp = {
       const map: Record<string, Record<string, Lesson>> = {};
       for (const [id, l] of entries) map[id] = l;
       setLessonMap(map);
+
+      // Restore section view after data is loaded
+      const sectionKey = localStorage.getItem("teacher_section_key");
+      const savedView = localStorage.getItem("teacher_view") as View;
+      const savedCourseId = localStorage.getItem("teacher_course_id") || "";
+
+      if (sectionKey && savedView === "section") {
+        const [lessonId, idxStr] = sectionKey.split("|");
+        const idx = parseInt(idxStr, 10);
+        for (const lessons of Object.values(map)) {
+          const lesson = (lessons as any)[lessonId];
+          if (lesson) {
+            setActiveSection({ lesson, sectionIndex: idx });
+            __setView("section");
+            break;
+          }
+        }
+      } else if (savedView === "course" && savedCourseId && data[savedCourseId]) {
+        __setView("course");
+        __setSelectedCourseId(savedCourseId);
+      }
     } catch (e: any) { showFeedback("error", e.message); }
   }
 
   useEffect(() => { loadCourses(); }, []);
+
+
 
   const courseList = Object.entries(courseMap);
 const totalLessons = Object.values(lessonMap).reduce((a, m) => a + Object.keys(m).length, 0);
@@ -553,7 +591,7 @@ function TeacherTopHeader() {
             <SectionDetailPage
               lesson={activeSection.lesson}
               sectionIndex={activeSection.sectionIndex}
-              onBack={() => { setView("course"); setActiveSection(null); }}
+              onBack={() => { setView("course"); setActiveSection(null); localStorage.removeItem("teacher_section_key"); }}
               showFeedback={showFeedback}
               onApproved={loadCourses}
               darkMode={darkMode}
@@ -635,6 +673,7 @@ function TeacherTopHeader() {
                   onPublished={loadCourses}
                   onOpenSection={(lesson, idx) => {
                     setActiveSection({ lesson, sectionIndex: idx });
+                    localStorage.setItem("teacher_section_key", lesson.lesson_id + "|" + idx);
                     setView("section");
                   }}
                   showFeedback={showFeedback}
@@ -704,7 +743,7 @@ function TeacherTopHeader() {
             <motion.button
               key={t.id}
               whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
-              onClick={() => setHomeTab(t.id)}
+              onClick={() => setHomeTab(t.id as HomeTab)}
               style={{
                 flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
                 padding: "13px 16px", borderRadius: 16, border: "none", cursor: "pointer",
@@ -1241,4 +1280,3 @@ function TeacherTopHeader() {
     </div>
   );
 }
-

@@ -43,7 +43,7 @@ def _get_client() -> Groq:
 
 def _get_model_name() -> str:
     # İstersen .env içine GROQ_MODEL de koyabilirsin
-    return os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
+    return os.getenv("GROQ_MODEL", "llama-3.1-8b-instant").strip()
 
 
 def _get_style_instruction(teaching_style: str) -> str:

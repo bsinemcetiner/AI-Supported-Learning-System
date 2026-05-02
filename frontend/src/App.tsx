@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { LassieLogo } from "./components/LassieLogo";
-import { token as tokenStore, chats as chatsApi } from "./services/api";
+import { token as tokenStore, chats as chatsApi, settings as settingsApi } from "./services/api";
 import type { User, ChatMap, TeachingMode, TeachingTone } from "./types";
 import StudentCalendar from "./pages/StudentCalendar";
 import AuthPage from "./pages/AuthPage";
@@ -263,17 +263,27 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [chatMap, setChatMap] = useState<ChatMap>({});
-  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [activeChatId, setActiveChatId] = useState<string | null>(() => localStorage.getItem("last_chat_id"));
   const [animatedInitialChatId, setAnimatedInitialChatId] = useState<string | null>(null);
-  const [dashboardCourseId, setDashboardCourseId] = useState<string | null>(null);
+  const [dashboardCourseId, setDashboardCourseId] = useState<string | null>(() => localStorage.getItem("last_course_id"));
   const [streaming, setStreaming] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [dashView, setDashView] = useState<"dashboard" | "browse" | "calendar">("dashboard");
+  const [dashView, setDashView] = useState<"dashboard" | "browse" | "calendar">(() => (localStorage.getItem("last_dash_view") as any) || "dashboard");
   const [teachingMode, setTeachingMode] = useState<TeachingMode>("direct");
   const [teachingTone, setTeachingTone] = useState<TeachingTone>("Professional Tutor");
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [deleteChatTarget, setDeleteChatTarget] = useState<{ id: string; title: string } | null>(null);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("student_dark") === "1");
+  const [authLoading, setAuthLoading] = useState(true);
+  const [inactiveLogout, setInactiveLogout] = useState(false);
+
+  function persistNav(chatId: string | null, courseId: string | null, view: string) {
+    if (chatId) localStorage.setItem("last_chat_id", chatId);
+    else localStorage.removeItem("last_chat_id");
+    if (courseId) localStorage.setItem("last_course_id", courseId);
+    else localStorage.removeItem("last_course_id");
+    localStorage.setItem("last_dash_view", view);
+  }
 
   function toggleDark() {
     setDarkMode(prev => {
@@ -284,10 +294,17 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (isAdmin) return;
+    if (isAdmin) { setAuthLoading(false); return; }
     const t = tokenStore.get();
-    if (!t) return;
-    chatsApi.getAll().then(setChatMap).catch(() => tokenStore.clear());
+    if (!t) { setAuthLoading(false); return; }
+    settingsApi.getMe()
+      .then((me) => {
+        setUser({ username: me.username, full_name: me.full_name ?? "", role: me.role as any });
+        return chatsApi.getAll();
+      })
+      .then(setChatMap)
+      .catch(() => { tokenStore.clear(); })
+      .finally(() => setAuthLoading(false));
   }, []);
 
   useEffect(() => {
@@ -298,6 +315,44 @@ export default function App() {
     if (c.tone) setTeachingTone(c.tone);
   }, [activeChatId, chatMap]);
 
+  // ── Inactivity timer (15 min) ─────────────────────────────────────
+  useEffect(() => {
+    if (!user) return;
+    const TIMEOUT = 15 * 60 * 1000; // 15 minutes
+    let timer: ReturnType<typeof setTimeout>;
+
+    function resetTimer() {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        tokenStore.clear();
+        setUser(null);
+        setChatMap({});
+        setActiveChatId(null);
+        setDashboardCourseId(null);
+        localStorage.removeItem("last_chat_id");
+        localStorage.removeItem("last_course_id");
+        localStorage.removeItem("last_dash_view");
+        localStorage.removeItem("teacher_view");
+        localStorage.removeItem("teacher_home_tab");
+        localStorage.removeItem("teacher_course_id");
+        localStorage.removeItem("teacher_section_key");
+        localStorage.removeItem("student_lesson_id");
+        localStorage.removeItem("student_active_tab");
+        setInactiveLogout(true);
+      }, TIMEOUT);
+    }
+
+    const events = ["mousemove", "mousedown", "keydown", "touchstart", "scroll", "click"];
+    events.forEach((e) => window.addEventListener(e, resetTimer));
+    resetTimer();
+
+    return () => {
+      clearTimeout(timer);
+      events.forEach((e) => window.removeEventListener(e, resetTimer));
+    };
+  }, [user]);
+  // ────────────────────────────────────────────────────────────────────
+
   if (isAdmin) return <AdminDashboardPage onLogout={() => setIsAdmin(false)} />;
 
   async function loadChats() {
@@ -306,7 +361,7 @@ export default function App() {
   }
 
   function handleLogin(u: User) { setUser(u); loadChats(); }
-  function handleLogout() { tokenStore.clear(); setUser(null); setChatMap({}); setActiveChatId(null); setDashboardCourseId(null); setSettingsOpen(false); }
+  function handleLogout() { tokenStore.clear(); setUser(null); setChatMap({}); setActiveChatId(null); setDashboardCourseId(null); setSettingsOpen(false); localStorage.removeItem("last_chat_id"); localStorage.removeItem("last_course_id"); localStorage.removeItem("last_dash_view"); localStorage.removeItem("teacher_view"); localStorage.removeItem("teacher_home_tab"); localStorage.removeItem("teacher_course_id"); localStorage.removeItem("teacher_section_key"); localStorage.removeItem("student_lesson_id"); localStorage.removeItem("student_active_tab"); }
   function requestLogout() { setLogoutConfirmOpen(true); }
   function confirmLogout() { setLogoutConfirmOpen(false); handleLogout(); }
 
@@ -316,6 +371,7 @@ export default function App() {
     if (resolvedCourseId) setDashboardCourseId(resolvedCourseId);
     setAnimatedInitialChatId(animateInitialMessage ? chatId : null);
     setActiveChatId(chatId);
+    persistNav(chatId, resolvedCourseId, dashView);
   }
 
   function handleDeleteChat(chatId: string) {
@@ -379,7 +435,19 @@ export default function App() {
     try { await chatsApi.updateSettings(activeChatId, { tone }); await loadChats(); } catch (e) { console.error(e); }
   }
 
-  if (!user) return <AuthPage onLogin={handleLogin} onAdminLogin={() => setIsAdmin(true)} />;
+  if (authLoading) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#fff", flexDirection: "column", gap: 16 }}><div style={{ fontSize: "2.5rem" }}>📚</div><p style={{ color: "#94a3b8", fontSize: "0.9rem" }}>Loading...</p></div>;
+  if (!user) return (
+    <>
+      {inactiveLogout && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 9999, background: "linear-gradient(135deg, #f97316, #ec4899)", padding: "14px 24px", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, boxShadow: "0 4px 20px rgba(249,115,22,0.4)" }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <p style={{ color: "#fff", fontWeight: 600, fontSize: "0.92rem", margin: 0 }}>You have been logged out due to 15 minutes of inactivity.</p>
+          <button onClick={() => setInactiveLogout(false)} style={{ marginLeft: 8, background: "rgba(255,255,255,0.25)", border: "none", borderRadius: 8, color: "#fff", padding: "4px 10px", cursor: "pointer", fontSize: "0.82rem", fontWeight: 600 }}>✕</button>
+        </div>
+      )}
+      <AuthPage onLogin={(u) => { setInactiveLogout(false); handleLogin(u); }} onAdminLogin={() => { setInactiveLogout(false); setIsAdmin(true); }} />
+    </>
+  );
 
   const activeChat = activeChatId ? chatMap[activeChatId] : null;
 
@@ -416,7 +484,7 @@ export default function App() {
           teachingTone={teachingTone}
           onModeChange={handleModeChange}
           onToneChange={handleToneChange}
-          onDashView={(v) => { setDashView(v); setActiveChatId(null); setDashboardCourseId(null); }}
+          onDashView={(v) => { setDashView(v); setActiveChatId(null); setDashboardCourseId(null); persistNav(null, null, v); }}
           onLogout={requestLogout}
           onSettings={() => setSettingsOpen(true)}
           darkMode={darkMode}
@@ -438,7 +506,7 @@ export default function App() {
                   teachingTone={teachingTone}
                   onOpenChat={handleOpenChat}
                   selectedCourseId={dashboardCourseId}
-                  onSelectedCourseChange={setDashboardCourseId}
+                  onSelectedCourseChange={(id) => { setDashboardCourseId(id); if (id) localStorage.setItem("last_course_id", id); else localStorage.removeItem("last_course_id"); }}
                   dashView={dashView}
                   onDashViewChange={setDashView}
                   username={user.username}
