@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { LassieLogo } from "../components/LassieLogo";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -465,9 +465,7 @@ function removeSelectedMaterialFile(indexToRemove: number) {
 
 function TeacherTopHeader() {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -16 }}
-      animate={{ opacity: 1, y: 0 }}
+    <div
       style={{
         display: "flex",
         alignItems: "center",
@@ -573,7 +571,7 @@ function TeacherTopHeader() {
           </motion.button>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }
 
