@@ -12,6 +12,7 @@ from services.course_manager import (
     get_all_courses,
     get_course_materials,
     delete_material_from_course,
+    delete_course,
 )
 from services.rag_manager import RAGManager
 from services.ocr_service import ocr_service
@@ -351,3 +352,29 @@ def unenroll_course(
     db.delete(assignment)
     db.commit()
     return {"message": "Kayıt silindi", "course_id": course_id}
+
+@router.delete("/{course_id}")
+def delete_course_endpoint(
+    course_id: str,
+    current_user: dict = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    """Delete a course and all its lessons."""
+    # Also clean up section JSON files
+    import os, json
+    from services.lesson_manager import get_lessons_by_course
+    lessons = get_lessons_by_course(db, course_id)
+    sections_dir = "lesson_sections"
+    for lesson_id in lessons:
+        safe_id = lesson_id.replace("::", "__").replace("/", "_").replace(" ", "_").replace(":", "_")
+        path = os.path.join(sections_dir, f"{safe_id}_sections.json")
+        if os.path.exists(path):
+            try:
+                os.remove(path)
+            except Exception:
+                pass
+
+    ok, msg = delete_course(db, course_id, current_user["username"])
+    if not ok:
+        raise HTTPException(status_code=404, detail=msg)
+    return {"message": msg, "course_id": course_id}

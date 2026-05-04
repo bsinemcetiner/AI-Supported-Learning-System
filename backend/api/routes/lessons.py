@@ -21,43 +21,12 @@ from services.lesson_manager import (
     save_draft_explanation,
     approve_lesson_explanation,
     get_student_visible_explanation,
+    delete_lesson,
+    delete_lessons_by_course,
 )
 from services.rag_manager import RAGManager
 from models import Chat, Message, User
 from services import ai_engine
-
-
-def _stream_section_direct(system_prompt: str, section_text: str, section_title: str):
-    """Lightweight Groq call for section generation — skips the heavy ai_engine system prompt."""
-    import os
-    from groq import Groq
-    client = Groq(api_key=os.getenv("GROQ_API_KEY", "").strip())
-    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
-
-    # Trim section text to keep tokens low
-    text = section_text.strip()
-    if len(text) > 4000:
-        text = text[:4000] + "\n\n[Content truncated.]"
-
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": f"Section title: {section_title}\n\nSection content:\n{text}\n\nGenerate the lesson page JSON now."},
-    ]
-
-    stream = client.chat.completions.create(
-        model=model,
-        messages=messages,
-        temperature=0.4,
-        stream=True,
-        max_tokens=1800,
-    )
-
-    full = ""
-    for chunk in stream:
-        delta = chunk.choices[0].delta.content or ""
-        if delta:
-            full += delta
-            yield full
 from groq import Groq
 
 router = APIRouter(prefix="/lessons", tags=["lessons"])
@@ -260,9 +229,7 @@ Return a JSON object with this exact structure. Do NOT include markdown, no code
       "type": "example",
       "title": "Real-World Example",
       "image_keyword": null,
-      "body": "Concrete example with context (3-5 sentences). Make it tangible and relatable. Do NOT put code here.",
-      "code": null,
-      "code_language": null,
+      "body": "Concrete example with context (3-5 sentences). Make it tangible and relatable.",
       "highlight": "Why this example matters"
     }},
     {{
@@ -301,9 +268,6 @@ CONTENT RULES:
 - Include comparison table ONLY if genuinely useful; otherwise replace with another concept or deep_dive slide
 - Minimum 5 slides, maximum 7 slides
 - Return ONLY valid JSON — absolutely no text outside the JSON object
-- If a code example is required, put the code in the "code" field and the language in "code_language".
-- Never put code blocks, markdown fences, or backticks inside the "body" field.
-- The "body" field must contain explanation text only.
 """.strip()
 
 
@@ -405,153 +369,40 @@ def generate_section(lesson_id: str, section_index: int, current_user: dict = De
     custom_prompt = lesson.get("custom_prompt", "")
     feedback_history = lesson.get("teacher_feedback_history", [])
 
-    # Kod isteği var mı kontrol et
-    combined_instructions = (custom_prompt or "") + " " + (raw_preview_question or "")
-    code_keywords = ["code", "program", "write a", "write the", "example of", "implement",
-                     "function", "script", "printf", "scanf", "int main", "using", "class ",
-                     "def ", "import ", "kodla", "yaz", "örnek", "uygula"]
-    # custom_prompt'ta kod isteği varsa kesinlikle kod üret
-    needs_code = any(kw in combined_instructions.lower() for kw in code_keywords)
-
-    # Kod isteğini JSON prompt'tan ayır
-    json_prompt = _build_section_prompt(section_title, raw_preview_question)
-    json_prompt += """\n\nIMPORTANT JSON RULES:
-- Do NOT use backtick fences (```) anywhere inside JSON string values - this breaks JSON parsing
-- Do NOT use inline backticks (`) for code terms inside JSON strings - write them as plain text
-- Write command names, variable names, and code terms as plain text in body fields
-- The backend will handle code display separately"""
+    full_prompt = _build_section_prompt(section_title, raw_preview_question)
     if custom_prompt:
-        # Kod isteğini filtrele, sadece stil talimatlarını bırak
-        style_only = custom_prompt
-        for kw in ["write a", "include code", "give code", "show code", "example of code", "program using", "code example"]:
-            style_only = style_only.replace(kw, "")
-        json_prompt += f"\n\nADDITIONAL TEACHER INSTRUCTIONS:\n{style_only}"
+        full_prompt += f"\n\nADDITIONAL TEACHER INSTRUCTIONS:\n{custom_prompt}"
+
+    messages = [{"role": "user", "content": f"Create the lesson page for section: {section_title}"}]
 
     def event_stream():
-        import json as _json
-
         full_reply = ""
         last_text = ""
-        for cumulative in _stream_section_direct(json_prompt, section_text, section_title):
+        for cumulative in ai_engine.stream_ai_response(
+            messages=messages, context=section_text, teaching_style="Professional Tutor",
+            mode="direct", custom_prompt=full_prompt, feedback_history=feedback_history,
+        ):
             delta = cumulative[len(last_text):]
             last_text = cumulative
             full_reply += delta
             if delta:
-                yield f"data: {_json.dumps({'delta': delta, 'section_index': section_index})}\n\n"
+                yield f"data: {json.dumps({'delta': delta, 'section_index': section_index})}\n\n"
 
-        # JSON temizle
         cleaned = full_reply.strip()
-        if cleaned.startswith("```"):
-            first_nl = cleaned.find("\n")
-            if first_nl != -1:
-                cleaned = cleaned[first_nl+1:]
-            if cleaned.endswith("```"):
-                cleaned = cleaned[:-3].strip()
-
-        s = cleaned.find("{")
-        e = cleaned.rfind("}")
-        if s != -1 and e != -1 and e > s:
-            cleaned = cleaned[s:e+1]
-
-        # Char-by-char fix
-        out = []
-        in_str = False
-        i = 0
-        while i < len(cleaned):
-            c = cleaned[i]
-            if c == "\\" and i + 1 < len(cleaned):
-                out.append(c); out.append(cleaned[i+1]); i += 2; continue
-            if c == '"':
-                in_str = not in_str
-            if in_str and c == "\n":
-                out.append("\\n")
-            elif in_str and c == "\r":
-                pass
-            else:
-                out.append(c)
-            i += 1
-
-        try:
-            parsed = _json.loads("".join(out))
-        except Exception:
-            try:
-                parsed = _json.loads(cleaned)
-            except Exception:
-                parsed = None
-
-        # Kod isteği varsa Groq'a ayrı istek at
-        if needs_code and parsed:
-            try:
-                lang_hint = ""
-                cp_lower = combined_instructions.lower()
-                for lang in ["c#", "python", "java", "javascript", "typescript", "bash", "sql", "c++"]:
-                    if lang in cp_lower:
-                        lang_hint = lang
-                        break
-                if not lang_hint:
-                    c_patterns = ["c program", "c language", "c code",
-                                  "#include", "printf", "scanf", "int main", "stdlib", "stdio"]
-                    if any(p in cp_lower for p in c_patterns):
-                        lang_hint = "c"
-
-                code_request = f"""You are creating a code example for an educational lesson slide.
-
-SECTION TITLE: "{section_title}"
-TEACHER INSTRUCTION: {combined_instructions}
-LANGUAGE: {lang_hint if lang_hint else "the most appropriate language for this topic"}
-
-SECTION CONTENT (use this to understand the topic and write a relevant example):
-{section_text[:3000]}
-
-Rules:
-- Write a complete, working code example DIRECTLY related to the section content above
-- The code must illustrate the specific concept from this section, not a generic example
-- Return ONLY the code block with proper markdown fences
-- Use ```{lang_hint if lang_hint else ""} at the start and ``` at the end
-- No explanation text before or after — ONLY the code block
-"""
-                client = ai_engine._get_client()
-                code_resp = client.chat.completions.create(
-                    model=ai_engine._get_model_name(),
-                    messages=[{"role": "user", "content": code_request}],
-                    temperature=0.2,
-                    stream=False,
-                )
-                code_text = code_resp.choices[0].message.content or ""
-                code_text = code_text.strip()
-
-                # Example slide'a code field olarak ekle
-                for slide in parsed.get("slides", []):
-                    if slide.get("type") == "example":
-                        clean_code = code_text.strip()
-
-                        # Opening/closing markdown fences'i kaldır: ```c ... ```
-                        if clean_code.startswith("```"):
-                            lines = clean_code.splitlines()
-
-                            if lines and lines[0].strip().startswith("```"):
-                                lines = lines[1:]
-
-                            if lines and lines[-1].strip() == "```":
-                                lines = lines[:-1]
-
-                            clean_code = "\n".join(lines).strip()
-
-                        slide["code"] = clean_code
-                        slide["code_language"] = lang_hint if lang_hint else "code"
-                        break
-            except Exception as e:
-                import traceback
-                print(f"[CODE GEN ERROR] {e}")
-                traceback.print_exc()
-
-        if parsed:
-            cleaned = _json.dumps(parsed, ensure_ascii=False)
+        if "```" in cleaned:
+            parts = cleaned.split("```")
+            for part in parts:
+                part = part.strip()
+                if part.startswith("json"):
+                    part = part[4:].strip()
+                if part.startswith("{"):
+                    cleaned = part
+                    break
 
         sections[section_index]["draft"] = cleaned
         sections[section_index]["approved"] = False
         _save_sections(lesson_id, sections)
-        yield f"data: {_json.dumps({'done': True, 'section_index': section_index})}\n\n"
+        yield f"data: {json.dumps({'done': True, 'section_index': section_index})}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
@@ -582,9 +433,6 @@ def unapprove_section(lesson_id: str, section_index: int, current_user: dict = D
     _save_sections(lesson_id, sections)
     return {"message": f"Section {section_index + 1} unapproved.", "section_index": section_index}
 
-
-@router.patch("/{lesson_id}/publish-sections")
-# Bu fonksiyonu lessons.py içindeki publish_sections ile değiştir
 
 @router.patch("/{lesson_id}/publish-sections")
 def publish_sections(
@@ -724,3 +572,46 @@ def start_lesson_chat(lesson_id: str, body: StartLessonChatRequest, current_user
     db.add(Message(chat_id=chat.id, sender="assistant", content=approved_text))
     db.commit()
     return {"chat_id": str(chat.id), "lesson_id": lesson_id, "week_title": lesson.get("week_title"), "starter_message": ""}
+
+@router.delete("/course/{course_id}/all")
+def delete_all_lessons_endpoint(
+    course_id: str,
+    current_user: dict = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    """Delete ALL lessons for a course."""
+    import os
+    existing_lessons = get_lessons_by_course(db, course_id)
+    for lesson_id in existing_lessons:
+        sections_path = _get_sections_path(lesson_id)
+        if os.path.exists(sections_path):
+            try:
+                os.remove(sections_path)
+            except Exception:
+                pass
+
+    ok, msg = delete_lessons_by_course(db, course_id, current_user["username"])
+    if not ok:
+        raise HTTPException(status_code=404, detail=msg)
+    return {"message": msg, "course_id": course_id}
+
+
+@router.delete("/{lesson_id}")
+def delete_lesson_endpoint(
+    lesson_id: str,
+    current_user: dict = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    """Delete a single lesson (week) and its associated files/sections."""
+    import os
+    sections_path = _get_sections_path(lesson_id)
+    if os.path.exists(sections_path):
+        try:
+            os.remove(sections_path)
+        except Exception:
+            pass
+
+    ok, msg = delete_lesson(db, lesson_id, current_user["username"])
+    if not ok:
+        raise HTTPException(status_code=404, detail=msg)
+    return {"message": msg, "lesson_id": lesson_id}

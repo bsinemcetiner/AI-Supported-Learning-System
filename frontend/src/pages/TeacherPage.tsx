@@ -1,5 +1,4 @@
-import { TeacherCalendar } from "../components/TeacherCalendar";
-import { memo, useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { LassieLogo } from "../components/LassieLogo";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -12,7 +11,7 @@ import type { Course, Material } from "../types";
 import type { Lesson } from "../services/api";
 import { LessonSectionReview } from "./LessonSectionReview";
 import { SectionDetailPage } from "./SectionDetailPage";
-
+import { TeacherCalendar } from "./TeacherCalendar";
 type View = "home" | "course" | "section";
 type HomeTab = "quick-start" | "courses" | "create" | "upload" | "upload_material";
 type ActiveSection = { lesson: Lesson; sectionIndex: number };
@@ -165,138 +164,6 @@ const fadeUp = {
   transition: { duration: 0.22 },
 };
 
-type TeacherTopHeaderProps = {
-  darkMode: boolean;
-  textPrimary: string;
-  textSecondary: string;
-  borderColor: string;
-  onToggleDarkMode: () => void;
-  onLogout?: () => void;
-  onSettings?: () => void;
-};
-
-const TeacherTopHeader = memo(function TeacherTopHeader({
-  darkMode,
-  textPrimary,
-  textSecondary,
-  borderColor,
-  onToggleDarkMode,
-  onLogout,
-  onSettings,
-}: TeacherTopHeaderProps) {
-  return (
-    <motion.div
-      initial={false}
-      animate={{ opacity: 1, y: 0 }}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        marginBottom: "2rem",
-        gap: 12,
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <LassieLogo size={72} radius={20} darkMode={darkMode} />
-
-        <div>
-          <h1
-            style={{
-              fontSize: "2.2rem",
-              fontWeight: 700,
-              color: textPrimary,
-              margin: 0,
-              letterSpacing: "-0.02em",
-            }}
-          >
-            Teacher Dashboard
-          </h1>
-          <p style={{ fontSize: "0.85rem", color: textSecondary, margin: 0 }}>
-            Learning Assistant
-          </p>
-        </div>
-      </div>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <motion.button
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={onToggleDarkMode}
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: "50%",
-            background: darkMode ? "#334155" : "#fff",
-            border: `1px solid ${borderColor}`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
-          }}
-        >
-          {darkMode ? (
-            <Sun size={18} color="#fbbf24" />
-          ) : (
-            <Moon size={18} color="#6b7280" />
-          )}
-        </motion.button>
-
-        {onSettings && (
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={onSettings}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "8px 16px",
-              borderRadius: 12,
-              background: darkMode ? "#334155" : "#fff",
-              border: `1px solid ${borderColor}`,
-              cursor: "pointer",
-              fontSize: "0.85rem",
-              fontWeight: 600,
-              color: textSecondary,
-              fontFamily: "inherit",
-              boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
-            }}
-          >
-            <Settings size={16} />
-            Settings
-          </motion.button>
-        )}
-
-        {onLogout && (
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={onLogout}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "8px 16px",
-              borderRadius: 12,
-              background: darkMode ? "#334155" : "#fff",
-              border: `1px solid ${borderColor}`,
-              cursor: "pointer",
-              fontSize: "0.85rem",
-              fontWeight: 600,
-              color: textSecondary,
-              fontFamily: "inherit",
-              boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
-            }}
-          >
-            Logout
-          </motion.button>
-        )}
-      </div>
-    </motion.div>
-  );
-});
-
    export default function TeacherPage({
       username,
       onLogout,
@@ -311,26 +178,13 @@ const TeacherTopHeader = memo(function TeacherTopHeader({
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error" | "info"; text: string } | null>(null);
   const [darkMode, setDarkMode] = useState(false);
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
 
-  const [view, __setView] = useState<View>(() => (localStorage.getItem("teacher_view") as View) || "home");
-  const [homeTab, __setHomeTab] = useState<HomeTab>(() => (localStorage.getItem("teacher_home_tab") as HomeTab) || "quick-start");
-  const [selectedCourseId, __setSelectedCourseId] = useState<string>(() => localStorage.getItem("teacher_course_id") || "");
+  const [view, setView] = useState<View>("home");
+  const [homeTab, setHomeTab] = useState<HomeTab>("quick-start");
+  const [selectedCourseId, setSelectedCourseId] = useState<string>("");
   const [activeSection, setActiveSection] = useState<ActiveSection | null>(null);
-
-  function setSelectedCourseId(id: string) {
-    __setSelectedCourseId(id);
-    localStorage.setItem("teacher_course_id", id);
-  }
-
-  function setHomeTab(v: HomeTab) {
-    __setHomeTab(v);
-    localStorage.setItem("teacher_home_tab", v);
-  }
-
-  function setView(v: View) {
-    __setView(v);
-    localStorage.setItem("teacher_view", v);
-  }
 
   const [courseName, setCourseName] = useState("");
   const [uploadCourseId, setUploadCourseId] = useState("");
@@ -360,33 +214,10 @@ const TeacherTopHeader = memo(function TeacherTopHeader({
       const map: Record<string, Record<string, Lesson>> = {};
       for (const [id, l] of entries) map[id] = l;
       setLessonMap(map);
-
-      // Restore section view after data is loaded
-      const sectionKey = localStorage.getItem("teacher_section_key");
-      const savedView = localStorage.getItem("teacher_view") as View;
-      const savedCourseId = localStorage.getItem("teacher_course_id") || "";
-
-      if (sectionKey && savedView === "section") {
-        const [lessonId, idxStr] = sectionKey.split("|");
-        const idx = parseInt(idxStr, 10);
-        for (const lessons of Object.values(map)) {
-          const lesson = (lessons as any)[lessonId];
-          if (lesson) {
-            setActiveSection({ lesson, sectionIndex: idx });
-            __setView("section");
-            break;
-          }
-        }
-      } else if (savedView === "course" && savedCourseId && data[savedCourseId]) {
-        __setView("course");
-        __setSelectedCourseId(savedCourseId);
-      }
     } catch (e: any) { showFeedback("error", e.message); }
   }
 
   useEffect(() => { loadCourses(); }, []);
-
-
 
   const courseList = Object.entries(courseMap);
 const totalLessons = Object.values(lessonMap).reduce((a, m) => a + Object.keys(m).length, 0);
@@ -588,6 +419,41 @@ function removeSelectedMaterialFile(indexToRemove: number) {
     catch (e: any) { showFeedback("error", e.message); }
   }
 
+  function handleLessonDeleted(lessonId: string) {
+    if (!selectedCourseId) return;
+    setLessonMap((prev) => {
+      const courseMap = { ...(prev[selectedCourseId] ?? {}) };
+      delete courseMap[lessonId];
+      return { ...prev, [selectedCourseId]: courseMap };
+    });
+  }
+
+  async function handleDeleteAllLessons() {
+    if (!selectedCourseId) return;
+    setDeletingAll(true);
+    try {
+      await coursesApi.delete(selectedCourseId);
+      showFeedback("success", "Course deleted.");
+      setCourseMap((prev) => {
+        const next = { ...prev };
+        delete next[selectedCourseId];
+        return next;
+      });
+      setLessonMap((prev) => {
+        const next = { ...prev };
+        delete next[selectedCourseId];
+        return next;
+      });
+      setView("home");
+      setHomeTab("courses");
+    } catch (e: any) {
+      showFeedback("error", e.message || "Could not delete course.");
+    } finally {
+      setDeletingAll(false);
+      setShowDeleteAllModal(false);
+    }
+  }
+
   const bg = darkMode
     ? "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)"
     : "linear-gradient(135deg, #fff7ed 0%, #fdf2f8 50%, #f5f3ff 100%)";
@@ -596,32 +462,134 @@ function removeSelectedMaterialFile(indexToRemove: number) {
   const textPrimary = darkMode ? "#f1f5f9" : "#111827";
   const textSecondary = darkMode ? "#94a3b8" : "#6b7280";
   const borderColor = darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.07)";
-  const toggleDarkMode = useCallback(() => {
-    setDarkMode((prev) => !prev);
-  }, []);
 
+function TeacherTopHeader() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -16 }}
+      animate={{ opacity: 1, y: 0 }}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: "2rem",
+        gap: 12,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <LassieLogo size={72} radius={20} darkMode={darkMode} />
+
+        <div>
+          <h1
+            style={{
+              fontSize: "2.2rem",
+              fontWeight: 700,
+              color: textPrimary,
+              margin: 0,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Teacher Dashboard
+          </h1>
+          <p style={{ fontSize: "0.85rem", color: textSecondary, margin: 0 }}>
+            Learning Assistant
+          </p>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <motion.button
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setDarkMode(!darkMode)}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            background: darkMode ? "#334155" : "#fff",
+            border: `1px solid ${borderColor}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
+          }}
+        >
+          {darkMode ? (
+            <Sun size={18} color="#fbbf24" />
+          ) : (
+            <Moon size={18} color="#6b7280" />
+          )}
+        </motion.button>
+
+        {onSettings && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={onSettings}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "8px 16px",
+              borderRadius: 12,
+              background: darkMode ? "#334155" : "#fff",
+              border: `1px solid ${borderColor}`,
+              cursor: "pointer",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+              color: textSecondary,
+              fontFamily: "inherit",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
+            }}
+          >
+            <Settings size={16} />
+            Settings
+          </motion.button>
+        )}
+
+        {onLogout && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={onLogout}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "8px 16px",
+              borderRadius: 12,
+              background: darkMode ? "#334155" : "#fff",
+              border: `1px solid ${borderColor}`,
+              cursor: "pointer",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+              color: textSecondary,
+              fontFamily: "inherit",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
+            }}
+          >
+            Logout
+          </motion.button>
+        )}
+      </div>
+    </motion.div>
+  );
+}
 
   // ── Section detail ──
   if (view === "section" && activeSection) {
     return (
        <div style={{ background: bg, minHeight: "100vh" }}>
         <div style={{ padding: "2rem 2rem", maxWidth: 1200, margin: "0 auto" }}>
-          <TeacherTopHeader
-              darkMode={darkMode}
-              textPrimary={textPrimary}
-              textSecondary={textSecondary}
-              borderColor={borderColor}
-              onToggleDarkMode={toggleDarkMode}
-              onLogout={onLogout}
-              onSettings={onSettings}
-          />
+          <TeacherTopHeader />
             <AnimatePresence>
               {feedback && <motion.div {...fadeUp} className={`alert alert-${feedback.type}`} style={{ marginBottom: 16 }}>{feedback.text}</motion.div>}
             </AnimatePresence>
             <SectionDetailPage
               lesson={activeSection.lesson}
               sectionIndex={activeSection.sectionIndex}
-              onBack={() => { setView("course"); setActiveSection(null); localStorage.removeItem("teacher_section_key"); }}
+              onBack={() => { setView("course"); setActiveSection(null); }}
               showFeedback={showFeedback}
               onApproved={loadCourses}
               darkMode={darkMode}
@@ -644,15 +612,7 @@ function removeSelectedMaterialFile(indexToRemove: number) {
     return (
   <div style={{ background: bg, minHeight: "100vh" }}>
     <div style={{ padding: "2rem 2rem", maxWidth: 1200, margin: "0 auto" }}>
-      <TeacherTopHeader
-          darkMode={darkMode}
-          textPrimary={textPrimary}
-          textSecondary={textSecondary}
-          borderColor={borderColor}
-          onToggleDarkMode={toggleDarkMode}
-          onLogout={onLogout}
-          onSettings={onSettings}
-      />
+      <TeacherTopHeader />
 
       <AnimatePresence>
         {feedback && (
@@ -698,7 +658,18 @@ function removeSelectedMaterialFile(indexToRemove: number) {
           )}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <p style={{ fontSize: "0.72rem", fontWeight: 700, color: textSecondary, textTransform: "uppercase", letterSpacing: "0.08em" }}>Lesson Review Wizard</p>
-            <button className="btn btn-ghost btn-sm" onClick={() => { setView("home"); setHomeTab("upload"); }}>+ Upload another lesson</button>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              {lessons.length > 0 && (
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{ color: "#dc2626", borderColor: "#fca5a5" }}
+                  onClick={() => setShowDeleteAllModal(true)}
+                >
+                  🗑 Delete Course
+                </button>
+              )}
+              <button className="btn btn-ghost btn-sm" onClick={() => { setView("home"); setHomeTab("upload"); }}>+ Upload another lesson</button>
+            </div>
           </div>
           {lessons.length === 0 ? (
             <div className="alert alert-info">No lessons yet. Upload a lesson PDF to get started.</div>
@@ -709,9 +680,9 @@ function removeSelectedMaterialFile(indexToRemove: number) {
                   key={lesson.lesson_id}
                   lesson={lesson}
                   onPublished={loadCourses}
+                  onDeleted={handleLessonDeleted}
                   onOpenSection={(lesson, idx) => {
                     setActiveSection({ lesson, sectionIndex: idx });
-                    localStorage.setItem("teacher_section_key", lesson.lesson_id + "|" + idx);
                     setView("section");
                   }}
                   showFeedback={showFeedback}
@@ -725,7 +696,86 @@ function removeSelectedMaterialFile(indexToRemove: number) {
             </div>
           )}
         </motion.div>
-      </div>
+  
+      {/* ── Delete All Modal ── */}
+      {showDeleteAllModal && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 9999,
+            background: "rgba(0,0,0,0.55)",
+            backdropFilter: "blur(6px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+          onClick={() => { if (!deletingAll) setShowDeleteAllModal(false); }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: darkMode ? "rgba(30,41,59,0.98)" : "#fff",
+              border: darkMode ? "1px solid rgba(255,255,255,0.12)" : "1px solid #fecaca",
+              borderRadius: 24,
+              padding: "2rem 2.25rem",
+              width: 420,
+              maxWidth: "90vw",
+              boxShadow: "0 24px 64px rgba(0,0,0,0.35)",
+            }}
+          >
+            {/* Icon */}
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.25rem" }}>
+              <div style={{
+                width: 56, height: 56, borderRadius: 16,
+                background: "linear-gradient(135deg,#fee2e2,#fecaca)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                  <path d="M10 11v6"/><path d="M14 11v6"/>
+                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                </svg>
+              </div>
+            </div>
+
+            <h3 style={{ textAlign: "center", fontSize: "1.15rem", fontWeight: 800, color: darkMode ? "#f1f5f9" : "#111827", margin: "0 0 8px" }}>
+              Delete This Course?
+            </h3>
+            <p style={{ textAlign: "center", fontSize: "0.875rem", color: darkMode ? "#94a3b8" : "#6b7280", margin: "0 0 1.75rem", lineHeight: 1.6 }}>
+              This course and all its lessons will be permanently deleted. This action <strong style={{ color: "#dc2626" }}>cannot be undone</strong>.
+            </p>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setShowDeleteAllModal(false)}
+                disabled={deletingAll}
+                style={{
+                  flex: 1, padding: "11px", borderRadius: 14,
+                  border: `1px solid ${darkMode ? "rgba(255,255,255,0.12)" : "#e5e7eb"}`,
+                  background: "transparent",
+                  color: darkMode ? "#94a3b8" : "#6b7280",
+                  fontWeight: 600, fontSize: "0.9rem", cursor: "pointer", fontFamily: "inherit",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAllLessons}
+                disabled={deletingAll}
+                style={{
+                  flex: 1, padding: "11px", borderRadius: 14, border: "none",
+                  background: deletingAll ? "#fca5a5" : "linear-gradient(135deg,#ef4444,#dc2626)",
+                  color: "#fff", fontWeight: 700, fontSize: "0.9rem",
+                  cursor: deletingAll ? "not-allowed" : "pointer", fontFamily: "inherit",
+                  boxShadow: deletingAll ? "none" : "0 4px 16px rgba(239,68,68,0.35)",
+                  transition: "all 0.2s",
+                }}
+              >
+                {deletingAll ? "Deleting…" : "Yes, Delete Course"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
     </div>
     );
   }
@@ -758,15 +808,7 @@ function removeSelectedMaterialFile(indexToRemove: number) {
       <div style={{ position: "relative", zIndex: 1, padding: "2rem 2rem", maxWidth: 1200, margin: "0 auto" }}>
 
         {/* Header */}
-        <TeacherTopHeader
-          darkMode={darkMode}
-          textPrimary={textPrimary}
-          textSecondary={textSecondary}
-          borderColor={borderColor}
-          onToggleDarkMode={toggleDarkMode}
-          onLogout={onLogout}
-          onSettings={onSettings}
-        />
+        <TeacherTopHeader />
 
         {/* Feedback */}
         <AnimatePresence>
@@ -789,7 +831,7 @@ function removeSelectedMaterialFile(indexToRemove: number) {
             <motion.button
               key={t.id}
               whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
-              onClick={() => setHomeTab(t.id as HomeTab)}
+              onClick={() => setHomeTab(t.id)}
               style={{
                 flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
                 padding: "13px 16px", borderRadius: 16, border: "none", cursor: "pointer",
@@ -1326,3 +1368,5 @@ function removeSelectedMaterialFile(indexToRemove: number) {
     </div>
   );
 }
+
+// ── Teacher Calendar Component ────────────────────────────────────────────────

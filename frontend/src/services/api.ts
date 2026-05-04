@@ -5,6 +5,7 @@ import type {
   TeachingMode,
   TeachingTone,
   Material,
+  NotificationItem,
 } from "../types";
 
 const BASE = "http://127.0.0.1:8011/api";
@@ -37,18 +38,6 @@ export type Section = {
   summary: string;
   draft: string;
   approved: boolean;
-};
-
-export type CalendarEvent = {
-  id: number;
-  title: string;
-  description: string;
-  event_date: string;
-  event_time: string;
-  color: string;
-  created_by: string;
-  is_shared: boolean;
-  created_at: string;
 };
 
 export const token = {
@@ -116,6 +105,53 @@ export async function* streamRequest(
 
     for (const line of lines) {
       if (!line.startsWith("data: ")) continue;
+
+      try {
+        const json = JSON.parse(line.slice(6));
+        if (json.delta) yield json.delta;
+        if (json.done) return;
+      } catch {
+        // ignore malformed stream lines
+      }
+    }
+  }
+}
+
+export async function* streamFormRequest(
+  path: string,
+  form: FormData
+): AsyncGenerator<string> {
+  const headers: Record<string, string> = {};
+
+  const t = token.get();
+  if (t) headers["Authorization"] = `Bearer ${t}`;
+
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers,
+    body: form,
+  });
+
+  if (!res.ok || !res.body) {
+    const err = await res.text().catch(() => "Stream failed");
+    throw new Error(err || "Stream failed");
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+
       try {
         const json = JSON.parse(line.slice(6));
         if (json.delta) yield json.delta;
@@ -134,18 +170,6 @@ export const auth = {
       body: JSON.stringify({ username, password }),
     }),
 
-  signup: (
-    full_name: string,
-    username: string,
-    password: string,
-    role: string,
-    email?: string
-  ) =>
-    request<{ message: string }>("/auth/signup", {
-      method: "POST",
-      body: JSON.stringify({ full_name, username, password, role, email }),
-    }),
-
   sendOtp: (email: string) =>
     request<{ message: string; role: string }>("/auth/send-otp", {
       method: "POST",
@@ -153,15 +177,29 @@ export const auth = {
     }),
 
   verifyOtp: (email: string, otp: string) =>
-    request<{ message: string; verified: boolean }>("/auth/verify-otp", {
+    request<{ message: string }>("/auth/verify-otp", {
       method: "POST",
       body: JSON.stringify({ email, otp }),
+    }),
+
+  signup: (
+    full_name: string,
+    username: string,
+    password: string,
+    role: string,
+    email: string
+  ) =>
+    request<{ message: string }>("/auth/signup", {
+      method: "POST",
+      body: JSON.stringify({ full_name, username, password, role, email }),
     }),
 };
 
 export const courses = {
   getAll: () => request<Record<string, Course>>("/courses/"),
+
   getMine: () => request<Record<string, Course>>("/courses/mine"),
+
   getAssigned: () => request<Record<string, Course>>("/courses/assigned"),
 
   enroll: (course_id: string) =>
@@ -183,18 +221,22 @@ export const courses = {
   uploadMaterial: async (course_id: string, file: File) => {
     const form = new FormData();
     form.append("file", file);
+
     const headers: Record<string, string> = {};
     const t = token.get();
     if (t) headers["Authorization"] = `Bearer ${t}`;
+
     const res = await fetch(`${BASE}/courses/${course_id}/materials`, {
       method: "POST",
       headers,
       body: form,
     });
+
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(err.detail ?? "Upload failed");
     }
+
     return res.json();
   },
 
@@ -205,25 +247,35 @@ export const courses = {
 
   getMaterials: (course_id: string) =>
     request<Material[]>(`/courses/${course_id}/materials`),
+
+  delete: (course_id: string) =>
+    request<{ message: string; course_id: string }>(`/courses/${course_id}`, {
+      method: "DELETE",
+    }),
 };
 
 export const lessons = {
   upload: async (course_id: string, week_title: string, file: File) => {
     const form = new FormData();
     form.append("file", file);
+
     const headers: Record<string, string> = {};
     const t = token.get();
     if (t) headers["Authorization"] = `Bearer ${t}`;
+
     const qs = new URLSearchParams({ course_id, week_title }).toString();
+
     const res = await fetch(`${BASE}/lessons/upload?${qs}`, {
       method: "POST",
       headers,
       body: form,
     });
+
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(err.detail ?? "Lesson upload failed");
     }
+
     return res.json() as Promise<{
       lesson_id: string;
       week_title: string;
@@ -299,6 +351,17 @@ export const lessons = {
         body: JSON.stringify({ mode, tone }),
       }
     ),
+
+  delete: (lesson_id: string) =>
+    request<{ message: string; lesson_id: string }>(`/lessons/${lesson_id}`, {
+      method: "DELETE",
+    }),
+
+  deleteAllByCourse: (course_id: string) =>
+    request<{ message: string; course_id: string }>(
+      `/lessons/course/${course_id}/all`,
+      { method: "DELETE" }
+    ),
 };
 
 export const chats = {
@@ -307,14 +370,14 @@ export const chats = {
   getStreak: () => request<{ streak: number }>("/chats/streak"),
 
   create: (opts: {
-    course_id?: string;
-    lesson_id?: string;
-    section_index?: number | null;
-    title?: string;
-    mode?: TeachingMode;
-    tone?: TeachingTone;
-    starter_message?: string;
-  }) =>
+  course_id?: string;
+  lesson_id?: string;
+  section_index?: number | null;
+  title?: string;
+  mode?: TeachingMode;
+  tone?: TeachingTone;
+  starter_message?: string;
+}) =>
     request<{ chat_id: string }>("/chats/", {
       method: "POST",
       body: JSON.stringify(opts),
@@ -341,124 +404,17 @@ export const chats = {
   sendStream: (chat_id: string, content: string) =>
     streamRequest(`/chats/${chat_id}/messages`, { content, stream: true }),
 
+  sendImageQuestionStream: (chat_id: string, question: string, image: File) => {
+      const form = new FormData();
+      form.append("question", question);
+      form.append("stream", "true");
+      form.append("image", image);
+
+      return streamFormRequest(`/chats/${chat_id}/image-question`, form);
+  },
+
   regenerateStream: (chat_id: string) =>
     streamRequest(`/chats/${chat_id}/regenerate`, {}),
-
-  sendImageQuestionStream: async function* (chat_id: string, content: string, image: File) {
-    const headers: Record<string, string> = {};
-    const t = token.get();
-    if (t) headers["Authorization"] = `Bearer ${t}`;
-
-    const form = new FormData();
-    form.append("question", content);
-    form.append("stream", "true");
-    form.append("image", image);
-
-    const res = await fetch(`${BASE}/chats/${chat_id}/image-question`, {
-      method: "POST",
-      headers,
-      body: form,
-    });
-
-    if (!res.ok || !res.body) {
-      const err = await res.text().catch(() => "Stream failed");
-      throw new Error(err || "Stream failed");
-    }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-      for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        try {
-          const json = JSON.parse(line.slice(6));
-          if (json.delta) yield json.delta;
-          if (json.done) return;
-        } catch { }
-      }
-    }
-  },
-};
-
-// ===== EVENTS =====
-export const events = {
-  getMine: () => request<CalendarEvent[]>("/events/mine"),
-  getShared: () => request<CalendarEvent[]>("/events/shared"),
-
-  create: (body: {
-    title: string;
-    description?: string;
-    event_date: string;
-    event_time?: string;
-    color?: string;
-    is_shared?: boolean;
-  }) =>
-    request<CalendarEvent>("/events/", {
-      method: "POST",
-      body: JSON.stringify(body),
-    }),
-
-  update: (
-    event_id: number,
-    body: {
-      title?: string;
-      description?: string;
-      event_date?: string;
-      event_time?: string;
-      color?: string;
-      is_shared?: boolean;
-    }
-  ) =>
-    request<CalendarEvent>(`/events/${event_id}`, {
-      method: "PATCH",
-      body: JSON.stringify(body),
-    }),
-
-  delete: (event_id: number) =>
-    request<{ message: string; id: number }>(`/events/${event_id}`, {
-      method: "DELETE",
-    }),
-
-  getMyPersonal: () => request<CalendarEvent[]>("/events/my-personal"),
-
-  createPersonal: (body: {
-    title: string;
-    description?: string;
-    event_date: string;
-    event_time?: string;
-    color?: string;
-  }) =>
-    request<CalendarEvent>("/events/personal", {
-      method: "POST",
-      body: JSON.stringify(body),
-    }),
-
-  updatePersonal: (
-    event_id: number,
-    body: {
-      title?: string;
-      description?: string;
-      event_date?: string;
-      event_time?: string;
-      color?: string;
-    }
-  ) =>
-    request<CalendarEvent>(`/events/personal/${event_id}`, {
-      method: "PATCH",
-      body: JSON.stringify(body),
-    }),
-
-  deletePersonal: (event_id: number) =>
-    request<{ message: string; id: number }>(`/events/personal/${event_id}`, {
-      method: "DELETE",
-    }),
 };
 
 // ===== ADMIN =====
@@ -477,6 +433,7 @@ export const adminLogin = async (username: string, password: string) => {
 };
 
 export const adminLogout = () => localStorage.removeItem(ADMIN_TOKEN_KEY);
+
 export const getAdminToken = () => localStorage.getItem(ADMIN_TOKEN_KEY);
 
 const adminHeaders = () => ({
@@ -486,19 +443,19 @@ const adminHeaders = () => ({
 
 export const fetchAllStudents = async () => {
   const res = await fetch(`${BASE}/admin/students`, { headers: adminHeaders() });
-  if (!res.ok) throw new Error("Failed to fetch students");
+  if (!res.ok) throw new Error("Could not fetch students");
   return res.json();
 };
 
 export const fetchAllTeachers = async () => {
   const res = await fetch(`${BASE}/admin/teachers`, { headers: adminHeaders() });
-  if (!res.ok) throw new Error("Failed to fetch teachers");
+  if (!res.ok) throw new Error("Could not fetch teachers");
   return res.json();
 };
 
 export const fetchAllCourses = async () => {
   const res = await fetch(`${BASE}/admin/courses`, { headers: adminHeaders() });
-  if (!res.ok) throw new Error("Failed to fetch courses");
+  if (!res.ok) throw new Error("Could not fetch courses");
   return res.json();
 };
 
@@ -506,11 +463,11 @@ export const fetchStudentCourses = async (studentId: number) => {
   const res = await fetch(`${BASE}/admin/students/${studentId}/courses`, {
     headers: adminHeaders(),
   });
-  if (!res.ok) throw new Error("Failed to fetch student courses");
+  if (!res.ok) throw new Error("Could not fetch student courses");
   return res.json();
 };
 
-export const assignCourse = async (studentId: number, courseId: string) => {
+export const assignCourse = async (studentId: number, courseId: number) => {
   const res = await fetch(`${BASE}/admin/assign`, {
     method: "POST",
     headers: adminHeaders(),
@@ -520,13 +477,13 @@ export const assignCourse = async (studentId: number, courseId: string) => {
   return res.json();
 };
 
-export const removeCourse = async (studentId: number, courseId: string) => {
+export const removeCourse = async (studentId: number, courseId: number) => {
   const res = await fetch(`${BASE}/admin/remove`, {
     method: "DELETE",
     headers: adminHeaders(),
     body: JSON.stringify({ student_id: studentId, course_id: courseId }),
   });
-  if (!res.ok) throw new Error("Removal failed");
+  if (!res.ok) throw new Error("Remove failed");
   return res.json();
 };
 
@@ -554,10 +511,69 @@ export const settings = {
 
 export const notifications = {
   getAll: () =>
-    request<{ notifications: any[] }>("/notifications/"),
+    request<{ notifications: NotificationItem[]; unread_count: number }>(
+      "/notifications/"
+    ),
 
   markAllRead: () =>
-    request<{ message: string }>("/notifications/read-all", {
+    request<{ ok: boolean }>("/notifications/read-all", {
       method: "PATCH",
+    }),
+
+  markOneRead: (notification_id: string) =>
+    request<{ ok: boolean }>(`/notifications/${notification_id}/read`, {
+      method: "PATCH",
+    }),
+};
+
+// ===== CALENDAR EVENTS =====
+export type CalendarEvent = {
+  id: number;
+  title: string;
+  description: string;
+  event_date: string;   // "YYYY-MM-DD"
+  event_time: string;   // "HH:MM-HH:MM" or ""
+  color: string;
+  is_shared: boolean;
+  created_by: string;
+};
+
+export const events = {
+  getShared: () =>
+    request<CalendarEvent[]>("/events/shared"),
+
+  getMyPersonal: () =>
+    request<CalendarEvent[]>("/events/personal"),
+
+  createPersonal: (data: {
+    title: string;
+    description: string;
+    event_date: string;
+    event_time: string;
+    color: string;
+  }) =>
+    request<CalendarEvent>("/events/personal", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updatePersonal: (
+    id: number,
+    data: {
+      title: string;
+      description: string;
+      event_date: string;
+      event_time: string;
+      color: string;
+    }
+  ) =>
+    request<CalendarEvent>(`/events/personal/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  deletePersonal: (id: number) =>
+    request<{ message: string }>(`/events/personal/${id}`, {
+      method: "DELETE",
     }),
 };

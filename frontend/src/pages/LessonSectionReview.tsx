@@ -5,6 +5,7 @@ import type { Lesson, Section } from "../services/api";
 interface LessonSectionReviewProps {
   lesson: Lesson;
   onPublished: () => void;
+  onDeleted: (lessonId: string) => void;
   onOpenSection: (lesson: Lesson, sectionIndex: number) => void;
   showFeedback: (type: "success" | "error" | "info", text: string) => void;
   darkMode: boolean;
@@ -17,6 +18,7 @@ interface LessonSectionReviewProps {
 export function LessonSectionReview({
   lesson,
   onPublished,
+  onDeleted,
   onOpenSection,
   showFeedback,
   darkMode,
@@ -28,6 +30,9 @@ export function LessonSectionReview({
   const [sections, setSections] = useState<Section[]>([]);
   const [totalSections, setTotalSections] = useState(0);
   const [publishing, setPublishing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleted, setDeleted] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [publishedCount, setPublishedCount] = useState(0);
 
@@ -55,6 +60,19 @@ export function LessonSectionReview({
       showFeedback("error", e.message || "Could not publish sections.");
     } finally {
       setPublishing(false);
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await lessonsApi.delete(lesson.lesson_id);
+      setDeleted(true);
+      setTimeout(() => onDeleted(lesson.lesson_id), 1200);
+    } catch (e: any) {
+      showFeedback("error", e.message || "Could not delete lesson.");
+      setDeleting(false);
+      setConfirmDelete(false);
     }
   }
 
@@ -139,6 +157,35 @@ export function LessonSectionReview({
   // İkon kutusu için renkler
   const iconGradient = "linear-gradient(135deg, #fb923c, #ec4899)";
 
+  if (deleted) {
+    return (
+      <div style={{
+        background: cardBg,
+        borderRadius: 20,
+        border: "1px solid #86efac",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
+        overflow: "hidden",
+        fontFamily: "inherit",
+        padding: "1.25rem 1.5rem",
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        opacity: 0,
+        transform: "scale(0.97)",
+        transition: "all 0.35s ease",
+      }}>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+        <span style={{ fontSize: "0.9rem", fontWeight: 600, color: "#16a34a" }}>
+          "{lesson.week_title}" deleted.
+        </span>
+      </div>
+    );
+  }
+
   return (
 
       <div
@@ -185,8 +232,53 @@ export function LessonSectionReview({
           </div>
         </div>
 
-        {/* Publish button */}
-        <button
+        {/* Action buttons */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          {/* Delete button / confirm */}
+          {confirmDelete ? (
+            <div style={{ display: "flex", gap: 6, alignItems: "center", background: darkMode ? "rgba(239,68,68,0.15)" : "#fff1f2", border: "1px solid #fca5a5", borderRadius: 14, padding: "8px 14px" }}>
+              <span style={{ fontSize: "0.82rem", color: "#dc2626", fontWeight: 600 }}>Delete this lesson?</span>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                style={{ background: "#dc2626", color: "#fff", border: "none", borderRadius: 10, padding: "6px 14px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                {deleting ? "Deleting..." : "Yes, delete"}
+              </button>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                style={{ background: "transparent", color: "#6b7280", border: "1px solid #d1d5db", borderRadius: 10, padding: "6px 12px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              title="Delete this lesson"
+              style={{
+                background: "transparent",
+                color: darkMode ? "#f87171" : "#dc2626",
+                border: `1px solid ${darkMode ? "rgba(248,113,113,0.35)" : "#fca5a5"}`,
+                borderRadius: 12,
+                padding: "9px 14px",
+                fontSize: "0.82rem", fontWeight: 600,
+                cursor: "pointer", fontFamily: "inherit",
+                display: "flex", alignItems: "center", gap: 6,
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = darkMode ? "rgba(239,68,68,0.15)" : "#fff1f2"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+              </svg>
+              Delete
+            </button>
+          )}
+
+          {/* Publish button */}
+          <button
           onClick={handlePublish}
           disabled={publishing || approvedCount === 0 || allCurrentApprovedPublished}
           style={{
@@ -241,6 +333,7 @@ export function LessonSectionReview({
           </>
         )}
         </button>
+        </div>
       </div>
 
       {/* Status message */}

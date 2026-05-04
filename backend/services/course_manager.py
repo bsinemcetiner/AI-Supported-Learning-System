@@ -213,3 +213,24 @@ def delete_material_from_course(db: Session, course_id: str, file_hash: str):
     db.commit()
 
     return True, "Material deleted successfully.", removed
+
+def delete_course(db: Session, course_id: str, teacher_username: str):
+    from models import Lesson
+    course = db.query(Course).filter(Course.course_id == course_id).first()
+    if not course:
+        return False, "Course not found."
+    if course.teacher_username != teacher_username:
+        return False, "You do not have permission to delete this course."
+    # Delete all lessons in the course
+    lessons = db.query(Lesson).filter(Lesson.course_id == course_id).all()
+    import os
+    for lesson in lessons:
+        if lesson.stored_path and os.path.exists(lesson.stored_path):
+            try:
+                os.remove(lesson.stored_path)
+            except Exception:
+                pass
+        db.delete(lesson)
+    db.delete(course)
+    db.commit()
+    return True, "Course deleted successfully."

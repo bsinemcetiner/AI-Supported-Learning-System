@@ -1,0 +1,1695 @@
+Programming in C
+Variables,
+Operators, 
+Selection statements,
+Repetition statements,
+Functions,
+Iteration vs. Recursion,
+C preprocessor
+Previously on CE316
+● “Hello, World” in C; did you try it at home? 
+● Any questions before we go any further?
+Hello, World
+● Welcome back to programming in C!
+● Remember “Hello, World”
+● The goal (or purpose) of the program was to 
+print “Hello, World” on the screen. To do so, 
+we had to use the printf function, which lives 
+in the stdio.h file. 
+● Since the starting point of a program is main, 
+the resulting program was as follows:
+Hello, World
+The goal of program is to print “Hello, 
+World on screen, so we have to use 
+printf which lives in stdio.h
+main is the entry point for all C programs.
+It returns an integer (int). 
+printf
+● Remember that I have told you “printf” does 
+not care what you write between double 
+quotes. 
+● Actually, it does. But cares only for some 
+elements that need formatting. 
+● Also, remember the new line character: \n
+● The backslash preceding the character n is 
+called the “escaping character”
+● What is escaping? 
+printf
+● Suppose, you want to print the following 
+sentence on screen:
+He said “Hello” to me. 
+● If you use double quotes around Hello, then 
+how can printf know that the parameter is 
+complete.
+● Look at the syntax highlighting in the text 
+editor:
+Escaping
+Clearly, there is a problem when you want to use double 
+quotes within printf. 
+Escaping
+● As it is with \n, you can use backslash 
+before a double quote, it will be escaped and 
+will not be considered as the end of 
+parameter.  
+● What will the program output? 
+● Try it! Let’s call it your first homework for this 
+week. 
+Escaping
+● What if you want to use backslash? 
+● Then, you escape backslash with backslash: \\
+● We will mostly use escaping for new lines (\n) 
+and using double quotes within printf. 
+● Here is a list of other special characters:
+● \t → tab (to align your output)
+● \a → makes the computer go BEEP! (alert)
+● They look like two characters but they represent 
+only one.
+Variables
+● Variables and constants are the basic data 
+manipulated in a program.
+● Variables are containers for your data. 
+● However, C needs to know what kind of data 
+you want to store. So, it has a list of types. 
+● You already have seen int variable type 
+from the main function. Let’s take a closer 
+look at them.
+Variables
+int Integers
+char Characters
+float Floating point (single 
+precision)
+double Floating point (double 
+precision)
+Variables
+● Besides its type, you also should give your 
+variable a name (called identifier).  
+● Naming a variable is easy: 
+○ The name must start with a character or _ 
+○ The following can be characters, numbers or _
+● The following are valid variable names: num1, 
+grade
+● Variable names are case sensitive; that means 
+grade and GRADE are different variables.
+● Naming your variables: try to choose 
+meaningful, concise variable names. 
+Variables
+● What can we do with variables? 
+● Why do we need them?
+● You can use them to store data. 
+● Otherwise, you have to use constant values 
+all the time. 
+● What is the meaning of programming if we 
+can not program for different values? 
+Variables
+● As you may have noticed, three out of four 
+variable types are related to numbers. 
+● Only char type is related to characters. 
+Remember, though, characters were also 
+represented by numbers.
+● Before we use C like a simple calculator, 
+let’s learn more about variables. 
+Variables
+● All variables must be declared before use.
+● All variables are defined in the memory 
+depending on their scope in the program.
+● A declaration specifies a type, and contains 
+a list of one or more variables of that type. 
+● A variable may also be initialized in its 
+declaration. 
+● Actually you should always try to initialize 
+your variables.
+printf: revisited
+● We want to be able to display the variable 
+value.
+● To do so, we use placeholders as “format 
+specifiers” that start with %
+● For integers (int) we use d (for decimal).
+● So far, printf had only one argument (the double 
+quoted string).
+● If we use %d inside this first argument, it means 
+that when output on screen it will be replaced 
+by the second parameter, which is likely an 
+integer.
+● The parameters are separated by a comma (,). 
+Notice that the specifiers with %d are replaced with the 
+value of corresponding variables
+Before...
+● ...we move on to variable types in detail, let’s 
+take a closer look to the previous source 
+code.
+● The reason is, we have used many 
+operators in there. Since they look familiar, 
+you may have not noticed them. But we 
+have assignment (=) and an operation (+). 
+Tokens in C
+● There are 6 kinds of tokens (symbols) in C
+○ keywords
+○ identifiers
+○ constants
+○ string constants
+○ punctuators
+○ operators
+● Let’s take a look at each of them. 
+Keywords
+● Keywords are reserved for C: you can not 
+use them as identifiers (such as variable 
+names.)
+● There are 32 of them. See below.
+● Did you recognize some of them?
+auto break case char const continue default do
+double else enum extern float for goto if
+int long register return short signed sizeof static
+struct switch typedef union unsigned void volatile while
+Identifiers
+● Used to name variables and functions
+● Case sensitive!
+○ all different identifiers: 
+ilker
+ILKER
+IlKeR
+Constants
+● There are a few types of constants:
+○ integer constants: e.g. 19 and 200
+○ floating constants: e.g. 1.9 and 3.14
+○ long constants: e.g. 123456789L
+○ character constants: ‘i’, ‘l’, ‘+’
+notice the single quotes around the character. 
+○ string constants: “ilker”, “kaya”, “damla”
+A sequence of characters enclosed in a pair of 
+double quotes. 
+“” is a null string
+‘a’ is not the same as “a”
+Punctuators
+● We have used all of these: 
+○ Curly braces {}
+○ Comma ,
+○ Semicolon ;
+○ Parentheses ()
+Operators
+● There are many operators in C. For now, the 
+following is a small list of them:
+○ () are used immediately after functions
+○ +, -, *, / the mathematical operators for addition, 
+subtraction, multiplication and division.
+○ % integer modulo division (remainder) 
+○ ++, -- increment and decrement operator
+○ =, +=, -=, *=, /=, %= assignment operators.
+Operators
+● Operators have precedence among 
+themselves. For example, for a statement 
+such as follows
+int a = 3 + 5 * 2;
+the multiplication has precedence over 
+addition. So, first 5*2 is evaluated. 
+● Similar to mathematics, parentheses have 
+higher precedence:
+int a = (3 + 5)*2
+In this case the addition inside parentheses is 
+evaluated first. 
+We’ll talk more about precedence next week.
+Assignment
+● Assignment is very important in C 
+programming. 
+● The value on the right hand side of the 
+statement is assigned to the variable on the left: 
+int a = 3; 
+int b = a + 4;
+● In the first statement, the value 3 (integer 
+constant) is assigned to variable a.
+● In the second statement, the expression a+4 is 
+evaluated first and the result is assigned to b.
+Other Assignment Operators
+● The equal sign (=) is the basic assignment 
+operator. For example,
+int x = 10;
+x = x + 3;
+The final value of x is 13. 
+● In mathematics an equation such as x = x + 3 is 
+confusing. The x’es on the both sides of the 
+equation cancel each other.
+● However, this is not an equation. It is an 
+assignment. 
+● It means, assign the value of right hand side to the 
+variable on the left hand side. 
+Other Assignment Operators
+● If you use assignments, consider the 
+following short hand syntax:
+○ x += 3; // means x = x + 3;
+○ x -= 3; // means x = x - 3;
+○ x *= 3; // means x = x * 3;
+○ x /= 3; // means x = x / 4;
+● There is another handy operator, called 
+increment/decrement operator:
+○ x++; // means x = x + 1;
+○ x--; // means x = x - 1;
+○ So where does the name C++ come from? 
+More operators
+● Modulo operator gives you the remainder 
+from the division. For example 
+int x = 12; 
+int y = x % 5; // assignes 2 to y. 
+int z = x % 4; // assignes 0 to z. 
+char
+● Now we can go back to the variables.
+● The char variable has the smallest range. It 
+only holds integer values between 0 to 255 
+(28) that correspond to a character.
+● For example, integer 65 is A and integer 97 
+is a. 
+● Since it is only 8 bits long, it is only one byte.
+● So if you have a text file that is 900 bytes, it 
+means there are 900 characters in it. 
+● You can use “%c” in printf for characters. 
+char
+● It is very important for you to notice that we 
+are talking about single characters, not a list 
+of characters or words. 
+● A list of characters in C is called a string, 
+which is an array of characters containing a 
+special termination character ‘\0’ at the end.
+int
+● The int type represents integers. 
+● There are many integer types.
+● The integer type int supports both signed and 
+unsigned integers. 
+● Unsigned integers are always positive.
+● Signed integers (default int) can have 
+negative values.
+● You can try sizeof(type) to see the required 
+memory area for a particular type in C.
+● Most likely it uses 4 bytes, which means 232
+different values. 
+● You can use %d in printf. 
+int
+● In addition, there are a number of qualifiers 
+that can be applied to these basic types. 
+● short and long apply to integers:
+short int sh;
+long int counter;
+● The word int can be omitted in such 
+declarations, and typically is. 
+float and double
+● Floating point variables are represented by float 
+and double types. 
+● The float type uses 4 bytes (mostly), and you 
+can use the f suffix:
+float x = 1.4f;
+● The double type uses 8 bytes and you don’t 
+require any suffix.
+● The double type is more precise. 
+● You can use %f for both of them in printf. 
+● The type long double specifies extended-
+precision floating point.
+C and types
+● C is very strict about types.
+● It is even strict with constant types.
+● For example:
+printf(“%d”, 3 / 5); 
+prints 0 on screen, why?
+● How about this?
+printf(“%f”, 3 / 5);
+● You need floating point values to get floating 
+values.
+printf(“%f”, 3.0 / 5.0);
+C and types
+● So, what to do if you have an integer value 
+as the sum of all grades and another integer 
+value for the number of students in a class. 
+How can you calculate the average grade?
+● You can use float values for the sum and 
+number of student values, but it is not what 
+we always want.
+● You can force the compiler to change the 
+type. 
+Casting
+● This type changing operation is casting. It is a 
+little early to talk about it, but a simple 
+demonstration would not hurt. 
+● So, if you have two integer values (either 
+constants or variables) you can cast them 
+(convert them) to another type as follows:
+printf(“%f”, (float)3 / (float)5);
+● This means, convert this constant value (or 
+variable) to the type in the parentheses.
+Casting
+● Of course, some of these conversions are 
+harmless.
+● But, what if you want to cast 3.2 to integer? 
+● Then you lose precision, it becomes 3. 
+● So, if you get weird 0 values, be sure to 
+check your variable types.
+Time for some input
+● The printf function has a very close relative.
+● It is called scanf. 
+● It uses similar format specifiers.
+● However, instead of outputting the value, it 
+saves the data to the variable from an input 
+source (your keyboard in this case). 
+● So now, you can get some input from the 
+user. Ask how old they are:
+&
+● Please notice the ampersand (&) sign just 
+before the variable name.
+● When using scanf to save some data into 
+a variable, you need this sign before the 
+variable name (no-space between them).
+● This means, “save the data referenced by 
+the format specifier (%d) into this variable’s 
+memory address”
+● It is also your first glimpse to “pointers”
+Variables and memory
+● Everytime you declare an integer, C handles 
+the definition of the data in memory for you. 
+For example:
+int x = 5;
+● A memory cell is created for variable x and 
+the integer value 5 is saved there. The 
+memory location depends on your operating 
+system. 
+● You can think of memory as a very large file 
+and you have been given an address of an 
+integer size to hold your integer value. 
+Input
+● The format specifier says that you are 
+expecting an integer. 
+● Here is a software engineering tip: Never 
+trust the data that comes from the user. 
+● People type all kinds of things. 
+scanf with floating point numbers
+● You can use %f with scanf for float type.
+● With type double, you have to use %lf 
+● At home, try to read floating point values and 
+print them on screen. 
+The Flow
+Top down 
+flow
+The Flow
+● A C program starts running from the _____ 
+function. 
+● It executes each expression step by step. 
+● However, we can change the flow as 
+required. 
+● So far, each line executed one at a time. 
+● How would a programmer know when to 
+change the flow? 
+● If, for example, the user has entered an 
+invalid data. 
+Controlling User Input
+● We use the scanf function to get a data from 
+the user. 
+● If we want to check this data, we can use 
+operators, that look very much like 
+mathematical operators. 
+● Beware though, they only look like them, and 
+in most cases, used like them. 
+Zero / Non-zero
+● If you want to control a variable, say, if variable 
+x equals 5;
+○ it is either equal to 5, then the statement is TRUE
+○ or it is not equal to 5, then the statement is FALSE
+● If the statement is TRUE, it corresponds to a 
+non-zero value (mostly 1). 
+● If the statement is FALSE, it corresponds to 
+zero (0). 
+● These values are called boolean values but 
+they don’t have a type in C. We use integers 
+instead. 
+Be Logical
+● Logical AND
+○ T AND T = T
+○ T AND F = F
+○ F AND T = F
+○ F AND F = F
+● Logical OR
+○ T OR T = T
+○ T OR F = T
+○ F OR T = T
+○ F OR F = F
+Logic is the beginning of wisdom, not the end.
+Mr. Spock.
+
+Relational Operators
+Less than < x < 3;
+Greater than > x > 4;
+Less than or equal <= x <= 10;
+Greater than or equal >= x >= 0;
+Equality
+Equal == x == 2;
+Not Equal != x != 3;
+Logical
+Negation ! !(x == 2);
+Logical AND && (x != 2) && (x != 3); 
+Logical OR || (x == 1) || (x == 4);
+The Operators
+What did all that mean?
+
+Check your answers
+● The ! negates the 
+value; turns true into 
+false and false into 
+true. 
+● These are simple 
+expressions.
+● In complicated 
+expressions, be 
+careful with operator 
+precedence.
+A very common mistake is confusing 
+the assignment operator = with the 
+equal operator == 
+The = operator assigns the value on 
+the right to the variable on the left. 
+The == operator is used to compare
+its left and right operands. 
+The Precedence
+● Now that we know a lot about operators, let’s 
+talk about precedence. 
+● Similar to mathematics, C operates on 
+expressions of varying complexity using a set of 
+rules. 
+● These rules define which operator comes first. 
+● In mathematics, in an operation such as 
+3 + 4 x 5 
+the multiplication is done before the addition.
+● There is such a table in C, as well. 
+The Precedence
+● The table on the previous slide is available 
+from 
+http://en.cppreference.com/w/c/language/op
+erator_precedence
+Associativity
+● Thank you for noticing associativity on the 
+table.
+● It shows the order of evaluation with the 
+operator. 
+● In right to left associativity (like assignment 
+operator), right is evaluated first. 
+● So, you will never be confused again. 
+● Let’s test it. 
+Precedence and Associativity
+● int z = x > y; 
+○ Easy. The relational operators are higher on the list, 
+so x > y is evaluated first. The variable z gets true or 
+false (1 or 0) value from the evaluation of x > y. 
+● z = x - y < 5;
+○ The minus operator ranks higher on the list. So, x - y 
+is evaluated first. Then the < operator. Finally, the 
+assignment. 
+● z = 3 < x < 5; 
+○ Associativity! Operator < works left to right. So 3 < x 
+first, then the result (0 or 1) with < 5; 
+On Clearity and Readability
+● The compiler does not make mistakes.
+● You are all familiar with the following term: 
+HUMAN ERROR
+● So, be clear when you are writing your code. 
+● A statement such as 
+z = 3 < x < 5;
+does not confuse the compiler, but it might confuse a human 
+(who is possibly reading and trying to find out the answer.)
+● So, use parentheses; readability makes you a better 
+programmer. Remember that your code will be reviewed by 
+your fellow engineers/programmers.
+Let’s test your logic
+● int x = 1;
+int z = !x;
+int t = !!x;
+● What if x was 5 (x = 5) above?
+● This is a mathematical expression; 
+3 < x < 10
+which means x is between 3 and 10. 
+Here it is in C:
+(3 < x) && (x < 10);
+Why not use?
+3 < x < 10; 
+C is clever: Short circuit
+● The logical OR returns true as long as one of 
+the operands is true. 
+● We also know that in C, the OR operator || is 
+evaluated left to right. 
+● If the left operand returns true, do we need to 
+check the one on the right? 
+● No. 
+● Neither does C. 
+● Similarly, if the first operand of an AND (&&) is 
+false, the second one is not checked (or 
+evaluated). 
+● So far, we have talked about operators, 
+true/false values. 
+● Let’s talk about the flow using
+○ if 
+○ switch 
+Selection Statements
+if statements
+● If you want to change the flow of your program, 
+you can use if statements. 
+● You need a true/false statement to check and 
+accordingly you can run different codes. 
+● It is still written top-down :) 
+● Here is a simple case:
+int x = 0; // always init. a variable.
+scanf(“%d”, &x);
+if(x == 13) {
+printf(“is it your lucky number?”);
+}
+if statements
+● Consider the fragment below.
+if(x == 13) {
+printf(“is it your lucky number?”);
+}
+● You know that the expression x == 13 will 
+return true(1) or false(0). If it returns true, 
+then the printf expression will be evaluated. 
+Otherwise, it will not be evaluated. 
+● According to the user input, you have two 
+different programs. 
+● Notice the curly braces and the indentation. 
+if statements
+● Consider the fragment below
+if(x == 13) { 
+printf(“is it your lucky number?”);
+}
+● This piece of code is useful if you want to do 
+something in only one case (in this case, if 
+the user enters 13). 
+● Let’s try a secret code screen. 
+TheCode.c
+
+Stop… or else
+● The user either enters the code correctly 
+(true) or not (false).
+● For such cases you can use else.
+● Notice that the curly braces immediately 
+follow the else keyword. 
+● if (...) {
+// run these statements if it is true
+} else {
+// run these statements if it is false
+}
+Here is a sample output
+
+Which one to use?
+● It depends on your programming task. 
+● Actually, there is one more type of these if
+statements where you can make it choose 
+for more than two choices.
+● For such cases, we use else if. Typically, for 
+creating menus on our command-line 
+programs. 
+else if
+● It is really not that complicated:
+if(...) {
+// run if this expression is true
+} else if (...) {
+// run if this second expression is true
+} else {
+// run if none of them are true
+}
+● You can skip the last else. In that case, if none 
+of the statements return true, all of them are 
+skipped. 
+● You can have as much else if as you require.
+if inside an if? if it is possible, then...
+● You can have another if statement in 
+another if statement. We call them nested if 
+statements. 
+if (expression1) {
+if(expression2) {
+statements
+}
+}
+● Of course, expression1 AND expression 2 
+must both be true for statements to run. 
+Wait. AND?
+NESTED
+What if?
+● What if you enter 4 as input? 
+● Homework: Write this program at home and 
+explain why it gives different outputs. 
+Conditional Operator
+● You will be using if and else a lot. In some 
+cases, it will only be as follows:
+if (expression1) { expression2; }
+else { expression3; }
+● Well, there is a conditional operator which 
+keeps it shorter:
+expression1 ? expression2 : expression3;
+An example
+if (x < 5) {
+y = 5;
+} else {
+y = 10;
+}
+// this becomes:
+y = (x < 5) ? 5 : 10; 
+// more fun:
+printf(“%d\n”, (x < 5) ? 5 : 10);
+The switch statement
+● There is a multiway conditional statement 
+that generalizes the if-else if-else
+statements. 
+● switch (expression) {
+case expr1: /* statement(s) */
+case expr2: /* statement(s) */
+/* as much case as you need */
+default: /* if none of them match, switch 
+uses this instead */
+}
+● There is a catch with the switch. 
+Moving along cases:
+● int x = 0;
+scanf(“%d”, &x);
+switch(x) {
+case 1:
+printf(“entered 1”);
+case 2:
+printf(“entered 2”);
+default: 
+printf(“entered something else”);
+}
+● The switch evaluates x and if it is 1, it starts
+evaluating from case 1. That means, it runs all 
+the remaining (inc. default) as well. 
+● If it is 2, it skips case 1 and starts from case 2. 
+switch is not the same as if
+● So, switch is not the same as if. 
+● However, we can make it run like if, if we 
+want to. 
+● We can use the keyword break to stop the 
+cases when we are done. 
+● The break keyword is also used in loops. 
+● It causes an exit from the innermost (in this 
+case it is nested) switch.
+● Here is the favourite colour program using 
+switch (with breaks of course).
+switch
+● So, why need switch? 
+● It has its uses. Consider a problem where 
+you need the program to jump to a line 
+according to the input.
+● See the code on the next slide. 
+switch put to good use
+
+Using if or switch?
+● You can use either if or a switch for a 
+problem. 
+● Always pay attention to your indentation.
+● Also, as a good programming habit, make 
+sure you make the most common case the 
+first one. 
+Loops
+● Loops are repetitive blocks.
+● We need them almost all the time.
+● Here is a problem for you:
+You want to find the average grade in a 
+class. How can you write this program? 
+Reasoning
+● To write any program you need to know the 
+solution. 
+● Calculating an average is simple: you sum 
+up all the values and divide the result by the 
+number of values. 
+● To make the program calculate the average 
+using the solution above, we need to write it 
+step by step using the constructs that we 
+know.
+Reasoning
+● We can ask for input for each student. The 
+input we get can be added at each step to 
+another variable. 
+● Once all the grades are entered, we divide 
+the sum (1) to the number of students (2). 
+● We know how to get input from the user. So, 
+we will use scanf. 
+● We can use mathematical operators to add 
+numbers and divide the result to the total 
+number of students. 
+Reasoning
+● The scanf function needs a variable to store 
+the input value. We can call this variable 
+temp and assuming grades are integers, we 
+can use type int. 
+int temp = 0;   
+● The expression above initializes the variable 
+to 0. You should always initialize your 
+variables. In this case, the value 0 will be 
+overwritten when the user enters a new 
+value, but it is OK. We play it safe. 
+Reasoning 
+● Notice that we don’t need to keep every user 
+input. We just need to add them one after 
+another. 
+● Therefore, we need another integer. Let’s 
+call it sum. 
+int sum = 0; //(1)
+● This time the initialization makes sense 
+because we will be adding the temp value to 
+sum. 
+Reasoning 
+● The average is calculated by dividing the 
+sum, by the number of values. 
+● Since we don’t know any loop constructs yet, 
+the number of students (2) will be hard-
+coded to the program. 
+● For the sake of brevity, let’s keep it at three.
+● Without loops, I’ll be using ancient wisdom: 
+copy & paste. 
+Problems
+● We have used copy & paste.
+● If the number of students change, so does 
+the code.
+● We have an integer constant in the average 
+calculation (3.0). If the number of students 
+change, we should not forget to change it as 
+well. 
+● How can loops help? 
+● First, identify the repetition, then use the 
+loop construct. 
+Loops
+● A loop has three parts:
+a. The initial value(s)
+b. The step
+c. The stopping condition
+● The initial value and the step may not always 
+be there.
+● The stopping condition is crucial. If this 
+condition is never met, the loop does not 
+stop. We call such loops as infinite loops. It 
+makes your computer hang (=this is bad).
+The increment operator
+● The step is almost always one step at a 
+time. So, we usually use the increment 
+operator: ++
+● Remember that ++ operator meant 
+x = x + 1;
+● There are two kinds of it: post and pre.
+● You know that 
+printf(“%d\n”, x + 1);
+will print the value of x + 1. 
+● Consider the following case:
+Why?
+
+variable++ is post-increment.
+● The post-increment returns the original value. 
+However, the next time the variable is used, the 
+incremented value is used. 
+● The pre-increment returns the incremented 
+value. The next time, the value is still 
+incremented. 
+● The same goes for the decrement operator. 
+● So, if you do 
+x = i++;
+the x variable has the value of i before 
+increment.
+Examples:
+
+while
+● The while loop is a simple loop where you 
+only need a stopping condition. 
+● The loop runs as long as the condition is 
+non-zero (true). 
+while (expression) {
+statements; 
+}
+while
+● Let’s try a simple example: 
+Notice the three loop 
+parts as well :)
+initial value
+stopping 
+condition
+step
+Reasoning
+● Now that we know how to write a loop, let’s 
+try to use it. 
+● We can go ahead and use the code above 
+and set the stopping condition to (counter < 
+3). 
+● However, let’s generalize it more and make 
+it work with any number of students! 
+● To do so, we need to change the stopping 
+condition to something that will indicate the 
+end of students. 
+The Stopping Condition
+● The grades are all positive, so if the user 
+enters a grade less than zero, we can stop. 
+● This time, we need to know how many 
+students the user will enter. 
+● It is easy; at the end of every loop, we can 
+increment a counter.
+● If the user enters a negative number, the 
+value entered will not be added to the sum 
+and the counter will not be incremented. 
+● Let me try again. 
+Remarks
+● We check the temp variable twice. Can we 
+do it at one take? 
+● The variable called counter is of type int. 
+While calculating avg, we cast it to a float. 
+Can we do it without a cast?
+● These are your homework assignments (not 
+to be graded). 
+while
+● With the introduction of while, you have 
+learned about the three parts of a loop.
+● You know that you can loop a number of 
+times, or let the user decide it. 
+● Homework: re-write the average program 
+and ask the user for the number of students 
+first and loop that many times. 
+Enter number of students: 10
+Enter grade for student 1: …
+Enter grade for student 2: ...
+Loops
+● So, you know about loops now. I’ll introduce 
+two more: do...while and for loops. 
+● You’ll notice that they are also similar.  
+● Remember; the starting conditions, the step 
+and the stopping condition. 
+● You can tweak these according to your 
+needs. 
+do...while
+● The do...while loop has a structure as 
+follows:
+do {
+statements;
+} while(expression); 
+● Notice that the statements are run at least 
+once (the flow). Similar to while, the loop 
+continues until expression returns zero. 
+● Notice the semi-colon at the end of while.
+do...while
+● Running the body at least once is the 
+characteristic of do...while loops. 
+● If you run the code below, you’ll notice that 
+the printf is executed once. 
+
+for
+● The for loop is one of the most famous 
+loops. It is also used quite often. 
+● The three parts of a loop exist in the 
+definition of the loop: 
+for(initialize; stopping condition; step) {
+statements;
+}
+for
+● Here is an example.
+● Notice that I’ve initialized the variable i to 23 
+during declaration.
+● However, the for loop initializes it to 0, the 
+stopping condition is i<10 and the step is 
+i++.
+
+for
+● I have already asked you to write the 
+average program again by asking the user 
+the number of students to enter. 
+● This time, instead of while, use for. 
+for
+● You don’t have to write anything at the 
+declaration of the for loop. 
+● For example, if the loop variable is already 
+initialized, skip the first part. 
+int i = 0;
+for( ; i<10; i++)  { }
+● If you don’t want to check the stopping 
+condition (are you sure?) then skip the part 
+in the center as well. 
+for( ; ; i++) { }
+for
+● If you will increment the value within the loop 
+(according to a condition perhaps), then skip 
+the last one as well. 
+for( ; ; ) { }
+● Actually, these conditions are rare. 
+● It is because you want to increase code 
+readability. 
+● The for loop provides a quick glance to all of 
+the three loop parts. 
+for
+● One more thing: you can use comma (,) 
+within these three loop parts. So, you can 
+use two variables within the loop. 
+int i, j;
+for(i=0, j=10;i<10;i++, j--) { }
+● Yes, you can use a negative step. Why not 
+write a program that will print the numbers 
+starting from a value to zero. What will be 
+the stopping condition? How can you do it 
+while you are incrementing the step?
+Why not increment more than one?
+● What if you want to increment by 2, rather 
+than by 1?
+int i;
+for(i=0;i<100;i+=2) { … }
+More about loops
+● I assume that you got a sense of using the 
+loops. 
+● There are a few things you can do with 
+loops, such as nesting them (we like 
+nesting, don’t we?) 
+● That means using a loop, inside a loop. 
+Nested Loops
+// let’s say this loop runs n times
+for( … ; … ; … ) { 
+/* some statements */
+// and this one runs m times
+for( … ; … ; … ) {
+// the statements here 
+// n*m times
+}
+}
+// notice the indentation. 
+// you can easily see the blocks.
+Nested Loop Problem
+● Let’s try some graphics (not 3D). 
+● Why not draw a square using a character?
+
+Reasoning
+● The square is a simple ASCII art. 
+● Since it is a square there are equal number 
+of columns and rows. 
+● The command line window outputs text from 
+left to right. 
+● On every line, we need to print n number of 
+characters.
+● The “printing of n number of characters” will 
+be done n times. So, there will be n2
+characters on the screen. 
+Reasoning
+● Remember that we need to find the 
+repetitions to use with the loops.
+● The first repetition is the single line. 
+● The second repetition is printing a number of 
+lines. 
+● The problem here is which loop will be the 
+inner loop? 
+● Go back a few more slides and look at the 
+nested loop template. 
+Step 1
+● Let’s try hard-coding first. 
+● This will print the 8x8 square. 
+● The repetition in the code below are the 
+stars (*). Let’s put them to the loop as well. 
+● Notice that the new line \n does not repeat.
+
+Step 2
+● The inner loop (with variable j) runs 64 times 
+and prints “* “ on screen. Once the 8 stars 
+are complete, we print \n to get a new line. 
+Homework: 
+This program has a constant 
+integer value: 8. Re-write it 
+so that the user enters the 
+size of the square. 
+Nesting other loops
+● You can nest a while loop inside another 
+while loop. 
+● You can nest a while loop inside another for 
+loop. 
+● You can nest as deep as you require, with 
+any loop you need. 
+● Just watch out the variable you use. If you 
+use variable i for the outmost loop, use 
+another variable for the inner loop. 
+break
+● Remember the keyword break from switch 
+we have discussed. 
+● If you use break within a loop, you break out 
+of it. 
+● I want to use this opportunity to demonstrate 
+the infinite loop. It is fun to break from the 
+infinite loop. 
+Infinite Loop
+● If you remove the break, your screen will be 
+filled with “infinite loop”
+● Instead of for(;;), you can try while(1)
+
+Breaking Infinite Nested Loops
+● This demonstrates that you break out of the 
+loop you are in. 
+
+continue
+● The continue keyword is used to skip the 
+remaining statements in the loop body. 
+● You can use it with all of them. 
+● The code below won’t print 5. 
+
+Game Programming
+● You have acquired skills to write your first computer 
+game.
+● It is a very old game and can be easily 
+programmed using conditionals and loops.
+● The program will store a random integer, and the 
+user (player) will try to guess the number. 
+● At each guess, the program will give a hint, such as 
+“too high!” or “too low!”. 
+● You can use rand() function to get a random 
+number (I’ll demonstrate it). 
+● When the player guesses correctly, the program will 
+print the number of times he failed.
+rand() returns a random 
+integer. We use 
+modulus to limit it. 
+Here is a sample output
+
+Tips
+● You have seen a screenshot of a sample 
+output. 
+● Role-play as the program, and try to think 
+about what it does at every input. 
+● Once you have a clear idea of the steps to 
+take, merely use the tools in your 
+possession to write the code. 
+Bonus
+● Also, write another program that will try to guess the 
+number you hold. 
+○ The program will ask you for an upper limit. 
+○ Then, it will start guessing and you will reply as high 
+or low (0 or 1). 
+○ The program must be clever to keep the number of 
+guesses as few as it can.
+Quest
+● In a for loop of that runs 30 times, print the 
+output of rand()%100. It will give you 30 
+random numbers, up to 100. 
+● Run the program again. 
+● Anything weird? 
+● Run again.
+● Still?
+● Why does it happen? How can it be prevented?
+● How can you design a program that creates 
+random values? 
+Functions
+● You are familiar with functions
+○ We wrote a main function
+○ We called (used) functions like printf and scanf. 
+● You are also familiar with their properties
+○ They have names as identifiers
+○ They have parameters 
+○ They have types and they return that type
+● But, why do we need them? 
+Why? 
+● The official reason is to divide the problem 
+into smaller pieces that are easier to 
+maintain: divide and conquer
+● Functions are also the building blocks of 
+more complex programs.
+● Think about printf and scanf. We use them 
+to create programs for different purposes.
+● It is also a means of abstraction.
+Abstraction?
+● Think about the light switch. 
+● You hit a button and it toggles the lights.
+● Your input (parameter) is the button position. 
+● You don't know anything about the electrical 
+background such as the cables and the 
+electrical power.
+● As a result the lights are turned on or off. 
+● It returns nothing (hopefully). 
+
+Abstraction
+● The light switch might have other 
+abstractions which even the electrician may 
+not know about.
+● As a result the light switch has a purpose 
+with clear boundaries and an interface.
+● The other important abstraction in 
+programming is data abstraction. It is about 
+creating your own types from other types.
+(We’ll talk about data abstraction two weeks 
+later.)
+Why?
+● Other than abstraction, it is also possible to 
+create a function from a list of statements 
+that are part of a job. 
+● For example, a menu function can print a list 
+of functions available in the program. 
+Functions
+● Mathematical functions such as power
+(exponentiation), square root and factorial
+are all good candidates for C functions.
+● However, most of them are already in math.h
+library file. 
+● Before writing functions of our own, let's take 
+a look at one of them.
+● The pow function takes two parameters of 
+type double and returns a double value. 
+The pow function.
+On Linux and Mac, you may need to compile this file as follows:
+gcc power.c -o power -lm
+The -lm parameter links the mathematical functions. You don’t need it with Codeblocks.
+Type of the function
+● The type of the function defines the return type. 
+● Remember that with printf we can use the 
+functions as parameters.
+● If the function returns an integer, then we can 
+use %d to print the result, just like printing the 
+value of an integer. 
+The void type
+● A new type for functions is void.
+● The void type is used when the function does 
+not return anything.
+The parameters
+● Although not required, most functions have 
+parameters.
+● When you think of it, it makes sense: we will 
+probably want to work on some values. It 
+would be useful to be able to transfer (pass) 
+them to the function.
+● The printf function requires a parameter for 
+output, and a number of parameters for 
+format specifiers.
+Body of a function
+● The body is where the action takes place. 
+● It is written between curly braces and 
+contains a number of statements.
+● The last line is the return line. Any 
+statement below return line will be not be 
+executed. 
+● If the type is void, just type return.
+● You can define variables in the body of the 
+function. These variables are local to the 
+function.
+Locals?
+● The variables are valid inside the curly 
+braces they are defined in. They can not be 
+accessed outside. This is called scope. 
+● Official definition: The scope of a name is 
+the part of the program within which the 
+name can be used. 
+● The rules are very simple, but before the 
+rules, let’s see an example. 
+Variables a and i are 
+declared inside main, 
+so they are accessible 
+in the for loop as well. 
+However, k is defined 
+in the scope of the for 
+loop. It can not be 
+accessed from outside. 
+What will be the output 
+of this program? 
+Variables a and i are 
+declared inside main, 
+so they are 
+accessible in the for 
+loop as well. 
+However, k is defined 
+in the scope of the for 
+loop. It can not be 
+accessed from 
+outside of the loop.
+What will be the 
+output of this 
+program? 
+Locals
+● Since we are writing functions between curly 
+braces, any variables declared in the function 
+will be available only in that function. 
+● You can declare variables outside the main 
+function. They are called global variables. 
+They can be accessed from any function.
+● However, it is not a good programming practice 
+to use globals. In more complicated programs, 
+you can not find out the source of a bug if every 
+function gets access to the variable.
+The 
+globalvariable 
+is global and 
+can be 
+accessed from 
+any function. 
+Overwriting
+● What happens if we declare a variable 
+twice? 
+○ The compiler tells you that the variable is already 
+declared. 
+● What happens if we declare a variable with 
+the same name but in another scope? 
+Which variable will be valid? 
+The variable var1 
+is redefined in the 
+scope of for loop. 
+The printf will 
+print the value of 
+12 in that line. 
+Now what 
+happens here? 
+What will be the 
+output on line 10? 
+Function Definition
+● You now know all the prerequisites. 
+● Then, it is time to write our own functions.
+● Remember the basics: 
+○ The function has a type;
+○ The function has a name (a valid identifier);
+○ The function has parameters (zero or more);
+○ The function has a body with a list of statements 
+inside the curly braces;
+○ The function can have variables defined in the body, 
+called the locals;
+○ If the function will not return anything, we can use 
+the type void;
+Syntax
+type function_name (type p1, type p2) {
+declarations
+statements
+return expression;
+}
+type function_name () {
+declarations
+statements
+return expression;
+}
+Tripling an integer
+● Suppose we want to triple an integer. 
+● Tripling is simply multiplication by three. 
+● This is a very simple function. 
+● Let’s think about the return type. 
+● Let’s think of a valid name.
+● Do we need any parameters?
+● What do we need in the function? 
+● Remember the flow of a program. 
+● Since we start from the beginning, the 
+function must be declared before we can use 
+it. 
+● In main, we use variable d to get input from 
+user. We send the value of variable d to the 
+function triple, where it is saved in variable v 
+as a parameter (and as a local). 
+Step by Step
+Step by Step
+● We work on the value using the variable v
+and return the result. 
+● The result is returned and used as the 
+second parameter in the printf function. 
+● The value is printed on the screen. 
+Calling a function
+● To call a function, you write the name of the 
+function and provide the required argument 
+values (to be assigned to the corresponding 
+parameters within the function definition). 
+● The flow of the program changes into the 
+function. 
+● When the function returns, the flow is back on 
+the calling function, to the line it was called. 
+● A function can call other functions (it can even 
+call itself, but shhhh!)
+Calling Functions
+int main
+int triple
+float half
+Let’s say we 
+have defined two 
+functions. Every 
+program has 
+main. Let’s take a 
+look at the flow. 
+int main() {
+int a = 3;
+int t = triple(a);
+printf(“%f\n”, half(t));
+return 0;
+}
+int triple(int d) 
+{
+/* … */
+return d;
+}
+float half(int d) 
+{
+/* … */
+return d;
+}
+1. It all starts from 
+main.
+2. The flow passes to this 
+function
+3. and returns 
+back
+4. now to this 
+function
+5. and returns 
+where it was 
+called
+More on Functions
+● There are more things to consider about 
+functions.  
+● It is better to demonstrate them. 
+Improving triple function
+● We had a redundant variable in the previous 
+version. We can return the value 
+immediately. 
+● The assignment on line 11 is important.
+○ Remember that the = sign is assignment, and sets 
+the value on the right to the variable on the left.
+○ The value of variable t is sent to the triple function 
+and the returned value is assigned as the value of t.
+● Notice that the return type of triple function is 
+the same of the variable t. 
+void
+● So, here is a sample menu function with type 
+void. 
+● Notice that I have not used a return line. 
+● It prints the menu when required. 
+● Homework: write a function for the menu 
+option 1. It will only print hello on screen. 
+Absolute
+● Let’s write the absolute function. 
+● The absolute function returns the absolute 
+value of an integer. 
+● So we need an integer as a parameter.
+● If the value is less than zero, we can return 
+the value multiplied by -1.
+Sum
+● This function requires two integer 
+parameters. 
+● The numbers between these numbers are 
+summed and returned. 
+Sum
+● There is something to consider in the 
+summation function. 
+● If a is greater than b, then the loop does not 
+run (the stopping condition will be true at the 
+first step). 
+● Let it be your homework.
+Function Prototypes
+● Remember the flow of the program.
+● You can not use the function before defining 
+them. 
+● But there is a way to declare without the 
+body. 
+● You don’t have to write the variable names 
+in function prototypes. 
+Scope
+● Remember that if a variable is defined in a 
+scope, it is only valid inside that scope. 
+● If that scope is a function, it lives only in that 
+function.
+● Global variables are defined outside 
+functions (for example just after includes.)
+What will be the output?
+
+Why?
+● Remember, I always emphasize “the value 
+of a variable”. 
+● Here, we send the value of variable v to the 
+function. We are not working on the variable, 
+we are working with the value of the 
+variable. 
+● So, the variable is safe inside main. 
+● This way of passing parameters to functions 
+is called: CALL BY VALUE.
+A Global Example
+● You may have noticed the global variable. 
+● What happens if we change it inside the 
+scope_sum function? 
+Storage Classes
+● A variable has a name, as an identifier.
+● It has a type. 
+● It has a memory space. 
+● They also have a storage class.
+● auto, extern, register, static
+● It determines storage duration, scope and 
+linkage of the variable. 
+● Linkage is about the names and the entities 
+(variables) during the running of the 
+program. 
+auto
+● Variables declared within function bodies are 
+auto by default. 
+● So far, all the variables had the auto storage 
+class. 
+● Since it is default, we do not need to write it. 
+extern
+● Informally, look for the variable elsewhere, 
+either in this file, or in some other file. 
+● External variables are defined outside of any 
+function, and are thus potentially available to 
+many functions. 
+● Functions are always external. 
+● External variables are also useful because of 
+their greater scope and lifetime.
+extern sample
+register
+● A register declaration advises the compiler 
+that the variable in question will be heavily 
+used. 
+● The idea is that register variables are to be 
+placed in machine registers, which may 
+result in smaller and faster programs. 
+● But, compilers are free to ignore the advice.
+● The register declaration can only be 
+applied to automatic variables and to formal 
+parameters of a function. 
+static
+● The static declaration applied to internal 
+variables are local to a particular function 
+and they remain in existence rather than 
+coming and going each time the function is 
+activated. 
+● It will be clearer with a demonstration. 
+static
+● In the function f(), int c is declared each time 
+the function is called. 
+● Each time, a new variable c is defined
+(created). 
+● If we make this variable static, it will only be 
+created when the function f() is first called. 
+● It will not be deleted and its value will be 
+saved.  
+Recursion
+
+Recursion
+image from: http://www.codenirvana.in/2014/04/c-programming-recursion.html
+Recursion
+● If a function calls itself, it is recursive. 
+void recurse() {
+printf(“hello\n”);
+recurse();
+return;
+}
+● The function above calls itself on its second 
+line. 
+○ The new instance of the function calls itself on its 
+second line as well. 
+■ The new instance of the function calls itself on its 
+second line as well.
+● ... 
+Was that an infinite loop? 
+● Since the function did not have a condition 
+for NOT calling itself, it kept on calling itself, 
+for infinity. 
+● Let’s rewrite it so that we can stop it. 
+● We need a variable to get a hint of the 
+number of recursions.
+● The variable can be passed as a parameter, 
+or it can be global. 
+● As a good programming practice, we stay 
+away from globals as long as we can. 
+c = 0
+c = 1
+c = 2
+c = 3
+c = 4
+c = 5
+1. In this call, if returns false, and 
+function returns to previous call. 
+2. The function returns to the 
+point it was called. The if is 
+complete and the printf is run. 
+Then, this call also returns. 
+3. The recursive calls keep 
+returning until the first call. The 
+first call then returns to main. 
+Real-life recursion: Call waiting
+● When you are talking on the phone to A, 
+another call comes in. You hold the current 
+caller and switch to the new incoming call: B.  
+● Luckily, when you are talking to B, another 
+call comes in, and you hold once again and 
+switch to C. 
+● Once you hang up with C, you return to your 
+previous call, B. 
+● Similarly, once you hang up with B, you 
+return to A. 
+Real-life recursion: Call waiting
+● In this example, what is the recursive function 
+and its parameters?
+● It is very important you understand the way 
+recursion works.
+● Similar to loops, you need a stopping 
+condition. 
+● In the code example we have also used 
+starting conditions and the step.
+● Homework: How about using a static variable 
+instead of passing the variable as a 
+parameter?  
+Here is the output of the code
+Notice the order of the output. 
+More Mathematics
+● Let’s write summation using iterative and 
+recursive functions.
+
+Reasoning
+● The summation starts from 1 and continues 
+until N. 
+○ Does it matter if it starts from 0?
+● The variable N can be a parameter to our 
+function. 
+● Since it is summation with integer values, 
+the return type should be int. 
+● We can write a loop (for/while) and sum at 
+each step. 
+● Finally, we can return the sum value. 
+Iterative summation
+● To make the function recursive, we should 
+be able to write the mathematical function in 
+terms of itself as well. 
+● With summation, it is easy: 
+Now, let’s make it recursive
+● To simplify: 
+f(x) = x + f(x-1)
+● We did not write the stopping condition in the 
+previous slide. But if x == 1, then it should 
+not call itself, but return 1 instead. 
+● So, the initial value is x = N, the step is (x -
+1) and the stopping condition is (x == 1). 
+● Let’s go ahead and write it. 
+A little more
+Recursive summation
+that looks elegant :)
+x = 3
+x = 2
+x = 1
+● The last call (x = 1) returns 1 to the call before it. 
+● The call (x = 2) returns x + 1 (the 1 coming from the 
+(x = 1) call. 
+● The first call (x = 3) returns x + 3, which is the 
+result, 6. 
+Factorial
+● Another favorite function for recursion 
+demonstration.
+● Here is a recap.
+● 0! = 1
+● 5! = 5 x 4 x 3 x 2 x 1 = 120 
+● Let’s go with iterative first.
+Iterative Factorial
+
+Recursive Factorial
+● Can you define factorial function recursively?
+● Well, it is very similar to summation.
+● f(x) = x * f(x-1)
+● Of course, we need a stopping condition.
+● Zero (0) is dangerous. We should stop at 1.
+● Here is your recursive function. 
+Recursive Factorial
+
+Power function
+● Let’s directly think about a recursive power 
+function. (Iterative version is your
+homework.)
+● The power function has a base and a power.
+● We multiply the base as many times as the 
+power.
+
+Identify the repetition
+● The base is repeated. 
+● The repetition is done power times: this is 
+our stopping condition. 
+● We need two parameters. One for the base, 
+one for keeping track of power. 
+● power(b, p)  = b * power(b, p-1)
+● The recursion is now clear. We need to 
+check for the value of p (power) in the 
+function to stop.
+Recursive Power
+
+Fibonacci Numbers
+● The famous Fibonacci numbers…
+● Each Fibonacci number is the sum of the 
+previous two Fibonacci numbers.
+● So, F(3) = F(2) + F(1)
+● Formally: 
+● Of course, F(0) = 0 and F(1) = 1.
+● Read more about it on Wikipedia
+● http://en.wikipedia.org/wiki/Fibonacci_number
+
+Recursive Fibonacci
+● I already gave you the recursive function 
+definition. 
+● The stopping condition for F(x) is that x == 0 
+or x == 1. Then we return 0 or 1 respectively.
+● Otherwise, we call the function again using 
+F(x-1) and F(x-2). 
+● Alright, I’ll write it. But the iterative version is 
+your homework.  
+Recursive Fibonacci
+
+Greatest Common Divisor
+● Given two numbers, say, 111 and 259, what 
+is the greatest integer that divides them 
+both.
+● Do you remember the old school method? 
+● Here is a more practical way.  
+Greatest Common Divisor
+● The algorithm is easy. If y (second 
+parameter) is not 0, then call gcd again, 
+this time the second parameter becomes 
+the first parameter and the second 
+parameter is the remainder of x / y.
+● That is x % y
+● This is your homework. 
+● Such as in loops, you need a stopping 
+condition in recursive function calls. 
+Otherwise you get an infinite loop. We don’t 
+want infinite loops. 
+More recursive
+● Which one to promote?
+● Consider the memory (overhead: function call stack)
+● Consider the CPU (overhead: function calls)
+● Consider the problem’s nature and the
+programmer’s solution approach
+Discussion: iteration vs. recursion
+● The C preprocessor is the macro 
+preprocessor for C (and C++ as well).
+● It is a separate program invoked by the C 
+compiler.
+● Its directives come after the # sign.
+● Commonly used directives are:
+○ include and define
+○ https://en.wikipedia.org/wiki/C_preprocessor
+C preprocessor
+Having fun? 
+just checking *
+A few more homework assignments
+● Homework: Try entering invalid data, like 
+floating point numbers or a character and 
+check the output.
+● Another homework: Write a program that will 
+use %c, %f, %lf
+● One more: Research formatting using printf. 
+For example, can I print a variable x = 2 as 
+02?
+Extra homework assignments
+1. Write a function that halves an integer. Since 
+the integer can be odd, be careful with the 
+return type. 
+2. Write a function that takes power using two 
+parameters, one for the base, one for the 
+power. For example power(2, 5) should return 
+32 (=25). 
+3. The program we worked on is not complete. 
+Re-write the main that will call the appropriate 
+function until the user decides to exit. You can 
+ask for input in the main. 
+Credits
+● C How To Program, 7/e
+Deitel & Deitel, Prentice Hall, ISBN10: 
+013299044X, ISBN13: 978-0132990448
+● The C Programming Language, 2nd edition, 
+Brian W. Kernighan, Dennis M. Ritchie, 
+Prentice Hall, ISBN13:007-6092003106
+● Lecture slides by Kaya Oğuz
+● Lecture slides by Senem Kumova Metin
