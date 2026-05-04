@@ -6,6 +6,7 @@ from typing import Optional
 import io
 import json
 import os
+import re
 
 from sqlalchemy.orm import Session
 
@@ -201,73 +202,64 @@ OUTPUT FORMAT — STRICT RULES:
 Return a JSON object with this exact structure. Do NOT include markdown, no code fences, no explanation — pure JSON only.
 
 {{
-  "hero_keyword": "2-4 word highly specific Unsplash search term for this topic (e.g. 'computer memory chip closeup', 'neural network visualization', 'paging memory diagram')",
+  "hero_keyword": "2-4 word highly specific Unsplash search term for this topic",
   "learning_objectives": ["objective 1", "objective 2", "objective 3"],
   "slides": [
     {{
       "type": "intro",
       "title": "Section title here",
-      "subtitle": "A compelling one-line hook that makes the student want to read on",
-      "image_keyword": "REQUIRED: 3-5 word highly specific Unsplash search term — must be visually concrete and directly related to THIS topic. Good: 'computer memory allocation diagram'. Bad: 'technology', 'education', 'learning'",
-      "body": "2-3 sentence engaging introduction. Set the scene, explain why this matters."
+      "subtitle": "A compelling one-line hook",
+      "image_keyword": "REQUIRED: 3-5 word specific Unsplash search term",
+      "body": "2-3 sentence engaging introduction."
     }},
     {{
       "type": "concept",
       "title": "Key Concept Title",
       "image_keyword": null,
-      "body": "Rich explanation paragraph (4-6 sentences). Be detailed and clear. Explain WHY, not just WHAT.",
-      "highlight": "The single most important takeaway sentence from this slide"
+      "body": "Rich explanation paragraph (4-6 sentences).",
+      "highlight": "The single most important takeaway sentence"
     }},
     {{
       "type": "deep_dive",
       "title": "Deep Dive: [Specific Aspect]",
-      "image_keyword": "REQUIRED: 3-5 word highly specific term for a diagram/visual that directly illustrates the mechanism being explained. Good: 'page table virtual memory', 'TLB cache lookup diagram'. Bad: 'computer', 'science'",
-      "body": "Thorough explanation (5-7 sentences). Include mechanisms, processes, or underlying principles.",
+      "image_keyword": "REQUIRED: 3-5 word specific term",
+      "body": "Thorough explanation (5-7 sentences).",
       "highlight": "Key insight sentence"
     }},
     {{
       "type": "example",
-      "title": "Real-World Example",
+      "title": "Code Example: [Topic]",
       "image_keyword": null,
-      "body": "Concrete example with context (3-5 sentences). Make it tangible and relatable.",
+      "body": "1-2 sentences explaining what this code demonstrates.",
+      "code": "// Write actual working code here using \\n for newlines\\nConsole.WriteLine(\"example\");",
+      "code_language": "csharp",
       "highlight": "Why this example matters"
-    }},
-    {{
-      "type": "comparison",
-      "title": "Comparison / Contrast",
-      "image_keyword": null,
-      "table": {{
-        "headers": ["Aspect", "Option A", "Option B"],
-        "rows": [
-          ["row1 aspect", "A value", "B value"],
-          ["row2 aspect", "A value", "B value"],
-          ["row3 aspect", "A value", "B value"]
-        ]
-      }},
-      "highlight": "Key insight from the comparison"
     }},
     {{
       "type": "summary",
       "title": "Key Takeaways",
       "image_keyword": null,
-      "points": ["Takeaway 1 (full sentence)", "Takeaway 2 (full sentence)", "Takeaway 3 (full sentence)", "Takeaway 4 (full sentence)"],
-      "closing": "A motivating closing sentence connecting this section to the bigger picture."
+      "points": ["Takeaway 1", "Takeaway 2", "Takeaway 3", "Takeaway 4"],
+      "closing": "A motivating closing sentence."
     }}
   ]
 }}
 
-IMAGE KEYWORD RULES (CRITICAL):
-- ONLY "intro" and "deep_dive" slides get image_keyword values. ALL other slide types must have "image_keyword": null
-- image_keyword must be 3-5 words, highly specific to the exact concept (not generic)
-- Think: what would a textbook diagram of this concept look like? Use that as the keyword.
-- Examples of GOOD keywords: "paging memory management", "TCP three way handshake", "binary search tree traversal", "CPU pipeline stages"
-- Examples of BAD keywords: "computer", "technology", "diagram", "concept", "learning"
+CRITICAL CODE RULES:
+- The "code" field must be a plain JSON string — use \\n for newlines, NO backticks anywhere in the code field
+- NEVER put backticks (```) inside any JSON string value
+- All code goes in the "code" field only, never in "body"
+- "body" fields must be plain text only, no code, no backticks
+
+IMAGE KEYWORD RULES:
+- ONLY "intro" and "deep_dive" slides get image_keyword values. All others must have "image_keyword": null
 
 CONTENT RULES:
-- Every slide body must be a real paragraph — no shallow one-liners
-- Include comparison table ONLY if genuinely useful; otherwise replace with another concept or deep_dive slide
+- Every slide body must be a real paragraph
 - Minimum 5 slides, maximum 7 slides
+- ALWAYS include at least one "example" slide with a "code" field containing real working code
 - Return ONLY valid JSON — absolutely no text outside the JSON object
+- "slides" MUST be a JSON array, NEVER a string
 """.strip()
 
 
@@ -369,7 +361,12 @@ def generate_section(lesson_id: str, section_index: int, current_user: dict = De
     custom_prompt = lesson.get("custom_prompt", "")
     feedback_history = lesson.get("teacher_feedback_history", [])
 
-    full_prompt = _build_section_prompt(section_title, raw_preview_question)
+    full_prompt = _build_section_prompt(
+        section_title,
+        "Create a comprehensive, visually rich educational lesson page based on the provided content."
+    )
+    if raw_preview_question:
+        full_prompt += f"\n\nTEACHER STYLE PREFERENCE (apply to tone/content only, NOT to JSON structure):\n{raw_preview_question}"
     if custom_prompt:
         full_prompt += f"\n\nADDITIONAL TEACHER INSTRUCTIONS:\n{custom_prompt}"
 
@@ -389,6 +386,8 @@ def generate_section(lesson_id: str, section_index: int, current_user: dict = De
                 yield f"data: {json.dumps({'delta': delta, 'section_index': section_index})}\n\n"
 
         cleaned = full_reply.strip()
+
+        # 1. Dış backtick fence temizle
         if "```" in cleaned:
             parts = cleaned.split("```")
             for part in parts:
@@ -398,6 +397,47 @@ def generate_section(lesson_id: str, section_index: int, current_user: dict = De
                 if part.startswith("{"):
                     cleaned = part
                     break
+
+        # 2. Outermost { ... } al
+        start = cleaned.find("{")
+        end = cleaned.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            cleaned = cleaned[start:end + 1]
+
+        # 3. Parse, temizle, kaydet
+        try:
+            parsed = json.loads(cleaned)
+
+            # slides string ise parse et
+            if isinstance(parsed.get("slides"), str):
+                try:
+                    parsed["slides"] = json.loads(parsed["slides"])
+                except Exception:
+                    pass
+
+            # code field'larındaki backtick'leri temizle
+            if isinstance(parsed.get("slides"), list):
+                for slide in parsed["slides"]:
+                    if slide.get("code"):
+                        code = slide["code"]
+                        # ```csharp\n...\n``` veya ```\n...\n``` formatını temizle
+                        code = re.sub(r'^```[\w]*\s*', '', code.strip())
+                        code = re.sub(r'\s*```$', '', code.strip())
+                        slide["code"] = code
+                    # body içinde de backtick varsa temizle
+                    if slide.get("body") and "```" in slide["body"]:
+                        # body'den kodu çıkar, code field'ına taşı
+                        body = slide["body"]
+                        code_match = re.search(r'```([\w]*)\n([\s\S]*?)```', body)
+                        if code_match and not slide.get("code"):
+                            slide["code"] = code_match.group(2).strip()
+                            slide["code_language"] = code_match.group(1) or "csharp"
+                        # body'den kod bloğunu kaldır
+                        slide["body"] = re.sub(r'```[\w]*\n[\s\S]*?```', '', body).strip()
+
+            cleaned = json.dumps(parsed, ensure_ascii=False, separators=(',', ':'))
+        except Exception:
+            pass
 
         sections[section_index]["draft"] = cleaned
         sections[section_index]["approved"] = False
@@ -459,7 +499,6 @@ def publish_sections(
     save_draft_explanation(db, lesson_id, combined)
     approve_lesson_explanation(db, lesson_id)
 
-    # ── Auto-notification ──────────────────────────────────────────────
     try:
         from api.routes.notifications import create_notification
         course_id = lesson.get("course_id", "")
@@ -473,14 +512,15 @@ def publish_sections(
             type="new_lesson",
         )
     except Exception:
-        pass  # Never fail the publish because of notification error
-    # ──────────────────────────────────────────────────────────────────
+        pass
 
     return {
         "message": f"{len(approved)} sections published.",
         "lesson_id": lesson_id,
         "section_count": len(approved),
     }
+
+
 class FeedbackRequest(BaseModel):
     feedback: str
     custom_prompt: Optional[str] = None
@@ -573,13 +613,13 @@ def start_lesson_chat(lesson_id: str, body: StartLessonChatRequest, current_user
     db.commit()
     return {"chat_id": str(chat.id), "lesson_id": lesson_id, "week_title": lesson.get("week_title"), "starter_message": ""}
 
+
 @router.delete("/course/{course_id}/all")
 def delete_all_lessons_endpoint(
     course_id: str,
     current_user: dict = Depends(require_teacher),
     db: Session = Depends(get_db),
 ):
-    """Delete ALL lessons for a course."""
     import os
     existing_lessons = get_lessons_by_course(db, course_id)
     for lesson_id in existing_lessons:
@@ -602,7 +642,6 @@ def delete_lesson_endpoint(
     current_user: dict = Depends(require_teacher),
     db: Session = Depends(get_db),
 ):
-    """Delete a single lesson (week) and its associated files/sections."""
     import os
     sections_path = _get_sections_path(lesson_id)
     if os.path.exists(sections_path):

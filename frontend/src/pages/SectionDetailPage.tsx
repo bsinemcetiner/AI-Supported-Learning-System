@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { lessons as lessonsApi } from "../services/api";
 import type { Lesson, Section } from "../services/api";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 interface SectionDetailPageProps {
   lesson: Lesson;
@@ -17,7 +19,7 @@ interface SectionDetailPageProps {
 
 interface SlideBase { type: string; title: string; image_keyword?: string | null; highlight?: string; }
 interface IntroSlide extends SlideBase { type: "intro"; subtitle: string; body: string; }
-interface ConceptSlide extends SlideBase { type: "concept" | "deep_dive" | "example"; body: string; }
+interface ConceptSlide extends SlideBase { type: "concept" | "deep_dive" | "example"; body: string; code?: string; code_language?: string; }
 interface ComparisonSlide extends SlideBase { type: "comparison"; table: { headers: string[]; rows: string[][] }; }
 interface SummarySlide extends SlideBase { type: "summary"; points: string[]; closing: string; }
 type Slide = IntroSlide | ConceptSlide | ComparisonSlide | SummarySlide;
@@ -49,27 +51,107 @@ function extractJson(raw: string): LessonPageData | null {
   if (!raw) return null;
   let text = raw.trim();
 
-  // 1. Strip markdown code fences
-  if (text.includes("```")) {
-    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (fenceMatch) text = fenceMatch[1].trim();
-  }
+  // 1. Strip outer markdown fence
+  const outerFence = text.match(/^```(?:json)?\s*([\s\S]*?)```\s*$/);
+  if (outerFence) text = outerFence[1].trim();
 
-  // 2. Find outermost { ... }
+  // 2. Temporarily replace code blocks so their { } don't break JSON parsing
+  const codeBlocks: string[] = [];
+  const placeholder = (i: number) => `__CODEBLOCK_${i}__`;
+  text = text.replace(/```([\w]*)\n([\s\S]*?)```/g, (_match, lang, code) => {
+    const idx = codeBlocks.length;
+    codeBlocks.push(`\`\`\`${lang}\n${code}\`\`\``);
+    return placeholder(idx);
+  });
+
+  // 3. Find outermost { ... }
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start === -1 || end === -1 || end <= start) return null;
   text = text.slice(start, end + 1);
 
-  // 3. Parse
+  // 4. Parse
   try {
     const parsed: LessonPageData = JSON.parse(text);
+
+    // 5. Restore code blocks in slide fields
+    function restoreCodeBlocks(str: string): string {
+      return str.replace(/__CODEBLOCK_(\d+)__/g, (_, i) => codeBlocks[parseInt(i)] || "");
+    }
+
+    if (typeof parsed.slides === "string") {
+      try { (parsed as any).slides = JSON.parse((parsed as any).slides); } catch {}
+    }
+
+    if (parsed.slides && Array.isArray(parsed.slides)) {
+      parsed.slides = parsed.slides.map((slide: any) => {
+        if (slide.body) slide.body = restoreCodeBlocks(slide.body);
+        if (slide.highlight) slide.highlight = restoreCodeBlocks(slide.highlight);
+        if (slide.subtitle) slide.subtitle = restoreCodeBlocks(slide.subtitle);
+        if (slide.code) slide.code = restoreCodeBlocks(slide.code);
+        return slide;
+      });
+    }
+
     if (parsed.slides && Array.isArray(parsed.slides) && parsed.slides.length > 0) return parsed;
     return null;
   } catch (err) {
     console.error("[RichPreview] JSON parse failed:", err, "\nFirst 300 chars:", text.slice(0, 300));
     return null;
   }
+}
+
+// ─── Code block component ─────────────────────────────────────────────────────
+function CodeBlock({ code, language = "csharp" }: { code: string; language?: string }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", marginTop: 14, marginBottom: 6 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#1e1e2e", padding: "6px 14px" }}>
+        <span style={{ fontSize: "0.7rem", color: "#7c7f93", fontWeight: 600, letterSpacing: "0.05em" }}>{language}</span>
+        <button
+          onClick={handleCopy}
+          style={{ fontSize: "0.7rem", fontWeight: 700, color: copied ? "#10b981" : "#94a3b8", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+          {copied ? "✓ Copied!" : "Copy"}
+        </button>
+      </div>
+      <SyntaxHighlighter
+        language={language}
+        style={oneDark}
+        customStyle={{ margin: 0, borderRadius: 0, fontSize: "0.85rem", padding: "16px 18px" }}
+        showLineNumbers={true}
+      >
+        {code}
+      </SyntaxHighlighter>
+    </div>
+  );
+}
+
+// ─── Body renderer — splits plain text and inline code blocks ────────────────
+function renderBody(text: string) {
+  const normalized = text.replace(/\\n/g, "\n");
+  const parts = normalized.split(/(```[\w]*\n[\s\S]*?```)/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        const match = part.match(/^```([\w]*)\n([\s\S]*?)```$/);
+        if (match) {
+          const lang = match[1].trim() || "csharp";
+          const code = match[2].trimEnd();
+          return <CodeBlock key={i} code={code} language={lang} />;
+        }
+        return part.trim()
+          ? <p key={i} style={{ fontSize: "0.93rem", color: "#374151", lineHeight: 1.85, margin: "0 0 8px" }}>{part.trim()}</p>
+          : null;
+      })}
+    </>
+  );
 }
 
 const SLIDE_ACCENTS: Record<string, { grad: string; light: string; icon: string }> = {
@@ -148,13 +230,14 @@ function SlideCard({ slide, index }: { slide: Slide; index: number }) {
           return (<>
             {s.image_keyword && <HeroImage keyword={s.image_keyword} />}
             <p style={{ fontSize: "1rem", color: "#6366f1", fontWeight: 700, marginBottom: 10 }}>{s.subtitle}</p>
-            <p style={{ fontSize: "0.92rem", color: "#374151", lineHeight: 1.8, margin: 0 }}>{s.body}</p>
+            {renderBody(s.body)}
           </>);
         })()}
         {slide.type === "concept" && (() => {
           const s = slide as ConceptSlide;
           return (<>
-            <p style={{ fontSize: "0.93rem", color: "#374151", lineHeight: 1.85, margin: 0 }}>{s.body}</p>
+            {renderBody(s.body)}
+            {s.code && <CodeBlock code={s.code.replace(/\\n/g, "\n")} language={s.code_language || "csharp"} />}
             {s.highlight && <HighlightBox text={s.highlight} grad={ac.grad} />}
           </>);
         })()}
@@ -162,14 +245,16 @@ function SlideCard({ slide, index }: { slide: Slide; index: number }) {
           const s = slide as ConceptSlide;
           return (<div style={{ overflow: "hidden" }}>
             {s.image_keyword && <SideImage keyword={s.image_keyword} />}
-            <p style={{ fontSize: "0.93rem", color: "#374151", lineHeight: 1.85, margin: 0 }}>{s.body}</p>
+            {renderBody(s.body)}
+            {s.code && <CodeBlock code={s.code.replace(/\\n/g, "\n")} language={s.code_language || "csharp"} />}
             {s.highlight && <HighlightBox text={s.highlight} grad={ac.grad} />}
           </div>);
         })()}
         {slide.type === "example" && (() => {
           const s = slide as ConceptSlide;
           return (<>
-            <p style={{ fontSize: "0.93rem", color: "#374151", lineHeight: 1.85, margin: 0 }}>{s.body}</p>
+            {renderBody(s.body)}
+            {s.code && <CodeBlock code={s.code.replace(/\\n/g, "\n")} language={s.code_language || "csharp"} />}
             {s.highlight && <HighlightBox text={s.highlight} grad={ac.grad} />}
           </>);
         })()}
@@ -216,12 +301,9 @@ function SlideCard({ slide, index }: { slide: Slide; index: number }) {
 
 function RichPreview({ raw }: { raw: string }) {
   const data = extractJson(raw);
-
-  // Still streaming or genuinely unparseable — show raw
   if (!data) return (
     <div style={{ background: "var(--bg2)", borderRadius: 14, padding: "1.25rem", fontSize: "0.9rem", lineHeight: 1.75, whiteSpace: "pre-wrap", overflowY: "auto", maxHeight: 460, color: "var(--text-mid)" }}>{raw}</div>
   );
-
   return (
     <div>
       {data.learning_objectives && data.learning_objectives.length > 0 && (
@@ -310,37 +392,35 @@ export function SectionDetailPage({ lesson, sectionIndex, onBack, showFeedback, 
   }
 
   function getStatusBlock() {
-  if (section?.approved) {
+    if (section?.approved) {
+      return {
+        title: "This section is approved",
+        text: "You can still review the preview below, but this section is already marked ready for publishing.",
+        bg: darkMode ? "rgba(16,185,129,0.12)" : "#E1F5EE",
+        border: darkMode ? "rgba(16,185,129,0.30)" : "#5DCAA5",
+        titleColor: darkMode ? "#86efac" : "#0F6E56",
+        textColor: darkMode ? "#bbf7d0" : "#0F6E56",
+      };
+    }
+    if (draft.trim()) {
+      return {
+        title: "Preview is ready",
+        text: "Review the slides below. If they look good, approve the section. If not, add feedback and regenerate.",
+        bg: darkMode ? "rgba(251,146,60,0.10)" : "#FFF4EA",
+        border: darkMode ? "rgba(251,146,60,0.30)" : "var(--orange-md)",
+        titleColor: darkMode ? "#fdba74" : "#9a3412",
+        textColor: darkMode ? "#fed7aa" : "#92400e",
+      };
+    }
     return {
-      title: "This section is approved",
-      text: "You can still review the preview below, but this section is already marked ready for publishing.",
-      bg: darkMode ? "rgba(16,185,129,0.12)" : "#E1F5EE",
-      border: darkMode ? "rgba(16,185,129,0.30)" : "#5DCAA5",
-      titleColor: darkMode ? "#86efac" : "#0F6E56",
-      textColor: darkMode ? "#bbf7d0" : "#0F6E56",
+      title: "Next step: generate preview",
+      text: "Click Generate Preview to create a rich, visual lesson page for this section.",
+      bg: darkMode ? "rgba(15,23,42,0.70)" : "var(--bg2)",
+      border: darkMode ? "rgba(255,255,255,0.12)" : "var(--line)",
+      titleColor: textPrimary,
+      textColor: textSecondary,
     };
   }
-
-  if (draft.trim()) {
-    return {
-      title: "Preview is ready",
-      text: "Review the slides below. If they look good, approve the section. If not, add feedback and regenerate.",
-      bg: darkMode ? "rgba(251,146,60,0.10)" : "#FFF4EA",
-      border: darkMode ? "rgba(251,146,60,0.30)" : "var(--orange-md)",
-      titleColor: darkMode ? "#fdba74" : "#9a3412",
-      textColor: darkMode ? "#fed7aa" : "#92400e",
-    };
-  }
-
-  return {
-    title: "Next step: generate preview",
-    text: "Click Generate Preview to create a rich, visual lesson page for this section.",
-    bg: darkMode ? "rgba(15,23,42,0.70)" : "var(--bg2)",
-    border: darkMode ? "rgba(255,255,255,0.12)" : "var(--line)",
-    titleColor: textPrimary,
-    textColor: textSecondary,
-  };
-}
 
   if (!loaded || !section) return <div style={{ padding: "2rem", color: "var(--text-soft)" }}>Loading section...</div>;
   const status = getStatusBlock();
@@ -350,93 +430,48 @@ export function SectionDetailPage({ lesson, sectionIndex, onBack, showFeedback, 
       <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
         <button className="btn btn-ghost" onClick={onBack}>← Back</button>
         <div>
-         <div style={{ fontSize: "0.78rem", color: textSecondary, marginBottom: 2 }}>{lesson.week_title} · Section {sectionIndex + 1} · Page {section.page_start}–{section.page_end}</div>
-          <h2 style={{ fontSize: "1.45rem", margin: 0, color: textPrimary }}>
-            {section.title}
-          </h2>
+          <div style={{ fontSize: "0.78rem", color: textSecondary, marginBottom: 2 }}>{lesson.week_title} · Section {sectionIndex + 1} · Page {section.page_start}–{section.page_end}</div>
+          <h2 style={{ fontSize: "1.45rem", margin: 0, color: textPrimary }}>{section.title}</h2>
         </div>
         {section.approved && <span style={{ marginLeft: "auto", fontSize: "0.82rem", background: "#E1F5EE", color: "#0F6E56", borderRadius: "99px", padding: "4px 14px", fontWeight: 700 }}>✅ Approved</span>}
       </div>
 
-      <div
-          className="card"
-          style={{
-            padding: "1rem 1.1rem",
-            background: status.bg,
-            border: `1px solid ${status.border}`,
-          }}
-        >
-          <div style={{ fontWeight: 700, marginBottom: 6, color: status.titleColor }}>
-            {status.title}
-          </div>
-          <div style={{ fontSize: "0.84rem", color: status.textColor, lineHeight: 1.6 }}>
-            {status.text}
-          </div>
+      <div className="card" style={{ padding: "1rem 1.1rem", background: status.bg, border: `1px solid ${status.border}` }}>
+        <div style={{ fontWeight: 700, marginBottom: 6, color: status.titleColor }}>{status.title}</div>
+        <div style={{ fontSize: "0.84rem", color: status.textColor, lineHeight: 1.6 }}>{status.text}</div>
       </div>
 
-      <div
-          className="card"
-          style={{
-            padding: "0.9rem 1.25rem",
-            background: cardBg,
-            border: `1px solid ${borderColor}`,
-          }}
-        >
-          <div className="label" style={{ marginBottom: 6, color: textSecondary }}>
-            Page Content Preview
-          </div>
-          <div style={{ fontSize: "0.82rem", color: textSecondary, lineHeight: 1.6 }}>
-            {section.text_preview}...
-          </div>
+      <div className="card" style={{ padding: "0.9rem 1.25rem", background: cardBg, border: `1px solid ${borderColor}` }}>
+        <div className="label" style={{ marginBottom: 6, color: textSecondary }}>Page Content Preview</div>
+        <div style={{ fontSize: "0.82rem", color: textSecondary, lineHeight: 1.6 }}>{section.text_preview}...</div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <div
-          className="card"
-          style={{
-            padding: "1rem 1.25rem",
-            background: cardBg,
-            border: `1px solid ${borderColor}`,
-          }}
-        >
+        <div className="card" style={{ padding: "1rem 1.25rem", background: cardBg, border: `1px solid ${borderColor}` }}>
           <div className="label" style={{ marginBottom: 8 }}>Preview Prompt</div>
           <textarea
-              className="input"
-              rows={5}
-              value={promptDraft}
-              onChange={(e) => setPromptDraft(e.target.value)}
-              style={{
-                resize: "vertical",
-                fontSize: "0.85rem",
-                background: darkMode ? "rgba(15,23,42,0.65)" : "#fff",
-                color: textPrimary,
-                border: `1px solid ${borderColor}`,
-              }}
+            className="input"
+            rows={5}
+            value={promptDraft}
+            onChange={(e) => setPromptDraft(e.target.value)}
+            style={{ resize: "vertical", fontSize: "0.85rem", background: darkMode ? "rgba(15,23,42,0.65)" : "#fff", color: textPrimary, border: `1px solid ${borderColor}` }}
           />
-          <button className="btn btn-ghost" onClick={handleSavePrompt} disabled={isSavingPrompt} style={{ marginTop: 8, fontSize: "0.82rem" }}>{isSavingPrompt ? "Saving..." : "Save Prompt"}</button>
+          <p style={{ fontSize: "0.72rem", color: "#f97316", margin: "6px 0 0" }}>
+            ⚠️ This prompt affects content style only. JSON structure is managed automatically.
+          </p>
+          <button className="btn btn-ghost" onClick={handleSavePrompt} disabled={isSavingPrompt} style={{ marginTop: 8, fontSize: "0.82rem" }}>
+            {isSavingPrompt ? "Saving..." : "Save Prompt"}
+          </button>
         </div>
-        <div
-          className="card"
-          style={{
-            padding: "1rem 1.25rem",
-            background: cardBg,
-            border: `1px solid ${borderColor}`,
-          }}
-        >
+        <div className="card" style={{ padding: "1rem 1.25rem", background: cardBg, border: `1px solid ${borderColor}` }}>
           <div className="label" style={{ marginBottom: 8 }}>Teacher Feedback</div>
           <textarea
             className="input"
-              rows={5}
-              placeholder="e.g. Add more real-world examples, simplify language, include a table comparing X and Y..."
-              value={feedbackDraft}
-              onChange={(e) => setFeedbackDraft(e.target.value)}
-              style={{
-                resize: "vertical",
-                fontSize: "0.85rem",
-                background: darkMode ? "rgba(15,23,42,0.65)" : "#fff",
-                color: textPrimary,
-                border: `1px solid ${borderColor}`,
-              }}
+            rows={5}
+            placeholder="e.g. Add more real-world examples, simplify language, include a table comparing X and Y..."
+            value={feedbackDraft}
+            onChange={(e) => setFeedbackDraft(e.target.value)}
+            style={{ resize: "vertical", fontSize: "0.85rem", background: darkMode ? "rgba(15,23,42,0.65)" : "#fff", color: textPrimary, border: `1px solid ${borderColor}` }}
           />
           <p style={{ fontSize: "0.75rem", color: "var(--text-soft)", marginTop: 6 }}>This feedback will be applied the next time you generate the preview.</p>
         </div>
@@ -453,14 +488,7 @@ export function SectionDetailPage({ lesson, sectionIndex, onBack, showFeedback, 
       </div>
 
       {(draft || isGenerating) && (
-        <div
-          className="card"
-          style={{
-            padding: "1rem 1.25rem",
-            background: cardBg,
-            border: `1px solid ${borderColor}`,
-          }}
-        >
+        <div className="card" style={{ padding: "1rem 1.25rem", background: cardBg, border: `1px solid ${borderColor}` }}>
           <div className="label" style={{ marginBottom: 14 }}>
             AI Preview
             {isGenerating && <span style={{ marginLeft: 8, fontSize: "0.72rem", color: "var(--orange)", fontWeight: 400 }}>generating...</span>}
@@ -470,15 +498,7 @@ export function SectionDetailPage({ lesson, sectionIndex, onBack, showFeedback, 
       )}
 
       {!draft && !isGenerating && (
-        <div
-          className="card"
-          style={{
-            padding: "2rem 1.25rem",
-            textAlign: "center",
-            background: cardBg,
-            border: `1px solid ${borderColor}`,
-          }}
-        >
+        <div className="card" style={{ padding: "2rem 1.25rem", textAlign: "center", background: cardBg, border: `1px solid ${borderColor}` }}>
           <div style={{ fontSize: "2.5rem", marginBottom: 10 }}>✨</div>
           <p style={{ color: "var(--text-soft)", fontSize: "0.9rem" }}>No preview yet. Click <b>Generate Preview</b> to create a rich visual lesson page.</p>
         </div>

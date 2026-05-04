@@ -11,7 +11,7 @@ import type { Course, Material } from "../types";
 import type { Lesson } from "../services/api";
 import { LessonSectionReview } from "./LessonSectionReview";
 import { SectionDetailPage } from "./SectionDetailPage";
-import { TeacherCalendar } from "./TeacherCalendar";
+import { TeacherCalendar } from "../components/Teachercalendar";
 type View = "home" | "course" | "section";
 type HomeTab = "quick-start" | "courses" | "create" | "upload" | "upload_material";
 type ActiveSection = { lesson: Lesson; sectionIndex: number };
