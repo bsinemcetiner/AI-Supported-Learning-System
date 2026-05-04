@@ -102,7 +102,7 @@ function extractJson(raw: string): LessonPageData | null {
 }
 
 // ─── Code block component ─────────────────────────────────────────────────────
-function CodeBlock({ code, language = "csharp" }: { code: string; language?: string }) {
+function CodeBlock({ code, language = "text" }: { code: string; language?: string }) {
   const [copied, setCopied] = useState(false);
 
   function handleCopy() {
@@ -142,7 +142,7 @@ function renderBody(text: string) {
       {parts.map((part, i) => {
         const match = part.match(/^```([\w]*)\n([\s\S]*?)```$/);
         if (match) {
-          const lang = match[1].trim() || "csharp";
+          const lang = match[1].trim() || "text";
           const code = match[2].trimEnd();
           return <CodeBlock key={i} code={code} language={lang} />;
         }
@@ -153,6 +153,69 @@ function renderBody(text: string) {
     </>
   );
 }
+
+const SCHEMA_SAFE_SUFFIX = `
+Keep the output as valid JSON only. Do not use markdown fences. Do not add comments. Do not add fields outside the expected slide schema. Use only these slide types: "intro", "concept", "deep_dive", "example", "comparison", "summary". Escape all quotes and newlines properly inside JSON strings.
+`.trim();
+
+const PROMPT_HELPERS = {
+  examples: `
+Add at least one slide with type "example".
+The example slide must use this JSON shape:
+{ "type": "example", "title": "...", "body": "...", "highlight": "..." }
+The body must explain a realistic student-friendly scenario related to this section.
+Keep the body as plain text, not markdown.
+${SCHEMA_SAFE_SUFFIX}
+`.trim(),
+
+  simple: `
+Use simple undergraduate-level language in every slide body.
+Avoid unnecessary jargon. If a technical term is necessary, briefly explain it in the same sentence.
+Keep explanations conversational and teacher-like.
+Do not change the JSON structure.
+${SCHEMA_SAFE_SUFFIX}
+`.trim(),
+
+  table: `
+Include exactly one slide with type "comparison".
+The comparison slide must use this JSON shape:
+{ "type": "comparison", "title": "...", "table": { "headers": ["Concept", "Purpose", "Example", "Result"], "rows": [["...", "...", "...", "..."]] } }
+Keep all table cells short.
+Do not use markdown inside table cells.
+${SCHEMA_SAFE_SUFFIX}
+`.trim(),
+
+  code: `
+For programming topics, include at least one slide with type "example".
+The code example slide must use this JSON shape:
+{ "type": "example", "title": "...", "body": "...", "code": "...", "code_language": "..." }
+Put the explanation only in the "body" field.
+Put only the source code in the "code" field.
+Do not place markdown code fences inside the body or code field.
+The code must be short, correct, and idiomatic for the programming language or technology discussed in this section.
+Set "code_language" to the correct syntax-highlighting language name, such as "csharp", "java", "python", "javascript", "typescript", "sql", "html", "css", or "bash".
+${SCHEMA_SAFE_SUFFIX}
+`.trim(),
+
+  visual: `
+Make the lesson more visual using only the existing JSON schema.
+Add meaningful "image_keyword" values to the intro slide and suitable deep_dive slides.
+Add short "highlight" fields to concept, deep_dive, or example slides when helpful.
+Use clear slide titles and short slide bodies.
+Do not create image URLs. Only provide image_keyword text.
+Do not add new fields such as image_url, visual_layout, icons, colors, or design_notes.
+${SCHEMA_SAFE_SUFFIX}
+`.trim(),
+
+  shorter: `
+Keep the lesson concise.
+Each slide body must be around 2 to 4 sentences maximum.
+Avoid long paragraphs.
+If the topic is large, split it into multiple clear slides instead of writing one long slide.
+Keep the JSON structure valid.
+${SCHEMA_SAFE_SUFFIX}
+`.trim(),
+};
 
 const SLIDE_ACCENTS: Record<string, { grad: string; light: string; icon: string }> = {
   intro:      { grad: "linear-gradient(135deg,#6366f1,#8b5cf6)", light: "#ede9fe", icon: "🚀" },
@@ -237,7 +300,7 @@ function SlideCard({ slide, index }: { slide: Slide; index: number }) {
           const s = slide as ConceptSlide;
           return (<>
             {renderBody(s.body)}
-            {s.code && <CodeBlock code={s.code.replace(/\\n/g, "\n")} language={s.code_language || "csharp"} />}
+            {s.code && <CodeBlock code={s.code.replace(/\\n/g, "\n")} language={s.code_language || "text"} />}
             {s.highlight && <HighlightBox text={s.highlight} grad={ac.grad} />}
           </>);
         })()}
@@ -246,7 +309,7 @@ function SlideCard({ slide, index }: { slide: Slide; index: number }) {
           return (<div style={{ overflow: "hidden" }}>
             {s.image_keyword && <SideImage keyword={s.image_keyword} />}
             {renderBody(s.body)}
-            {s.code && <CodeBlock code={s.code.replace(/\\n/g, "\n")} language={s.code_language || "csharp"} />}
+            {s.code && <CodeBlock code={s.code.replace(/\\n/g, "\n")} language={s.code_language || "text"} />}
             {s.highlight && <HighlightBox text={s.highlight} grad={ac.grad} />}
           </div>);
         })()}
@@ -254,7 +317,7 @@ function SlideCard({ slide, index }: { slide: Slide; index: number }) {
           const s = slide as ConceptSlide;
           return (<>
             {renderBody(s.body)}
-            {s.code && <CodeBlock code={s.code.replace(/\\n/g, "\n")} language={s.code_language || "csharp"} />}
+            {s.code && <CodeBlock code={s.code.replace(/\\n/g, "\n")} language={s.code_language || "text"} />}
             {s.highlight && <HighlightBox text={s.highlight} grad={ac.grad} />}
           </>);
         })()}
@@ -339,7 +402,6 @@ function StreamingOrRich({ draft, isGenerating }: { draft: string; isGenerating:
 export function SectionDetailPage({ lesson, sectionIndex, onBack, showFeedback, onApproved, darkMode, cardBg, textPrimary, textSecondary, borderColor, }: SectionDetailPageProps) {
   const [section, setSection] = useState<Section | null>(null);
   const [promptDraft, setPromptDraft] = useState("");
-  const [feedbackDraft, setFeedbackDraft] = useState("");
   const [draft, setDraft] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
@@ -368,16 +430,36 @@ export function SectionDetailPage({ lesson, sectionIndex, onBack, showFeedback, 
   }
 
   async function handleGenerate() {
-    setIsGenerating(true); setDraft("");
-    if (feedbackDraft.trim()) { try { await lessonsApi.saveFeedback(lesson.lesson_id, feedbackDraft); setFeedbackDraft(""); } catch {} }
-    try {
-      let full = "";
-      for await (const delta of lessonsApi.generateSectionStream(lesson.lesson_id, sectionIndex)) { full += delta; setDraft(full); }
-      setSection((prev) => (prev ? { ...prev, draft: full, approved: false } : prev));
-      showFeedback("success", "Preview generated successfully.");
-    } catch (e: any) { showFeedback("error", e.message || "Generation failed."); }
-    finally { setIsGenerating(false); }
+  setIsGenerating(true);
+  setDraft("");
+
+  try {
+    await lessonsApi.updatePreviewQuestion(lesson.lesson_id, promptDraft);
+
+    let full = "";
+    for await (const delta of lessonsApi.generateSectionStream(lesson.lesson_id, sectionIndex)) {
+      full += delta;
+      setDraft(full);
+    }
+
+    setSection((prev) => (prev ? { ...prev, draft: full, approved: false } : prev));
+    showFeedback("success", "Preview generated successfully.");
+  } catch (e: any) {
+    showFeedback("error", e.message || "Generation failed.");
+  } finally {
+    setIsGenerating(false);
   }
+}
+function appendToPrompt(text: string) {
+  setPromptDraft((prev) => {
+    const cleanPrev = prev.trim();
+    const cleanText = text.trim();
+
+    if (cleanPrev.includes(cleanText)) return cleanPrev;
+
+    return `${cleanPrev}${cleanPrev ? "\n\n" : ""}${cleanText}`;
+  });
+}
 
   async function handleApprove() {
     if (!draft.trim()) { showFeedback("error", "Generate a preview first."); return; }
@@ -457,23 +539,91 @@ export function SectionDetailPage({ lesson, sectionIndex, onBack, showFeedback, 
             style={{ resize: "vertical", fontSize: "0.85rem", background: darkMode ? "rgba(15,23,42,0.65)" : "#fff", color: textPrimary, border: `1px solid ${borderColor}` }}
           />
           <p style={{ fontSize: "0.72rem", color: "#f97316", margin: "6px 0 0" }}>
-            ⚠️ This prompt affects content style only. JSON structure is managed automatically.
+            ⚠️ These instructions guide the AI output. Keep them clear and schema-friendly.
           </p>
           <button className="btn btn-ghost" onClick={handleSavePrompt} disabled={isSavingPrompt} style={{ marginTop: 8, fontSize: "0.82rem" }}>
             {isSavingPrompt ? "Saving..." : "Save Prompt"}
           </button>
         </div>
         <div className="card" style={{ padding: "1rem 1.25rem", background: cardBg, border: `1px solid ${borderColor}` }}>
-          <div className="label" style={{ marginBottom: 8 }}>Teacher Feedback</div>
-          <textarea
-            className="input"
-            rows={5}
-            placeholder="e.g. Add more real-world examples, simplify language, include a table comparing X and Y..."
-            value={feedbackDraft}
-            onChange={(e) => setFeedbackDraft(e.target.value)}
-            style={{ resize: "vertical", fontSize: "0.85rem", background: darkMode ? "rgba(15,23,42,0.65)" : "#fff", color: textPrimary, border: `1px solid ${borderColor}` }}
-          />
-          <p style={{ fontSize: "0.75rem", color: "var(--text-soft)", marginTop: 6 }}>This feedback will be applied the next time you generate the preview.</p>
+          <div className="label" style={{ marginBottom: 8 }}>Quick Prompt Helpers</div>
+
+          <p style={{ fontSize: "0.78rem", color: textSecondary, lineHeight: 1.55, marginTop: 0 }}>
+            Use these shortcuts to quickly improve the preview style. They will be added to the prompt on the left.
+          </p>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+            <button
+              className="btn btn-ghost"
+              type="button"
+              onClick={() => appendToPrompt(PROMPT_HELPERS.examples)}
+              style={{ fontSize: "0.78rem" }}
+            >
+              🧩 More examples
+            </button>
+
+            <button
+              className="btn btn-ghost"
+              type="button"
+              onClick={() => appendToPrompt(PROMPT_HELPERS.simple)}
+              style={{ fontSize: "0.78rem" }}
+            >
+              🌱 Simpler language
+            </button>
+
+            <button
+              className="btn btn-ghost"
+              type="button"
+              onClick={() => appendToPrompt(PROMPT_HELPERS.table)}
+              style={{ fontSize: "0.78rem" }}
+            >
+              📊 Add table
+            </button>
+
+            <button
+              className="btn btn-ghost"
+              type="button"
+              onClick={() => appendToPrompt(PROMPT_HELPERS.code)}
+              style={{ fontSize: "0.78rem" }}
+            >
+              💻 Code examples
+            </button>
+
+            <button
+              className="btn btn-ghost"
+              type="button"
+              onClick={() => appendToPrompt(PROMPT_HELPERS.visual)}
+              style={{ fontSize: "0.78rem" }}
+            >
+              🎨 More visual
+            </button>
+
+            <button
+              className="btn btn-ghost"
+              type="button"
+              onClick={() => appendToPrompt(PROMPT_HELPERS.shorter)}
+              style={{ fontSize: "0.78rem" }}
+            >
+              ✂️ Shorter slides
+            </button>
+          </div>
+
+          <div
+            style={{
+              marginTop: 16,
+              padding: "0.85rem 0.95rem",
+              borderRadius: 14,
+              background: darkMode ? "rgba(15,23,42,0.55)" : "var(--bg2)",
+              border: `1px solid ${borderColor}`,
+            }}
+          >
+            <div style={{ fontSize: "0.78rem", fontWeight: 800, color: textPrimary, marginBottom: 4 }}>
+              Recommended flow
+            </div>
+            <div style={{ fontSize: "0.75rem", color: textSecondary, lineHeight: 1.55 }}>
+              Edit the prompt, generate the preview, review the AI lesson page, then approve the section.
+            </div>
+          </div>
         </div>
       </div>
 
