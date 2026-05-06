@@ -43,7 +43,7 @@ def _get_client() -> Groq:
 
 def _get_model_name() -> str:
     # İstersen .env içine GROQ_MODEL de koyabilirsin
-    return os.getenv("GROQ_MODEL", "llama-3.1-8b-instant").strip()
+    return os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
 
 
 def _get_style_instruction(teaching_style: str) -> str:
@@ -161,29 +161,33 @@ RULES — never break these:
 """,
 
         "socratic": """
-You are a STRICT Socratic tutor. Your only job is to ask ONE question. You never explain anything.
+You are a STRICT Socratic tutor. Your only job is to ask ONE question per turn. You never explain.
 
 ABSOLUTE RULES:
-1. NEVER explain the concept.
-2. Ask exactly ONE short question per response.
+1. NEVER explain the concept — not even partially.
+2. Ask exactly ONE short question per response. Never two.
 3. Your question must NOT contain or imply the answer.
 4. Maximum response length: 2 sentences total.
 5. Do NOT use bullet points, headers, or lists.
-6. If the student answers correctly, ask them to go one step deeper.
-7. If the student answers incorrectly, ask WHY they think that — do not correct.
-8. If the student says "just tell me" or "give the full answer", switch to direct explanation.
+6. If the student answers correctly → ask a deeper follow-up question on the same topic.
+7. If the student answers incorrectly → ask "Why do you think that?" — never correct directly.
+8. If the student says "just tell me" or "I give up" → switch to a brief direct explanation.
+9. NEVER repeat a question you already asked. Read the full conversation before responding.
 """,
 
         "quiz_me": """
-You are a quiz tutor. Your job is to test the student's knowledge, not teach it.
+You are a quiz tutor. Your job is to test the student's knowledge through questions.
 
-RULES:
-1. Ask ONE short quiz question to check what the student already knows.
-2. Do NOT explain anything before asking.
-3. Wait for the student's answer before continuing.
-4. If the student is correct, acknowledge briefly and ask a follow-up.
-5. If the student is wrong, give a small hint — do NOT give the full answer immediately.
-6. Keep responses short and focused.
+STRICT RULES — never break these:
+1. FIRST TURN ONLY: Ask ONE short quiz question based on the course context.
+2. NEVER repeat or rephrase a question you already asked in this conversation.
+3. NEVER ask the student a question they just asked you — read the conversation history carefully.
+4. After the student answers: evaluate their answer, then ask a NEW follow-up question on a related subtopic.
+5. If the student is correct: say so briefly (1 sentence), then ask a harder follow-up.
+6. If the student is wrong: give ONE small hint without revealing the answer, then let them try again.
+7. Do NOT explain the full concept unless the student explicitly asks for it.
+8. Keep all responses under 4 sentences.
+9. Track what has already been asked — never loop back to a previous question.
 """,
     }
 
@@ -205,8 +209,10 @@ def _get_first_turn_instruction(mode: str) -> str:
             "Keep it under 2 sentences."
         ),
         "quiz_me": (
-            "This is the student's FIRST message. They have not answered anything yet. "
-            "Ask one quiz question to check their prior knowledge. Do not explain yet."
+            "This is the student's FIRST message. "
+            "Ask ONE clear quiz question based on the course context to check their prior knowledge. "
+            "Do NOT explain anything. Do NOT ask what they already know about — just pick a topic from the context and ask. "
+            "Keep it under 2 sentences."
         ),
     }
     return instructions.get(mode, "")
@@ -358,9 +364,10 @@ def _build_extra_messages(mode: str, is_first_turn: bool) -> list:
         extra_messages.append({
             "role": "system",
             "content": (
-                "REMINDER: Ask ONE quiz question. "
-                "Do NOT explain anything yet. "
-                "Wait for the student's answer."
+                "REMINDER: Ask ONE new quiz question. "
+                "NEVER repeat a question already asked in this conversation. "
+                "NEVER ask the student a question they just asked you — check the conversation history. "
+                "Do NOT explain anything yet. Wait for the student's answer."
             )
         })
 
@@ -396,7 +403,8 @@ def generate_ai_response(
     )
 
     user_messages = [m for m in messages if m.get("role") == "user"]
-    is_first_turn = len(user_messages) <= 1
+    assistant_messages = [m for m in messages if m.get("role") == "assistant"]
+    is_first_turn = len(user_messages) <= 1 and len(assistant_messages) == 0
     extra_messages = _build_extra_messages(mode, is_first_turn)
 
     client = _get_client()
@@ -432,7 +440,8 @@ def stream_ai_response(
     )
 
     user_messages = [m for m in messages if m.get("role") == "user"]
-    is_first_turn = len(user_messages) <= 1
+    assistant_messages = [m for m in messages if m.get("role") == "assistant"]
+    is_first_turn = len(user_messages) <= 1 and len(assistant_messages) == 0
     extra_messages = _build_extra_messages(mode, is_first_turn)
 
     client = _get_client()

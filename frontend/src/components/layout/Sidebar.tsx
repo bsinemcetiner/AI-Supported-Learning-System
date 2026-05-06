@@ -234,8 +234,8 @@ async function markAllRead() {
             {/* Dropdown */}
             {showNotifications && (
               <div style={{
-                position: "absolute", top: 44, right: -8,
-                width: 320, background: "#fff",
+                position: "absolute", top: 44, right: 0,
+                width: 300, background: "#fff",
                 borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.14)",
                 border: "1px solid #f1f5f9", zIndex: 100,
                 overflow: "hidden",
