@@ -233,7 +233,7 @@ Return a JSON object with this exact structure. Do NOT include markdown, no code
       "image_keyword": null,
       "body": "1-2 sentences explaining what this code demonstrates.",
       "code": "// Write actual working code here using \\n for newlines\\nConsole.WriteLine(\"example\");",
-      "code_language": "csharp",
+      "code_language": "c",
       "highlight": "Why this example matters"
     }},
     {{
@@ -261,7 +261,83 @@ CONTENT RULES:
 - ALWAYS include at least one "example" slide with a "code" field containing real working code
 - Return ONLY valid JSON — absolutely no text outside the JSON object
 - "slides" MUST be a JSON array, NEVER a string
+
 """.strip()
+
+
+def _escape_newlines_inside_json_strings(raw: str) -> str:
+    """
+    LLMs sometimes return invalid JSON by placing real line breaks inside string values.
+    This function keeps JSON structure intact and escapes only literal newlines that occur
+    while we are inside a quoted JSON string.
+    """
+    result = []
+    in_string = False
+    escaped = False
+
+    for ch in raw:
+        if escaped:
+            result.append(ch)
+            escaped = False
+            continue
+
+        if ch == "\\" and in_string:
+            result.append(ch)
+            escaped = True
+            continue
+
+        if ch == '"':
+            result.append(ch)
+            in_string = not in_string
+            continue
+
+        if in_string and ch == "\n":
+            result.append("\\n")
+            continue
+
+        if in_string and ch == "\r":
+            result.append("\\r")
+            continue
+
+        result.append(ch)
+
+    return "".join(result)
+
+
+def _repair_code_string_newlines(code: str) -> str:
+    """
+    In C/C++/Java-like snippets, the model may accidentally turn printf("\\n")
+    into a real newline inside the string literal. This repairs only newlines
+    that occur inside double-quoted code strings, while preserving normal code
+    line breaks between statements.
+    """
+    result = []
+    in_string = False
+    escaped = False
+
+    for ch in code:
+        if escaped:
+            result.append(ch)
+            escaped = False
+            continue
+
+        if ch == "\\" and in_string:
+            result.append(ch)
+            escaped = True
+            continue
+
+        if ch == '"':
+            result.append(ch)
+            in_string = not in_string
+            continue
+
+        if in_string and ch in ("\n", "\r"):
+            result.append("\\n")
+            continue
+
+        result.append(ch)
+
+    return "".join(result)
 
 
 @router.post("/upload", status_code=201)
@@ -372,17 +448,50 @@ def generate_section(lesson_id: str, section_index: int, current_user: dict = De
         "Create a comprehensive, visually rich educational lesson page based on the provided content."
     )
     if raw_preview_question:
-        full_prompt += f"\n\nTEACHER STYLE PREFERENCE (apply to tone/content only, NOT to JSON structure):\n{raw_preview_question}"
+        full_prompt += f"""
+
+==============================
+MANDATORY TEACHER MODIFICATIONS
+==============================
+
+The following teacher instructions are NOT optional. They are required constraints that must be visibly included in the generated lesson slides.
+
+Teacher instructions:
+{raw_preview_question}
+
+STRICT REQUIREMENTS:
+- You MUST satisfy every teacher instruction.
+- Keep the original section topic, but modify the lesson according to the teacher instructions.
+- If the teacher asks for a code example, create a dedicated "example" slide for it.
+- If the teacher asks for a specific program, the code must solve exactly that program.
+- Do NOT replace the teacher's requested example with a generic counting example.
+- Do NOT ignore teacher-added educational content.
+- Do NOT simply repeat examples from the source PDF unless the teacher asks for them.
+- Before returning the final JSON, verify that the teacher request is visibly included in the slides.
+- NEVER break the JSON structure.
+- Return ONLY valid JSON.
+- NEVER output markdown.
+- NEVER use ``` code fences.
+- Keep all code only inside the "code" field.
+- Keep "body" fields as plain explanatory text only.
+- In the "code" field, preserve normal code line breaks.
+- For C printf newline characters, write \n inside the C string, for example: printf("Hello\n");
+- Keep the response parseable JSON at all times.
+"""
     if custom_prompt:
         full_prompt += f"\n\nADDITIONAL TEACHER INSTRUCTIONS:\n{custom_prompt}"
 
     messages = [{"role": "user", "content": f"Create the lesson page for section: {section_title}"}]
 
+    # Keep enough source material for grounding, but avoid letting long PDF context
+    # overpower the teacher's mandatory modifications or exceed Groq token limits.
+    section_text_for_model = section_text[:5000]
+
     def event_stream():
         full_reply = ""
         last_text = ""
         for cumulative in ai_engine.stream_ai_response(
-            messages=messages, context=section_text, teaching_style="Professional Tutor",
+            messages=messages, context=section_text_for_model, teaching_style="Professional Tutor",
             mode="direct", custom_prompt=full_prompt, feedback_history=feedback_history,
         ):
             delta = cumulative[len(last_text):]
@@ -412,7 +521,10 @@ def generate_section(lesson_id: str, section_index: int, current_user: dict = De
 
         # 3. Parse, temizle, kaydet
         try:
-            parsed = json.loads(cleaned)
+            try:
+                parsed = json.loads(cleaned)
+            except json.JSONDecodeError:
+                parsed = json.loads(_escape_newlines_inside_json_strings(cleaned))
 
             # slides string ise parse et
             if isinstance(parsed.get("slides"), str):
@@ -426,9 +538,14 @@ def generate_section(lesson_id: str, section_index: int, current_user: dict = De
                 for slide in parsed["slides"]:
                     if slide.get("code"):
                         code = slide["code"]
-                        # ```csharp\n...\n``` veya ```\n...\n``` formatını temizle
+                        # Remove markdown code fences such as ```c, ```python, or plain ```
                         code = re.sub(r'^```[\w]*\s*', '', code.strip())
                         code = re.sub(r'\s*```$', '', code.strip())
+
+                        # Repair accidental real newlines inside C string literals,
+                        # for example: printf("Hello\n") stays correct in the rendered code.
+                        code = _repair_code_string_newlines(code)
+
                         slide["code"] = code
                     # body içinde de backtick varsa temizle
                     if slide.get("body") and "```" in slide["body"]:

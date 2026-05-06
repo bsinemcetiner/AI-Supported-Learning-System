@@ -1,10 +1,10 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { LassieLogo } from "../components/LassieLogo";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BookOpen, Upload, FileText, CheckCircle2,
   Send, Sparkles, TrendingUp, BookMarked, ChevronRight,
-  Plus, Layers, Users, Moon, Sun, Settings
+  Plus, Layers, Users, Moon, Sun, Settings, ChevronDown, GraduationCap
 } from "lucide-react";
 import { courses as coursesApi, lessons as lessonsApi } from "../services/api";
 import type { Course, Material } from "../types";
@@ -163,6 +163,165 @@ const fadeUp = {
   exit: { opacity: 0, y: -8 },
   transition: { duration: 0.22 },
 };
+
+// ── Modern Course Select ─────────────────────────────────────────────────────
+function CourseSelect({
+  value,
+  onChange,
+  options,
+  darkMode,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  options: [string, Course][];
+  darkMode: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = options.find(([id]) => id === value);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const triggerBg = darkMode ? "rgba(15,23,42,0.9)" : "linear-gradient(135deg,#fff7ed,#fdf4ff)";
+  const triggerBorder = darkMode ? "rgba(249,115,22,0.3)" : "#fed7aa";
+  const textPrimary = darkMode ? "#f1f5f9" : "#92400e";
+  const textSecondary = darkMode ? "#94a3b8" : "#c2410c";
+  const dropdownBg = darkMode ? "rgba(15,23,42,0.97)" : "#fffbf7";
+  const dropdownBorder = darkMode ? "rgba(249,115,22,0.25)" : "#fed7aa";
+  const hoverBg = darkMode ? "rgba(249,115,22,0.12)" : "rgba(249,115,22,0.08)";
+
+  return (
+    <div ref={ref} style={{ position: "relative", userSelect: "none" }}>
+      {/* Trigger button */}
+      <motion.button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        whileTap={{ scale: 0.985 }}
+        style={{
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "0.7rem 1rem",
+          background: triggerBg,
+          border: `1.5px solid ${open ? "#f97316" : triggerBorder}`,
+          borderRadius: 14,
+          cursor: "pointer",
+          outline: "none",
+          boxShadow: open
+            ? "0 0 0 3px rgba(249,115,22,0.15), 0 4px 16px rgba(249,115,22,0.12)"
+            : "0 2px 8px rgba(249,115,22,0.08)",
+          transition: "border-color 0.18s, box-shadow 0.18s",
+        }}
+      >
+        {/* Gradient icon */}
+        <div style={{
+          width: 34, height: 34, borderRadius: 10,
+          background: "linear-gradient(135deg, #f97316, #ec4899)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          flexShrink: 0, boxShadow: "0 3px 10px rgba(249,115,22,0.3)",
+        }}>
+          <GraduationCap size={16} color="#fff" />
+        </div>
+
+        {/* Selected label */}
+        <span style={{ flex: 1, textAlign: "left" }}>
+          {selected ? (
+            <span style={{ fontWeight: 700, fontSize: "0.92rem", color: textPrimary }}>
+              {selected[1].course_name}
+            </span>
+          ) : (
+            <span style={{ fontSize: "0.88rem", color: textSecondary }}>Select a course…</span>
+          )}
+        </span>
+
+        {/* Chevron */}
+        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+          <ChevronDown size={16} color={textSecondary} />
+        </motion.div>
+      </motion.button>
+
+      {/* Dropdown */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.97 }}
+            transition={{ duration: 0.16 }}
+            style={{
+              position: "absolute",
+              top: "calc(100% + 6px)",
+              left: 0, right: 0,
+              zIndex: 100,
+              background: dropdownBg,
+              border: `1.5px solid ${dropdownBorder}`,
+              borderRadius: 16,
+              boxShadow: "0 12px 40px rgba(249,115,22,0.15), 0 4px 16px rgba(0,0,0,0.08)",
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ padding: 6 }}>
+              {options.map(([id, course], i) => {
+                const isSelected = id === value;
+                return (
+                  <motion.div
+                    key={id}
+                    onClick={() => { onChange(id); setOpen(false); }}
+                    initial={{ opacity: 0, x: -6 }}
+                    animate={{ opacity: 1, x: 0, transition: { delay: i * 0.04 } }}
+                    whileHover={{ backgroundColor: hoverBg }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      padding: "0.6rem 0.8rem",
+                      borderRadius: 10,
+                      cursor: "pointer",
+                      background: isSelected
+                        ? (darkMode ? "rgba(249,115,22,0.15)" : "rgba(249,115,22,0.1)")
+                        : "transparent",
+                      transition: "background 0.12s",
+                    }}
+                  >
+                    {/* Dot indicator */}
+                    <div style={{
+                      width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                      background: isSelected
+                        ? "linear-gradient(135deg,#f97316,#ec4899)"
+                        : (darkMode ? "#334155" : "#fcd9b5"),
+                      boxShadow: isSelected ? "0 0 6px rgba(249,115,22,0.5)" : "none",
+                      transition: "all 0.15s",
+                    }} />
+
+                    <span style={{
+                      fontSize: "0.9rem",
+                      fontWeight: isSelected ? 700 : 500,
+                      color: isSelected
+                        ? "#f97316"
+                        : (darkMode ? "#f1f5f9" : "#78350f"),
+                      flex: 1,
+                    }}>
+                      {course.course_name}
+                    </span>
+
+                    {isSelected && (
+                      <CheckCircle2 size={14} color="#f97316" />
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
    export default function TeacherPage({
       username,
@@ -928,7 +1087,7 @@ function TeacherTopHeader() {
                   🗑 Delete Course
                 </button>
               )}
-              <button className="btn btn-ghost btn-sm" onClick={() => { setView("home"); setHomeTab("upload"); }}>+ Upload another lesson</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => { setUploadCourseId(selectedCourseId); setView("home"); setHomeTab("upload"); }}>+ Upload another lesson</button>
             </div>
           </div>
           {lessons.length === 0 ? (
@@ -1634,20 +1793,15 @@ function TeacherTopHeader() {
                     >
                       <div>
                         <label className="label">Select Course</label>
-                        <select
-                          className="select"
+                        <CourseSelect
                           value={uploadCourseId}
-                          onChange={(e) => {
-                            setUploadCourseId(e.target.value);
+                          onChange={(val) => {
+                            setUploadCourseId(val);
                             setLastLessonUpload(null);
                           }}
-                        >
-                          {courseList.map(([id, c]) => (
-                            <option key={id} value={id}>
-                              {c.course_name}
-                            </option>
-                          ))}
-                        </select>
+                          options={courseList}
+                          darkMode={darkMode}
+                        />
                       </div>
 
                       <div>
@@ -1970,20 +2124,15 @@ function TeacherTopHeader() {
                       <div>
                         <label className="label">Select Course</label>
 
-                        <select
-                          className="select"
+                        <CourseSelect
                           value={materialCourseId}
-                          onChange={(e) => {
-                            setMaterialCourseId(e.target.value);
+                          onChange={(val) => {
+                            setMaterialCourseId(val);
                             setLastMaterialUpload(null);
                           }}
-                        >
-                          {courseList.map(([id, c]) => (
-                            <option key={id} value={id}>
-                              {c.course_name}
-                            </option>
-                          ))}
-                        </select>
+                          options={courseList}
+                          darkMode={darkMode}
+                        />
                       </div>
 
                       <div>
