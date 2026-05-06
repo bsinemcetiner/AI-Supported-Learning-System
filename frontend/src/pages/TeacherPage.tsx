@@ -190,6 +190,11 @@ const fadeUp = {
   const [uploadCourseId, setUploadCourseId] = useState("");
   const [weekTitle, setWeekTitle] = useState("");
   const [files, setFiles] = useState<FileList | null>(null);
+  const [lastLessonUpload, setLastLessonUpload] = useState<{
+  courseId: string;
+  lessonIds: string[];
+  count: number;
+} | null>(null);
   const [materialCourseId, setMaterialCourseId] = useState("");
   const [materialFiles, setMaterialFiles] = useState<FileList | null>(null);
 
@@ -344,17 +349,51 @@ const materialSteps: FlowStep[] = [
   }
 
   async function handleUpload(e: React.FormEvent) {
-    e.preventDefault();
-    if (!files || !uploadCourseId) return;
-    setLoading(true);
-    let added = 0;
+  e.preventDefault();
+  if (!files || !uploadCourseId) return;
+
+  setLoading(true);
+
+  let added = 0;
+  const uploadedLessonIds: string[] = [];
+
+  try {
     for (const [i, f] of Array.from(files).entries()) {
-      try { await lessonsApi.upload(uploadCourseId, inferWeekTitle(f, i, files.length), f); added++; }
-      catch (e: any) { showFeedback("error", `${f.name}: ${e.message}`); }
+      try {
+        const result = await lessonsApi.upload(
+          uploadCourseId,
+          inferWeekTitle(f, i, files.length),
+          f
+        );
+
+        uploadedLessonIds.push(result.lesson_id);
+        added++;
+      } catch (e: any) {
+        showFeedback("error", `${f.name}: ${e.message}`);
+      }
     }
-    if (added > 0) showFeedback("success", `${added} lesson(s) uploaded.`);
-    setFiles(null); setWeekTitle(""); await loadCourses(); setLoading(false);
+
+    setFiles(null);
+    setWeekTitle("");
+
+    const input = document.getElementById("lesson-upload") as HTMLInputElement | null;
+    if (input) input.value = "";
+
+    await loadCourses();
+
+    if (added > 0) {
+      setLastLessonUpload({
+        courseId: uploadCourseId,
+        lessonIds: uploadedLessonIds,
+        count: added,
+      });
+
+      showFeedback("success", `${added} lesson(s) uploaded.`);
+    }
+  } finally {
+    setLoading(false);
   }
+}
 
 function removeSelectedMaterialFile(indexToRemove: number) {
   if (!materialFiles) return;
@@ -1159,110 +1198,341 @@ function TeacherTopHeader() {
         )}
 
         {/* ── Upload Lesson ── */}
-        {homeTab === "upload" && (
-          <motion.div {...fadeUp}>
-            {courseList.length === 0 ? (
-              <div className="alert alert-warning">⚠️ Create a course first.</div>
-            ) : (
-              <>
-                <div style={{ background: darkMode ? "rgba(251,146,60,0.08)" : "#fff7ed", border: "1px solid #fed7aa", borderRadius: 16, padding: "1rem 1.25rem", marginBottom: 20 }}>
-                  <p style={{ fontWeight: 700, fontSize: "0.88rem", color: "#ea580c", margin: "0 0 4px" }}>Step 2 of 5</p>
-                  <p style={{ fontSize: "0.83rem", color: darkMode ? "#fdba74" : "#92400e", margin: 0 }}>Upload a lesson PDF. The system will split it into sections automatically.</p>
-                </div>
-                <div style={{ maxWidth: 580 }}>
-                  <form onSubmit={handleUpload} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                    <div>
-                      <label className="label">Select Course</label>
-                      <select className="select" value={uploadCourseId} onChange={(e) => setUploadCourseId(e.target.value)}>
-                        {courseList.map(([id, c]) => <option key={id} value={id}>{c.course_name}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="label">Week / Lesson Title</label>
-                      <input className="input" placeholder="e.g. Week 1" value={weekTitle} onChange={(e) => setWeekTitle(e.target.value)} />
-                      <p style={{ marginTop: 5, fontSize: "0.76rem", color: textSecondary }}>If you upload one file, this title will be used. Multiple files use their filenames.</p>
-                    </div>
-                    <div>
-                      <label className="label">Upload PDF Files</label>
-                      <div
-                        style={{ border: "2px dashed #d1d5db", borderRadius: 18, padding: "2.5rem", textAlign: "center", background: darkMode ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.6)", cursor: "pointer", transition: "border-color 0.2s" }}
-                        onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = "#f97316"; }}
-                        onDragLeave={(e) => { e.currentTarget.style.borderColor = "#d1d5db"; }}
-                        onDrop={(e) => { e.preventDefault(); setFiles(e.dataTransfer.files); e.currentTarget.style.borderColor = "#d1d5db"; }}
-                      >
-                        <input type="file" accept=".pdf" multiple style={{ display: "none" }} id="lesson-upload" onChange={(e) => setFiles(e.target.files)} />
-                        <label htmlFor="lesson-upload" style={{ cursor: "pointer" }}>
-                          <Upload size={30} color="#9ca3af" style={{ margin: "0 auto 10px", display: "block" }} />
-                          <p style={{ color: textSecondary, fontSize: "0.9rem", margin: 0 }}>
-                            {files && files.length > 0 ? `${files.length} file(s) selected` : "Click to browse or drag & drop PDF files"}
-                          </p>
-                        </label>
-                      </div>
-                    </div>
-                    {files && files.length > 0 && (
-                          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                            {Array.from(files).map((f, i) => (
-                              <div
-                                key={`${f.name}-${i}`}
-                                style={{
-                                  background: "#fff7ed",
-                                  borderRadius: 9,
-                                  padding: "0.45rem 0.9rem",
-                                  fontSize: "0.84rem",
-                                  border: "1px solid #fed7aa",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                  gap: 10,
-                                  color: darkMode ? "#fdba74" : "#374151",
-                                }}
-                              >
-                                <span style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
-                                  <FileText size={13} color="#f97316" style={{ flexShrink: 0 }} />
-                                  <span
-                                    style={{
-                                      overflow: "hidden",
-                                      textOverflow: "ellipsis",
-                                      whiteSpace: "nowrap",
-                                    }}
-                                  >
-                                    {f.name}
-                                  </span>
-                                </span>
+{homeTab === "upload" && (
+  <motion.div {...fadeUp}>
+    {courseList.length === 0 ? (
+      <div className="alert alert-warning">⚠️ Create a course first.</div>
+    ) : (
+      <>
+        <div
+          style={{
+            background: darkMode ? "rgba(251,146,60,0.08)" : "#fff7ed",
+            border: "1px solid #fed7aa",
+            borderRadius: 16,
+            padding: "1rem 1.25rem",
+            marginBottom: 20,
+          }}
+        >
+          <p
+            style={{
+              fontWeight: 700,
+              fontSize: "0.88rem",
+              color: "#ea580c",
+              margin: "0 0 4px",
+            }}
+          >
+            Step 2 of 5
+          </p>
+          <p
+            style={{
+              fontSize: "0.83rem",
+              color: darkMode ? "#fdba74" : "#92400e",
+              margin: 0,
+            }}
+          >
+            Upload a lesson PDF. The system will split it into sections automatically.
+            After uploading, you can view the course and its lessons in My Courses.
+          </p>
+        </div>
 
-                                <button
-                                  type="button"
-                                  onClick={() => removeSelectedLessonFile(i)}
-                                  disabled={loading}
-                                  style={{
-                                    border: "none",
-                                    background: "transparent",
-                                    color: "#ef4444",
-                                    cursor: loading ? "not-allowed" : "pointer",
-                                    fontWeight: 800,
-                                    fontSize: "0.95rem",
-                                    flexShrink: 0,
-                                  }}
-                                  title="Remove file"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                    <div style={{ background: darkMode ? "rgba(251,146,60,0.08)" : "#fff7ed", border: "1px solid #fed7aa", borderRadius: 12, padding: "0.75rem 1rem", fontSize: "0.82rem", color: "#ea580c" }}>
-                      ✨ After upload, open the course and review the generated sections one by one.
-                    </div>
-                    <button className="btn btn-primary" type="submit" disabled={loading || !files || files.length === 0} style={{ alignSelf: "flex-start" }}>
-                      {loading ? "Uploading & Analyzing…" : "⬆️ Upload Lesson(s)"}
-                    </button>
-                  </form>
+        <div
+          style={{
+            maxWidth:
+              lastLessonUpload && lastLessonUpload.courseId === uploadCourseId
+                ? 980
+                : 580,
+          }}
+        >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns:
+                lastLessonUpload && lastLessonUpload.courseId === uploadCourseId
+                  ? "minmax(0, 580px) minmax(280px, 360px)"
+                  : "minmax(0, 580px)",
+              gap: 18,
+              alignItems: "start",
+            }}
+          >
+            <form
+              onSubmit={handleUpload}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 14,
+              }}
+            >
+              <div>
+                <label className="label">Select Course</label>
+                <select
+                  className="select"
+                  value={uploadCourseId}
+                  onChange={(e) => {
+                    setUploadCourseId(e.target.value);
+                    setLastLessonUpload(null);
+                  }}
+                >
+                  {courseList.map(([id, c]) => (
+                    <option key={id} value={id}>
+                      {c.course_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="label">Week / Lesson Title</label>
+                <input
+                  className="input"
+                  placeholder="e.g. Week 1"
+                  value={weekTitle}
+                  onChange={(e) => setWeekTitle(e.target.value)}
+                />
+                <p
+                  style={{
+                    marginTop: 5,
+                    fontSize: "0.76rem",
+                    color: textSecondary,
+                  }}
+                >
+                  If you upload one file, this title will be used. Multiple files use
+                  their filenames.
+                </p>
+              </div>
+
+              <div>
+                <label className="label">Upload PDF Files</label>
+                <div
+                  style={{
+                    border: "2px dashed #d1d5db",
+                    borderRadius: 18,
+                    padding: "2.5rem",
+                    textAlign: "center",
+                    background: darkMode
+                      ? "rgba(255,255,255,0.03)"
+                      : "rgba(255,255,255,0.6)",
+                    cursor: "pointer",
+                    transition: "border-color 0.2s",
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.style.borderColor = "#f97316";
+                  }}
+                  onDragLeave={(e) => {
+                    e.currentTarget.style.borderColor = "#d1d5db";
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setFiles(e.dataTransfer.files);
+                    setLastLessonUpload(null);
+                    e.currentTarget.style.borderColor = "#d1d5db";
+                  }}
+                >
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    multiple
+                    style={{ display: "none" }}
+                    id="lesson-upload"
+                    onChange={(e) => {
+                      setFiles(e.target.files);
+                      setLastLessonUpload(null);
+                    }}
+                  />
+                  <label htmlFor="lesson-upload" style={{ cursor: "pointer" }}>
+                    <Upload
+                      size={30}
+                      color="#9ca3af"
+                      style={{ margin: "0 auto 10px", display: "block" }}
+                    />
+                    <p
+                      style={{
+                        color: textSecondary,
+                        fontSize: "0.9rem",
+                        margin: 0,
+                      }}
+                    >
+                      {files && files.length > 0
+                        ? `${files.length} file(s) selected`
+                        : "Click to browse or drag & drop PDF files"}
+                    </p>
+                  </label>
                 </div>
-              </>
+              </div>
+
+              {files && files.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                  {Array.from(files).map((f, i) => (
+                    <div
+                      key={`${f.name}-${i}`}
+                      style={{
+                        background: "#fff7ed",
+                        borderRadius: 9,
+                        padding: "0.45rem 0.9rem",
+                        fontSize: "0.84rem",
+                        border: "1px solid #fed7aa",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 10,
+                        color: darkMode ? "#fdba74" : "#374151",
+                      }}
+                    >
+                      <span
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 7,
+                          minWidth: 0,
+                        }}
+                      >
+                        <FileText
+                          size={13}
+                          color="#f97316"
+                          style={{ flexShrink: 0 }}
+                        />
+                        <span
+                          style={{
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {f.name}
+                        </span>
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => removeSelectedLessonFile(i)}
+                        disabled={loading}
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          color: "#ef4444",
+                          cursor: loading ? "not-allowed" : "pointer",
+                          fontWeight: 800,
+                          fontSize: "0.95rem",
+                          flexShrink: 0,
+                        }}
+                        title="Remove file"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div
+                style={{
+                  background: darkMode ? "rgba(251,146,60,0.08)" : "#fff7ed",
+                  border: "1px solid #fed7aa",
+                  borderRadius: 12,
+                  padding: "0.75rem 1rem",
+                  fontSize: "0.82rem",
+                  color: "#ea580c",
+                }}
+              >
+                ✨ After upload, open the course and review the generated sections one
+                by one.
+              </div>
+
+              <button
+                className="btn btn-primary"
+                type="submit"
+                disabled={loading || !files || files.length === 0}
+                style={{ alignSelf: "flex-start" }}
+              >
+                {loading ? "Uploading & Analyzing…" : "⬆️ Upload Lesson(s)"}
+              </button>
+            </form>
+
+            {lastLessonUpload && lastLessonUpload.courseId === uploadCourseId && (
+              <div
+                style={{
+                  padding: "1.1rem 1.15rem",
+                  borderRadius: 18,
+                  background: darkMode ? "rgba(16,185,129,0.12)" : "#ecfdf5",
+                  border: darkMode
+                    ? "1px solid rgba(16,185,129,0.30)"
+                    : "1px solid #6ee7b7",
+                  boxShadow: darkMode
+                    ? "0 8px 24px rgba(0,0,0,0.18)"
+                    : "0 8px 24px rgba(16,185,129,0.12)",
+                }}
+              >
+                <div
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 14,
+                    background: "linear-gradient(135deg,#10b981,#059669)",
+                    color: "#fff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "1.15rem",
+                    marginBottom: 12,
+                  }}
+                >
+                  ✅
+                </div>
+
+                <div
+                  style={{
+                    fontSize: "0.95rem",
+                    fontWeight: 800,
+                    color: darkMode ? "#86efac" : "#065f46",
+                    marginBottom: 6,
+                  }}
+                >
+                  Lesson upload completed
+                </div>
+
+                <div
+                  style={{
+                    fontSize: "0.82rem",
+                    color: darkMode ? "#bbf7d0" : "#047857",
+                    lineHeight: 1.55,
+                    marginBottom: 14,
+                  }}
+                >
+                  {lastLessonUpload.count} lesson
+                  {lastLessonUpload.count > 1 ? "s" : ""} uploaded. You can now
+                  review the generated sections.
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCourseId(lastLessonUpload.courseId);
+                    setView("course");
+                  }}
+                  style={{
+                    width: "100%",
+                    border: "none",
+                    borderRadius: 13,
+                    padding: "11px 14px",
+                    background: "linear-gradient(135deg,#10b981,#059669)",
+                    color: "#fff",
+                    fontSize: "0.84rem",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    boxShadow: "0 4px 14px rgba(16,185,129,0.28)",
+                  }}
+                >
+                  Review uploaded lesson{lastLessonUpload.count > 1 ? "s" : ""} →
+                </button>
+              </div>
             )}
-          </motion.div>
-        )}
+          </div>
+        </div>
+      </>
+    )}
+  </motion.div>
+)}
 
         {/* ── Upload Material ── */}
         {homeTab === "upload_material" && (
@@ -1273,10 +1543,29 @@ function TeacherTopHeader() {
               <>
                 <div style={{ background: darkMode ? "rgba(255,255,255,0.05)" : "#f9fafb", border: `1px solid ${borderColor}`, borderRadius: 16, padding: "1rem 1.25rem", marginBottom: 20 }}>
                   <p style={{ fontWeight: 700, fontSize: "0.88rem", color: textSecondary, margin: "0 0 4px" }}>Optional step</p>
-                  <p style={{ fontSize: "0.83rem", color: textSecondary, margin: 0 }}>Upload course materials for student chat support. This is separate from lesson tuning.</p>
+                  <p style={{ fontSize: "0.83rem", color: textSecondary, margin: 0 }}>Upload course materials for student chat support. This is separate from lesson tuning. After uploading, you can view the course and its materials in My Courses.</p>
                 </div>
-                <div style={{ maxWidth: 580 }}>
-                  <form onSubmit={handleUploadMaterial} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 18,
+                    flexWrap: "wrap",
+                    maxWidth:
+                      lastLessonUpload && lastLessonUpload.courseId === uploadCourseId
+                        ? 1000
+                        : 580,
+                  }}
+                >
+                  <form
+                      onSubmit={handleUpload}
+                      style={{
+                        flex: "0 1 580px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 14,
+                      }}
+                    >
                     <div>
                       <label className="label">Select Course</label>
                       <select className="select" value={materialCourseId} onChange={(e) => setMaterialCourseId(e.target.value)}>
@@ -1366,5 +1655,3 @@ function TeacherTopHeader() {
     </div>
   );
 }
-
-// ── Teacher Calendar Component ────────────────────────────────────────────────
