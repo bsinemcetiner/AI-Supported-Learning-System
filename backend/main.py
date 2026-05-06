@@ -21,6 +21,10 @@ from dotenv import load_dotenv
 load_dotenv(dotenv_path=".env")
 
 app = FastAPI(title="AI Supported Learning System API", version="1.0.0")
+LESSON_PDFS_DIR = Path("lesson_pdfs")
+LESSON_PDFS_DIR.mkdir(parents=True, exist_ok=True)
+
+app.mount("/lesson_pdfs", StaticFiles(directory=str(LESSON_PDFS_DIR)), name="lesson_pdfs")
 UPLOADS_DIR = Path("uploads")
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 

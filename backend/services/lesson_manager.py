@@ -200,22 +200,6 @@ def delete_lessons_by_course(db: Session, course_id: str, teacher_username: str)
     return True, f"{len(lessons)} lesson(s) deleted."
 
 
-def delete_lesson(db: Session, lesson_id: str, teacher_username: str):
-    lesson = db.query(Lesson).filter(Lesson.lesson_id == lesson_id).first()
-    if not lesson:
-        return False, "Lesson not found."
-    if lesson.teacher_username != teacher_username:
-        return False, "You do not have permission to delete this lesson."
-    import os
-    if lesson.stored_path and os.path.exists(lesson.stored_path):
-        try:
-            os.remove(lesson.stored_path)
-        except Exception:
-            pass
-    db.delete(lesson)
-    db.commit()
-    return True, "Lesson deleted successfully."
-
 
 def delete_lessons_by_course(db: Session, course_id: str, teacher_username: str):
     lessons = db.query(Lesson).filter(

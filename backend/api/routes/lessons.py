@@ -34,11 +34,12 @@ router = APIRouter(prefix="/lessons", tags=["lessons"])
 rag = RAGManager()
 
 LESSON_MATERIALS_DIR = "lesson_materials"
+LESSON_PDFS_DIR = "lesson_pdfs"
 SECTIONS_DIR = "lesson_sections"
 
 
 def _ensure_dirs():
-    for d in [LESSON_MATERIALS_DIR, SECTIONS_DIR]:
+    for d in [LESSON_MATERIALS_DIR, LESSON_PDFS_DIR, SECTIONS_DIR]:
         if not os.path.exists(d):
             os.makedirs(d)
 
@@ -284,6 +285,11 @@ async def upload_lesson(
 
     with open(stored_path, "w", encoding="utf-8") as f:
         f.write(text)
+    pdf_filename = stored_filename.replace(".txt", ".pdf")
+    pdf_path = os.path.join(LESSON_PDFS_DIR, pdf_filename)
+
+    with open(pdf_path, "wb") as f:
+        f.write(content)
 
     pages = _read_pdf_pages(content)
     pages_path = stored_path.replace(".txt", "_pages.json")

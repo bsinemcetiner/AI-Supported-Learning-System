@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { lessons as lessonsApi } from "../services/api";
+import { lessons as lessonsApi, API_ORIGIN } from "../services/api";
 import type { Lesson, Section } from "../services/api";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -44,6 +44,32 @@ async function fetchUnsplashUrl(keyword: string): Promise<string | null> {
     if (url) imageCache[keyword] = url;
     return url;
   } catch { return null; }
+}
+
+function buildPdfUrl(storedPath?: string | null, pageStart?: number): string | null {
+  if (!storedPath) return null;
+
+  const cleanPath = storedPath.trim().replaceAll("\\", "/");
+  if (!cleanPath) return null;
+
+  const pdfPath = cleanPath
+    .replace(/^lesson_materials\//, "lesson_pdfs/")
+    .replace(/\.txt$/i, ".pdf");
+
+  if (!pdfPath.toLowerCase().endsWith(".pdf")) {
+    return null;
+  }
+
+  const baseUrl =
+    pdfPath.startsWith("http://") || pdfPath.startsWith("https://")
+      ? pdfPath
+      : pdfPath.startsWith("/")
+      ? `${API_ORIGIN}${pdfPath}`
+      : `${API_ORIGIN}/${pdfPath}`;
+
+  const page = pageStart && pageStart > 0 ? pageStart : 1;
+
+  return `${encodeURI(baseUrl)}#page=${page}&zoom=85`;
 }
 
 // ─── Robust JSON extractor ────────────────────────────────────────────────────
@@ -626,10 +652,156 @@ function appendToPrompt(text: string) {
         <div style={{ fontSize: "0.84rem", color: status.textColor, lineHeight: 1.6 }}>{status.text}</div>
       </div>
 
-      <div className="card" style={{ padding: "0.9rem 1.25rem", background: cardBg, border: `1px solid ${borderColor}` }}>
-        <div className="label" style={{ marginBottom: 6, color: textSecondary }}>Page Content Preview</div>
-        <div style={{ fontSize: "0.82rem", color: textSecondary, lineHeight: 1.6 }}>{section.text_preview}...</div>
-      </div>
+     {(() => {
+      const pdfUrl = buildPdfUrl(lesson.stored_path, section.page_start);
+      console.log("lesson.stored_path:", lesson.stored_path);
+      console.log("generated pdfUrl:", pdfUrl);
+      const pageLabel =
+        section.page_start === section.page_end
+          ? `page ${section.page_start}`
+          : `pages ${section.page_start}–${section.page_end}`;
+
+      return (
+        <div
+          className="card"
+          style={{
+            padding: "0.95rem 1.15rem",
+            background: darkMode ? "rgba(15,23,42,0.45)" : "#fffaf5",
+            border: darkMode
+              ? "1px solid rgba(251,146,60,0.22)"
+              : "1px solid #fed7aa",
+            borderRadius: 16,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+            <div
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 12,
+                background: "linear-gradient(135deg,#f97316,#ec4899)",
+                color: "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                fontSize: "1rem",
+                fontWeight: 800,
+              }}
+            >
+              📖
+            </div>
+
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: "0.78rem",
+                  fontWeight: 800,
+                  color: textPrimary,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  marginBottom: 3,
+                }}
+              >
+                Original PDF Pages
+              </div>
+
+              <div
+                style={{
+                  fontSize: "0.8rem",
+                  color: textSecondary,
+                  lineHeight: 1.55,
+                  marginBottom: 10,
+                }}
+              >
+                This section was extracted from <b>{pageLabel}</b>. Open the source pages to compare the AI preview with the original material.
+              </div>
+
+              {pdfUrl ? (
+                <details>
+                  <summary
+                    style={{
+                      cursor: "pointer",
+                      fontSize: "0.82rem",
+                      fontWeight: 800,
+                      color: "#f97316",
+                      userSelect: "none",
+                    }}
+                  >
+                    Open source PDF at {pageLabel}
+                  </summary>
+
+                  <div
+                    style={{
+                      marginTop: 12,
+                      borderRadius: 14,
+                      overflow: "hidden",
+                      border: `1px solid ${borderColor}`,
+                      background: "#fff",
+                    }}
+                  >
+                    <iframe
+                      title={`Original PDF ${pageLabel}`}
+                      src={pdfUrl}
+                      style={{
+                        width: "100%",
+                        height: 520,
+                        border: "none",
+                        display: "block",
+                      }}
+                    />
+                  </div>
+                </details>
+              ) : (
+                <div
+                  style={{
+                    fontSize: "0.8rem",
+                    color: "#ef4444",
+                    fontWeight: 700,
+                  }}
+                >
+                  Original PDF preview is not available for this section. You can still review the extracted source text below.
+                </div>
+              )}
+
+              {section.text_preview?.trim() && (
+                <details style={{ marginTop: 10 }}>
+                  <summary
+                    style={{
+                      cursor: "pointer",
+                      fontSize: "0.78rem",
+                      fontWeight: 700,
+                      color: textSecondary,
+                      userSelect: "none",
+                    }}
+                  >
+                    Show extracted text
+                  </summary>
+
+                  <div
+                    style={{
+                      marginTop: 10,
+                      padding: "0.85rem 0.95rem",
+                      borderRadius: 12,
+                      background: darkMode ? "rgba(15,23,42,0.75)" : "#fff",
+                      border: `1px solid ${borderColor}`,
+                      fontSize: "0.82rem",
+                      color: textSecondary,
+                      lineHeight: 1.65,
+                      whiteSpace: "pre-wrap",
+                      maxHeight: 180,
+                      overflowY: "auto",
+                    }}
+                  >
+                    {section.text_preview}
+                  </div>
+                </details>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    })()}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <div className="card" style={{ padding: "1rem 1.25rem", background: cardBg, border: `1px solid ${borderColor}` }}>
