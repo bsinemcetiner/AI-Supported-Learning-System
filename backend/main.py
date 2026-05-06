@@ -14,10 +14,17 @@ from api.routes.settings import router as settings_router
 from models import User, Course, Lesson, Chat, Message, Material, CourseMaterial
 from models.calendar_event import CalendarEvent
 
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+
 from dotenv import load_dotenv
 load_dotenv(dotenv_path=".env")
 
 app = FastAPI(title="AI Supported Learning System API", version="1.0.0")
+UPLOADS_DIR = Path("uploads")
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,

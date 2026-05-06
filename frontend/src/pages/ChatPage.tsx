@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Chat } from "../types";
+import { API_ORIGIN } from "../services/api";
 
 interface ChatPageProps {
   chatId: string;
@@ -141,6 +142,36 @@ function isJsonContent(content: string): boolean {
 
 function isRichLessonContent(content: string): boolean {
   return Boolean(extractSections(content) || extractSlides(content));
+}
+
+function normalizeImageUrl(url?: string | null): string | undefined {
+  const cleanUrl = url?.trim();
+  if (!cleanUrl) return undefined;
+
+  if (
+    cleanUrl.startsWith("blob:") ||
+    cleanUrl.startsWith("data:") ||
+    cleanUrl.startsWith("http://") ||
+    cleanUrl.startsWith("https://")
+  ) {
+    return cleanUrl;
+  }
+
+  const looksLikeImagePath =
+    cleanUrl.startsWith("/") ||
+    cleanUrl.startsWith("uploads/") ||
+    cleanUrl.startsWith("static/") ||
+    /\.(png|jpe?g|webp|gif)$/i.test(cleanUrl);
+
+  if (!looksLikeImagePath) {
+    return undefined;
+  }
+
+  if (cleanUrl.startsWith("/")) {
+    return `${API_ORIGIN}${cleanUrl}`;
+  }
+
+  return `${API_ORIGIN}/${cleanUrl}`;
 }
 
 function formatUserDisplayContent(content: string): string {
@@ -529,7 +560,11 @@ function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
           !isJsonContent(msg.content || "")
             ? animatedFirstMessage
             : msg.content;
-          const imagePreviewUrl = ((msg as any).imagePreviewUrl || (msg as any).image_url) as string | undefined;
+          const rawImageUrl = ((msg as any).imagePreviewUrl || (msg as any).image_url) as
+          | string
+          | undefined;
+
+          const imagePreviewUrl = normalizeImageUrl(rawImageUrl);
 
           if (isFirstAssistant) return (
             <div key={i} style={{ width: "100%" }}>

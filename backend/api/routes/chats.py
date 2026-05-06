@@ -57,7 +57,7 @@ def _serialize_chat(chat: Chat) -> dict:
                 "content": m.content,
                 "created_at": m.created_at.isoformat() if m.created_at else None,
                 "image_url": (
-                    f"http://127.0.0.1:8011/{m.image_path}"
+                    f"/{m.image_path}"
                     if getattr(m, "image_path", None)
                     else None
                 ),

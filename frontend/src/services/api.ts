@@ -8,7 +8,8 @@ import type {
   NotificationItem,
 } from "../types";
 
-const BASE = "http://127.0.0.1:8011/api";
+export const API_ORIGIN = "http://127.0.0.1:8011";
+export const BASE = `${API_ORIGIN}/api`;
 
 export type Lesson = {
   lesson_id: string;

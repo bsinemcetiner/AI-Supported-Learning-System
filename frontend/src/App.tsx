@@ -388,26 +388,72 @@ export default function App() {
   }
 
   async function handleSendMessage(chat_id: string, content: string, image?: File | null) {
-    setStreaming(true);
-    const imagePreviewUrl = image ? URL.createObjectURL(image) : null;
-    setChatMap((prev) => {
-      const cur = prev[chat_id];
-      return { ...prev, [chat_id]: { ...cur, messages: [...(cur?.messages ?? []), { role: "user", content, ...(imagePreviewUrl ? { imagePreviewUrl } : {}) } as any, { role: "assistant", content: "" }] } };
-    });
-    try {
-      const stream = image ? chatsApi.sendImageQuestionStream(chat_id, content, image) : chatsApi.sendStream(chat_id, content);
-      for await (const delta of stream) {
-        setChatMap((prev) => {
-          const cur = prev[chat_id];
-          const msgs = [...(cur?.messages ?? [])];
-          const last = msgs[msgs.length - 1];
-          if (last?.role === "assistant") msgs[msgs.length - 1] = { ...last, content: (last.content ?? "") + delta };
-          return { ...prev, [chat_id]: { ...cur, messages: msgs } };
-        });
-      }
-    } catch (e) { console.error(e); }
-    finally { setStreaming(false); await loadChats(); }
+  setStreaming(true);
+
+  const imagePreviewUrl = image ? URL.createObjectURL(image) : null;
+
+  setChatMap((prev) => {
+    const cur = prev[chat_id];
+
+    return {
+      ...prev,
+      [chat_id]: {
+        ...cur,
+        messages: [
+          ...(cur?.messages ?? []),
+          {
+            role: "user",
+            content,
+            ...(imagePreviewUrl ? { imagePreviewUrl } : {}),
+          } as any,
+          {
+            role: "assistant",
+            content: "",
+          },
+        ],
+      },
+    };
+  });
+
+  try {
+    const stream = image
+      ? chatsApi.sendImageQuestionStream(chat_id, content, image)
+      : chatsApi.sendStream(chat_id, content);
+
+    for await (const delta of stream) {
+      setChatMap((prev) => {
+        const cur = prev[chat_id];
+        const msgs = [...(cur?.messages ?? [])];
+        const last = msgs[msgs.length - 1];
+
+        if (last?.role === "assistant") {
+          msgs[msgs.length - 1] = {
+            ...last,
+            content: (last.content ?? "") + delta,
+          };
+        }
+
+        return {
+          ...prev,
+          [chat_id]: {
+            ...cur,
+            messages: msgs,
+          },
+        };
+      });
+    }
+  } catch (e) {
+    console.error(e);
+  } finally {
+    setStreaming(false);
+
+    // Image preview frontend'de blob URL olarak durduğu için
+    // hemen loadChats yaparsak preview siliniyor ve kırık image çıkıyor.
+    if (!image) {
+      await loadChats();
+    }
   }
+}
 
   async function handleRegenerate(chat_id: string) {
     setStreaming(true);
