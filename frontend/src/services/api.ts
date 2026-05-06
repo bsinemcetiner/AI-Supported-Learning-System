@@ -544,8 +544,7 @@ export const events = {
     request<CalendarEvent[]>("/events/shared"),
 
   getMyPersonal: () =>
-    request<CalendarEvent[]>("/events/personal"),
-
+  request<CalendarEvent[]>("/events/my-personal"),
   createPersonal: (data: {
     title: string;
     description: string;
@@ -577,4 +576,15 @@ export const events = {
     request<{ message: string }>(`/events/personal/${id}`, {
       method: "DELETE",
     }),
+   getMine: () =>
+    request<CalendarEvent[]>("/events/mine"),
+
+  create: (data: { title: string; description: string; event_date: string; event_time: string; color: string; is_shared: boolean }) =>
+    request<CalendarEvent>("/events/", { method: "POST", body: JSON.stringify(data) }),
+
+  update: (id: number, data: Partial<{ title: string; description: string; event_date: string; event_time: string; color: string; is_shared: boolean }>) =>
+    request<CalendarEvent>(`/events/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+
+  delete: (id: number) =>
+    request<{ message: string }>(`/events/${id}`, { method: "DELETE" }),
 };

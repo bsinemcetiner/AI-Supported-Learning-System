@@ -49,54 +49,90 @@ async function fetchUnsplashUrl(keyword: string): Promise<string | null> {
 // ─── Robust JSON extractor ────────────────────────────────────────────────────
 function extractJson(raw: string): LessonPageData | null {
   if (!raw) return null;
-  let text = raw.trim();
 
-  // 1. Strip outer markdown fence
-  const outerFence = text.match(/^```(?:json)?\s*([\s\S]*?)```\s*$/);
+  let text = raw
+    .trim()
+    .replace(/^\uFEFF/, "")
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'");
+
+  // Remove markdown fence if the whole response is fenced
+  const outerFence = text.match(/^```(?:json)?\s*([\s\S]*?)```\s*$/i);
   if (outerFence) text = outerFence[1].trim();
 
-  // 2. Temporarily replace code blocks so their { } don't break JSON parsing
-  const codeBlocks: string[] = [];
-  const placeholder = (i: number) => `__CODEBLOCK_${i}__`;
-  text = text.replace(/```([\w]*)\n([\s\S]*?)```/g, (_match, lang, code) => {
-    const idx = codeBlocks.length;
-    codeBlocks.push(`\`\`\`${lang}\n${code}\`\`\``);
-    return placeholder(idx);
-  });
-
-  // 3. Find outermost { ... }
+  // Extract the first balanced JSON object while respecting strings
   const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start === -1 || end === -1 || end <= start) return null;
-  text = text.slice(start, end + 1);
+  if (start === -1) return null;
 
-  // 4. Parse
+  let inString = false;
+  let escaped = false;
+  let depth = 0;
+  let end = -1;
+
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (ch === "\\") {
+      escaped = true;
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (!inString) {
+      if (ch === "{") depth++;
+      if (ch === "}") depth--;
+
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
+  }
+
+  if (end === -1) return null;
+
+  let jsonText = text.slice(start, end + 1).trim();
+
+  // Remove common invalid JSON issues
+  jsonText = jsonText
+    .replace(/,\s*}/g, "}")
+    .replace(/,\s*]/g, "]");
+
   try {
-    const parsed: LessonPageData = JSON.parse(text);
+    const parsed = JSON.parse(jsonText) as LessonPageData;
 
-    // 5. Restore code blocks in slide fields
-    function restoreCodeBlocks(str: string): string {
-      return str.replace(/__CODEBLOCK_(\d+)__/g, (_, i) => codeBlocks[parseInt(i)] || "");
+    if (!parsed || !Array.isArray(parsed.slides) || parsed.slides.length === 0) {
+      return null;
     }
 
-    if (typeof parsed.slides === "string") {
-      try { (parsed as any).slides = JSON.parse((parsed as any).slides); } catch {}
-    }
+    parsed.slides = parsed.slides.map((slide: any) => {
+      if (!slide.type) slide.type = "concept";
+      if (!slide.title) slide.title = "Untitled Slide";
 
-    if (parsed.slides && Array.isArray(parsed.slides)) {
-      parsed.slides = parsed.slides.map((slide: any) => {
-        if (slide.body) slide.body = restoreCodeBlocks(slide.body);
-        if (slide.highlight) slide.highlight = restoreCodeBlocks(slide.highlight);
-        if (slide.subtitle) slide.subtitle = restoreCodeBlocks(slide.subtitle);
-        if (slide.code) slide.code = restoreCodeBlocks(slide.code);
-        return slide;
-      });
-    }
+      if (typeof slide.body === "string") {
+        slide.body = slide.body.replace(/\\n/g, "\n");
+      }
 
-    if (parsed.slides && Array.isArray(parsed.slides) && parsed.slides.length > 0) return parsed;
-    return null;
+      if (typeof slide.code === "string") {
+        slide.code = slide.code.replace(/\\n/g, "\n");
+      }
+
+      return slide;
+    });
+
+    return parsed;
   } catch (err) {
-    console.error("[RichPreview] JSON parse failed:", err, "\nFirst 300 chars:", text.slice(0, 300));
+    console.error("[RichPreview] JSON parse failed:", err);
+    console.log("[RichPreview] Raw preview:", raw);
     return null;
   }
 }
@@ -192,6 +228,9 @@ The code example slide must use this JSON shape:
 Put the explanation only in the "body" field.
 Put only the source code in the "code" field.
 Do not place markdown code fences inside the body or code field.
+Escape double quotes inside code strings with backslash.
+Escape newlines inside code strings as \\n.
+For C# code, use "csharp" as code_language, not "c#" or "c #".
 The code must be short, correct, and idiomatic for the programming language or technology discussed in this section.
 Set "code_language" to the correct syntax-highlighting language name, such as "csharp", "java", "python", "javascript", "typescript", "sql", "html", "css", or "bash".
 ${SCHEMA_SAFE_SUFFIX}
@@ -364,9 +403,61 @@ function SlideCard({ slide, index }: { slide: Slide; index: number }) {
 
 function RichPreview({ raw }: { raw: string }) {
   const data = extractJson(raw);
-  if (!data) return (
-    <div style={{ background: "var(--bg2)", borderRadius: 14, padding: "1.25rem", fontSize: "0.9rem", lineHeight: 1.75, whiteSpace: "pre-wrap", overflowY: "auto", maxHeight: 460, color: "var(--text-mid)" }}>{raw}</div>
-  );
+
+  if (!data) {
+    return (
+      <div
+        style={{
+          background: "var(--bg2)",
+          borderRadius: 14,
+          padding: "1.25rem",
+          fontSize: "0.9rem",
+          lineHeight: 1.75,
+          color: "var(--text-mid)",
+        }}
+      >
+        <div
+          style={{
+            padding: "0.85rem 1rem",
+            borderRadius: 12,
+            background: "#fff7ed",
+            border: "1px solid #fed7aa",
+            color: "#9a3412",
+            fontWeight: 700,
+            marginBottom: 12,
+          }}
+        >
+          ⚠️ The AI preview could not be converted into slide cards. Please regenerate the preview.
+        </div>
+
+        <details>
+          <summary
+            style={{
+              cursor: "pointer",
+              fontWeight: 700,
+              color: "#f97316",
+              marginBottom: 10,
+            }}
+          >
+            Show raw AI output
+          </summary>
+
+          <pre
+            style={{
+              whiteSpace: "pre-wrap",
+              overflowY: "auto",
+              maxHeight: 420,
+              margin: 0,
+              fontFamily: "monospace",
+              fontSize: "0.82rem",
+            }}
+          >
+            {raw}
+          </pre>
+        </details>
+      </div>
+    );
+  }
   return (
     <div>
       {data.learning_objectives && data.learning_objectives.length > 0 && (
