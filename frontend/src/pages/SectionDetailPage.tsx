@@ -498,6 +498,7 @@ export function SectionDetailPage({ lesson, sectionIndex, onBack, showFeedback, 
   const [isApproving, setIsApproving] = useState(false);
   const [isSavingPrompt, setIsSavingPrompt] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [isPromptDirty, setIsPromptDirty] = useState(false);
 
   useEffect(() => { loadSection(); }, [lesson.lesson_id, sectionIndex]);
 
@@ -508,26 +509,37 @@ export function SectionDetailPage({ lesson, sectionIndex, onBack, showFeedback, 
       if (!sec) return;
       setSection(sec);
       setDraft(sec.draft || "");
-      setPromptDraft(lesson.preview_question || "Create a comprehensive, visually rich educational lesson page based on the provided content.");
-      setLoaded(true);
+      setPromptDraft(
+          lesson.preview_question ||
+            "Create a comprehensive, visually rich educational lesson page based on the provided content."
+        );
+        setIsPromptDirty(false);
+        setLoaded(true);
     } catch (e: any) { showFeedback("error", e.message || "Could not load section."); }
   }
 
   async function handleSavePrompt() {
     setIsSavingPrompt(true);
-    try { await lessonsApi.updatePreviewQuestion(lesson.lesson_id, promptDraft); showFeedback("success", "Preview prompt saved."); }
+    try {
+      await lessonsApi.updatePreviewQuestion(lesson.lesson_id, promptDraft);
+      setIsPromptDirty(false);
+      showFeedback("success", "Preview prompt saved.");
+    }
     catch (e: any) { showFeedback("error", e.message || "Could not save prompt."); }
     finally { setIsSavingPrompt(false); }
   }
 
   async function handleGenerate() {
-  setIsGenerating(true);
-  setDraft("");
+  if (isPromptDirty) {
+      showFeedback("info", "Please save the prompt before generating or regenerating the preview.");
+      return;
+    }
 
-  try {
-    await lessonsApi.updatePreviewQuestion(lesson.lesson_id, promptDraft);
+    setIsGenerating(true);
+    setDraft("");
 
-    let full = "";
+    try {
+      let full = "";
     for await (const delta of lessonsApi.generateSectionStream(lesson.lesson_id, sectionIndex)) {
       full += delta;
       setDraft(full);
@@ -626,12 +638,33 @@ function appendToPrompt(text: string) {
             className="input"
             rows={5}
             value={promptDraft}
-            onChange={(e) => setPromptDraft(e.target.value)}
+            onChange={(e) => {
+              setPromptDraft(e.target.value);
+              setIsPromptDirty(true);
+            }}
             style={{ resize: "vertical", fontSize: "0.85rem", background: darkMode ? "rgba(15,23,42,0.65)" : "#fff", color: textPrimary, border: `1px solid ${borderColor}` }}
           />
-          <p style={{ fontSize: "0.72rem", color: "#f97316", margin: "6px 0 0" }}>
-            ⚠️ These instructions guide the AI output. Keep them clear and schema-friendly.
-          </p>
+          <div
+              style={{
+                marginTop: 8,
+                padding: "9px 11px",
+                borderRadius: 12,
+                background: darkMode ? "rgba(249,115,22,0.14)" : "#fff7ed",
+                border: darkMode ? "1px solid rgba(251,146,60,0.35)" : "1px solid #fed7aa",
+                color: darkMode ? "#fdba74" : "#9a3412",
+                fontSize: "0.76rem",
+                fontWeight: 700,
+                lineHeight: 1.5,
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 8,
+              }}
+            >
+              <span style={{ fontSize: "0.9rem", lineHeight: 1.3 }}>⚠️</span>
+              <span>
+                Please save the prompt before generating/regenerating. Unsaved prompt changes will not be used.
+              </span>
+           </div>
           <button className="btn btn-ghost" onClick={handleSavePrompt} disabled={isSavingPrompt} style={{ marginTop: 8, fontSize: "0.82rem" }}>
             {isSavingPrompt ? "Saving..." : "Save Prompt"}
           </button>
@@ -719,8 +752,14 @@ function appendToPrompt(text: string) {
       </div>
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <button className="btn btn-primary" onClick={handleGenerate} disabled={isGenerating || isApproving} style={{ flex: 1, justifyContent: "center", minWidth: 220 }}>
-          {isGenerating ? "Generating..." : draft ? "🔄 Regenerate Preview" : "✨ Generate Preview"}
+        <button className="btn btn-primary" onClick={handleGenerate} disabled={isGenerating || isApproving || isPromptDirty} style={{ flex: 1, justifyContent: "center", minWidth: 220 }}>
+          {isGenerating
+          ? "Generating..."
+          : isPromptDirty
+          ? "Save prompt first"
+          : draft
+          ? "🔄 Regenerate Preview"
+          : "✨ Generate Preview"}
         </button>
         <button className="btn btn-primary" onClick={handleApprove} disabled={isGenerating || isApproving || !draft.trim() || section.approved}
           style={{ flex: 1, justifyContent: "center", minWidth: 220, background: section.approved ? "var(--bg2)" : "#1f8f5f", color: section.approved ? "var(--text-soft)" : "#fff" }}>
