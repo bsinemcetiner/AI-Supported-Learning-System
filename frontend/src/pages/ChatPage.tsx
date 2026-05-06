@@ -420,6 +420,7 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
   const [animatedFirstMessage, setAnimatedFirstMessage] = useState("");
   const [animatedChatId, setAnimatedChatId] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [selectedImagePreviewUrl, setSelectedImagePreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
@@ -447,7 +448,17 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
     return () => clearInterval(interval);
   }, [chatId, messages.length, animateInitialMessage]);
 
+useEffect(() => {
+  if (!selectedImage) {
+    setSelectedImagePreviewUrl(null);
+    return;
+  }
 
+  const objectUrl = URL.createObjectURL(selectedImage);
+  setSelectedImagePreviewUrl(objectUrl);
+
+  return () => URL.revokeObjectURL(objectUrl);
+}, [selectedImage]);
 
 function handleSubmit(e: React.FormEvent) {
   e.preventDefault();
@@ -660,38 +671,23 @@ function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
       </div>
 
       {/* --- INPUT AREA --- */}
-              {/* --- INPUT AREA --- */}
       <div style={{ padding: "1rem 1.5rem", background: "#fff", borderTop: "1px solid #f3f4f6" }}>
-        {selectedImage && (
+        {selectedImage && selectedImagePreviewUrl && (
           <div
             style={{
-              display: "inline-flex",
+              display: "flex",
               alignItems: "center",
-              gap: 8,
-              marginBottom: 8,
-              padding: "7px 10px",
-              borderRadius: 12,
+              gap: 12,
+              marginBottom: 10,
+              padding: 10,
+              borderRadius: 16,
               background: "#fff7ed",
               border: "1px solid #fed7aa",
-              color: "#9a3412",
-              fontSize: "0.78rem",
-              fontWeight: 600,
-              maxWidth: "100%",
+              maxWidth: 430,
+              position: "relative",
+              boxShadow: "0 2px 8px rgba(249,115,22,0.08)",
             }}
           >
-            <span>📷</span>
-
-            <span
-              style={{
-                maxWidth: 260,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {selectedImage.name}
-            </span>
-
             <button
               type="button"
               onClick={() => {
@@ -699,17 +695,72 @@ function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
                 if (fileInputRef.current) fileInputRef.current.value = "";
               }}
               disabled={streaming}
+              title="Remove image"
               style={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                width: 24,
+                height: 24,
+                borderRadius: "50%",
                 border: "none",
-                background: "transparent",
+                background: "#fff",
                 color: "#ef4444",
                 cursor: streaming ? "not-allowed" : "pointer",
                 fontWeight: 800,
                 fontSize: "0.9rem",
+                boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
               }}
             >
               ×
             </button>
+
+            <button
+              type="button"
+              onClick={() => setPreviewImageUrl(selectedImagePreviewUrl)}
+              title="Preview image"
+              style={{
+                border: "none",
+                background: "transparent",
+                padding: 0,
+                cursor: "zoom-in",
+                flexShrink: 0,
+              }}
+            >
+              <img
+                src={selectedImagePreviewUrl}
+                alt={selectedImage.name}
+                style={{
+                  width: 76,
+                  height: 76,
+                  objectFit: "cover",
+                  borderRadius: 12,
+                  display: "block",
+                  border: "1px solid #fdba74",
+                  background: "#fff",
+                }}
+              />
+            </button>
+
+            <div style={{ minWidth: 0, paddingRight: 28 }}>
+              <div
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "#9a3412",
+                  marginBottom: 4,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {selectedImage.name}
+              </div>
+
+              <div style={{ fontSize: "0.74rem", color: "#c2410c" }}>
+                Image selected · click to preview
+              </div>
+            </div>
           </div>
         )}
 
