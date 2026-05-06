@@ -187,6 +187,7 @@ const fadeUp = {
   } | null>(null);
 
   const [deletingMaterial, setDeletingMaterial] = useState(false);
+  const [expandedMaterialHash, setExpandedMaterialHash] = useState<string | null>(null);
 
   const [view, setView] = useState<View>("home");
   const [homeTab, setHomeTab] = useState<HomeTab>("quick-start");
@@ -801,23 +802,117 @@ function TeacherTopHeader() {
             <div style={{ marginBottom: 20 }}>
               <p style={{ fontSize: "0.72rem", fontWeight: 700, color: textSecondary, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Course Materials</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {materials.map((m: Material) => (
-                  <div key={m.file_hash} style={{ background: cardBg, border: `1px solid ${borderColor}`, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.6rem 1rem" }}>
-                    <span style={{ fontSize: "0.85rem", color: textPrimary }}>📄 {m.original_filename}</span>
-                    <button
-                      className="btn btn-danger btn-sm"
-                      onClick={() =>
-                        setPendingDeleteMaterial({
-                          courseId: selectedCourseId,
-                          fileHash: m.file_hash,
-                          filename: m.original_filename,
-                        })
-                      }
+                {materials.map((m: Material) => {
+                  const isExpanded = expandedMaterialHash === m.file_hash;
+
+                  const materialUrl =
+                    (m as any).file_url ||
+                    (m as any).url ||
+                    (m as any).public_url ||
+                    "";
+
+                  return (
+                    <div
+                      key={m.file_hash}
+                      style={{
+                        background: cardBg,
+                        border: `1px solid ${borderColor}`,
+                        borderRadius: 14,
+                        overflow: "hidden",
+                      }}
                     >
-                      Delete
-                    </button>
-                  </div>
-                ))}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "0.75rem 1rem",
+                          gap: 12,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "0.85rem",
+                            color: textPrimary,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            minWidth: 0,
+                          }}
+                        >
+                          <span>📄</span>
+                          <span
+                            style={{
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {m.original_filename}
+                          </span>
+                        </span>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            onClick={() =>
+                              setExpandedMaterialHash(isExpanded ? null : m.file_hash)
+                            }
+                          >
+                            {isExpanded ? "Hide preview ▲" : "Preview ▼"}
+                          </button>
+
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() =>
+                              setPendingDeleteMaterial({
+                                courseId: selectedCourseId,
+                                fileHash: m.file_hash,
+                                filename: m.original_filename,
+                              })
+                            }
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+
+                      {isExpanded && (
+                        <div
+                          style={{
+                            borderTop: `1px solid ${borderColor}`,
+                            background: darkMode ? "rgba(15,23,42,0.65)" : "#fff",
+                          }}
+                        >
+                          {materialUrl ? (
+                            <iframe
+                              src={`${materialUrl}#toolbar=1&navpanes=0`}
+                              title={`Preview ${m.original_filename}`}
+                              style={{
+                                width: "100%",
+                                height: 520,
+                                border: "none",
+                                display: "block",
+                                background: "#fff",
+                              }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                padding: "1rem",
+                                fontSize: "0.84rem",
+                                color: textSecondary,
+                              }}
+                            >
+                              Preview URL not found for this material.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
