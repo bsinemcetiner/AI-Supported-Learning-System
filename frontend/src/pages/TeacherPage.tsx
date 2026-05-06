@@ -180,6 +180,13 @@ const fadeUp = {
   const [darkMode, setDarkMode] = useState(false);
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
+  const [pendingDeleteMaterial, setPendingDeleteMaterial] = useState<{
+  courseId: string;
+  fileHash: string;
+  filename: string;
+  } | null>(null);
+
+  const [deletingMaterial, setDeletingMaterial] = useState(false);
 
   const [view, setView] = useState<View>("home");
   const [homeTab, setHomeTab] = useState<HomeTab>("quick-start");
@@ -200,7 +207,14 @@ const fadeUp = {
   const [lastMaterialUpload, setLastMaterialUpload] = useState<{
       courseId: string;
       count: number;
+      items: { name: string; url: string }[];
+      selectedIndex: number;
   } | null>(null);
+  const [selectedMaterialPreviewItems, setSelectedMaterialPreviewItems] = useState<
+    { name: string; url: string }[]
+  >([]);
+
+  const [selectedMaterialPreviewIndex, setSelectedMaterialPreviewIndex] = useState(0);
 
   function showFeedback(type: "success" | "error" | "info", text: string) {
     setFeedback({ type, text });
@@ -227,16 +241,21 @@ const fadeUp = {
   }
 
   useEffect(() => { loadCourses(); }, []);
+  useEffect(() => {
+    return () => {
+      selectedMaterialPreviewItems.forEach((item) => URL.revokeObjectURL(item.url));
+    };
+  }, [selectedMaterialPreviewItems]);
 
   const courseList = Object.entries(courseMap);
-const totalLessons = Object.values(lessonMap).reduce((a, m) => a + Object.keys(m).length, 0);
-const totalMaterials = courseList.reduce((a, [, c]) => a + (c.materials?.length ?? 0), 0);
+  const totalLessons = Object.values(lessonMap).reduce((a, m) => a + Object.keys(m).length, 0);
+  const totalMaterials = courseList.reduce((a, [, c]) => a + (c.materials?.length ?? 0), 0);
 
-const hasCourse = courseList.length > 0;
-const hasLesson = totalLessons > 0;
-const hasMaterial = totalMaterials > 0;
+  const hasCourse = courseList.length > 0;
+  const hasLesson = totalLessons > 0;
+  const hasMaterial = totalMaterials > 0;
 
-const lessonSteps: FlowStep[] = [
+  const lessonSteps: FlowStep[] = [
   {
     id: 1,
     title: "Create a course",
@@ -399,6 +418,29 @@ const materialSteps: FlowStep[] = [
   }
 }
 
+function clearSelectedMaterialPreviews() {
+  selectedMaterialPreviewItems.forEach((item) => URL.revokeObjectURL(item.url));
+  setSelectedMaterialPreviewItems([]);
+  setSelectedMaterialPreviewIndex(0);
+}
+
+function updateMaterialSelection(nextFiles: FileList | null) {
+  clearSelectedMaterialPreviews();
+
+  setMaterialFiles(nextFiles);
+  setLastMaterialUpload(null);
+  setSelectedMaterialPreviewIndex(0);
+
+  if (!nextFiles || nextFiles.length === 0) return;
+
+  const previewItems = Array.from(nextFiles).map((file) => ({
+    name: file.name,
+    url: URL.createObjectURL(file),
+  }));
+
+  setSelectedMaterialPreviewItems(previewItems);
+}
+
 function removeSelectedMaterialFile(indexToRemove: number) {
   if (!materialFiles) return;
 
@@ -410,7 +452,8 @@ function removeSelectedMaterialFile(indexToRemove: number) {
     }
   });
 
-  setMaterialFiles(dt.files.length > 0 ? dt.files : null);
+  const nextFiles = dt.files.length > 0 ? dt.files : null;
+  updateMaterialSelection(nextFiles);
 
   const input = document.getElementById("material-upload") as HTMLInputElement | null;
   if (input) {
@@ -427,11 +470,18 @@ function removeSelectedMaterialFile(indexToRemove: number) {
 
   let added = 0;
   const failed: string[] = [];
+  const uploadedItems: { name: string; url: string }[] = [];
 
   try {
     for (const f of Array.from(materialFiles)) {
       try {
-        await coursesApi.uploadMaterial(materialCourseId, f);
+        const result = await coursesApi.uploadMaterial(materialCourseId, f);
+
+        uploadedItems.push({
+          name: f.name,
+          url: URL.createObjectURL(f),
+        });
+
         added++;
       } catch (e: any) {
         failed.push(`${f.name}: ${e.message}`);
@@ -439,7 +489,7 @@ function removeSelectedMaterialFile(indexToRemove: number) {
     }
 
     setMaterialFiles(null);
-
+    clearSelectedMaterialPreviews();
     const input = document.getElementById("material-upload") as HTMLInputElement | null;
     if (input) input.value = "";
 
@@ -449,6 +499,8 @@ function removeSelectedMaterialFile(indexToRemove: number) {
       setLastMaterialUpload({
         courseId: materialCourseId,
         count: added,
+        items: uploadedItems,
+        selectedIndex: 0,
       });
 
       showFeedback("success", `${added} material(s) uploaded.`);
@@ -465,11 +517,63 @@ function removeSelectedMaterialFile(indexToRemove: number) {
     setLoading(false);
   }
 }
+function removeMaterialFromUi(courseId: string, fileHash: string) {
+  setCourseMap((prev) => {
+    const course = prev[courseId];
+    if (!course) return prev;
+
+    return {
+      ...prev,
+      [courseId]: {
+        ...course,
+        materials: (course.materials ?? []).filter(
+          (m: Material) => m.file_hash !== fileHash
+        ),
+      },
+    };
+  });
+}
 
   async function handleDeleteMaterial(course_id: string, file_hash: string) {
-    try { await coursesApi.deleteMaterial(course_id, file_hash); showFeedback("success", "Deleted."); await loadCourses(); }
-    catch (e: any) { showFeedback("error", e.message); }
+  setDeletingMaterial(true);
+
+  try {
+    await coursesApi.deleteMaterial(course_id, file_hash);
+
+    removeMaterialFromUi(course_id, file_hash);
+
+    showFeedback("success", "Material deleted.");
+    await loadCourses();
+  } catch (e: any) {
+    const message = e.message || "Could not delete material.";
+    const lower = message.toLowerCase();
+
+    if (lower.includes("not found") || lower.includes("failed to fetch")) {
+      removeMaterialFromUi(course_id, file_hash);
+
+      showFeedback("info", "Material removed from the list. Course materials refreshed.");
+
+      try {
+        await loadCourses();
+      } catch {
+        // ignore refresh errors here; UI was already updated
+      }
+
+      return;
+    }
+
+    showFeedback("error", message);
+
+    try {
+      await loadCourses();
+    } catch {
+      // ignore refresh errors here
+    }
+  } finally {
+    setDeletingMaterial(false);
+    setPendingDeleteMaterial(null);
   }
+}
 
   function handleLessonDeleted(lessonId: string) {
     if (!selectedCourseId) return;
@@ -700,7 +804,18 @@ function TeacherTopHeader() {
                 {materials.map((m: Material) => (
                   <div key={m.file_hash} style={{ background: cardBg, border: `1px solid ${borderColor}`, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.6rem 1rem" }}>
                     <span style={{ fontSize: "0.85rem", color: textPrimary }}>📄 {m.original_filename}</span>
-                    <button className="btn btn-danger btn-sm" onClick={() => handleDeleteMaterial(selectedCourseId, m.file_hash)}>Delete</button>
+                    <button
+                      className="btn btn-danger btn-sm"
+                      onClick={() =>
+                        setPendingDeleteMaterial({
+                          courseId: selectedCourseId,
+                          fileHash: m.file_hash,
+                          filename: m.original_filename,
+                        })
+                      }
+                    >
+                      Delete
+                    </button>
                   </div>
                 ))}
               </div>
@@ -825,6 +940,144 @@ function TeacherTopHeader() {
           </div>
         </div>
       )}
+        {/* ── Delete Material Modal ── */}
+        {pendingDeleteMaterial && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 9999,
+              background: "rgba(0,0,0,0.45)",
+              backdropFilter: "blur(5px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            onClick={() => {
+              if (!deletingMaterial) setPendingDeleteMaterial(null);
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: darkMode ? "rgba(30,41,59,0.98)" : "#fff",
+                border: darkMode ? "1px solid rgba(255,255,255,0.12)" : "1px solid #fecaca",
+                borderRadius: 22,
+                padding: "1.7rem 1.9rem",
+                width: 430,
+                maxWidth: "90vw",
+                boxShadow: "0 24px 64px rgba(0,0,0,0.30)",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: "1rem" }}>
+                <div
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: 16,
+                    background: "linear-gradient(135deg,#fee2e2,#fecaca)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#dc2626",
+                    fontSize: "1.35rem",
+                  }}
+                >
+                  🗑
+                </div>
+              </div>
+
+              <h3
+                style={{
+                  textAlign: "center",
+                  fontSize: "1.08rem",
+                  fontWeight: 800,
+                  color: textPrimary,
+                  margin: "0 0 8px",
+                }}
+              >
+                Delete this material?
+              </h3>
+
+              <p
+                style={{
+                  textAlign: "center",
+                  fontSize: "0.86rem",
+                  color: textSecondary,
+                  margin: "0 0 0.7rem",
+                  lineHeight: 1.6,
+                }}
+              >
+                This PDF will be removed from the course materials.
+              </p>
+
+              <div
+                style={{
+                  background: darkMode ? "rgba(15,23,42,0.7)" : "#fff7ed",
+                  border: darkMode ? "1px solid rgba(255,255,255,0.10)" : "1px solid #fed7aa",
+                  borderRadius: 12,
+                  padding: "0.7rem 0.85rem",
+                  fontSize: "0.82rem",
+                  color: darkMode ? "#fdba74" : "#92400e",
+                  marginBottom: "1.4rem",
+                  wordBreak: "break-word",
+                }}
+              >
+                📄 {pendingDeleteMaterial.filename}
+              </div>
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => setPendingDeleteMaterial(null)}
+                  disabled={deletingMaterial}
+                  style={{
+                    flex: 1,
+                    padding: "11px",
+                    borderRadius: 14,
+                    border: `1px solid ${darkMode ? "rgba(255,255,255,0.12)" : "#e5e7eb"}`,
+                    background: "transparent",
+                    color: textSecondary,
+                    fontWeight: 600,
+                    fontSize: "0.9rem",
+                    cursor: deletingMaterial ? "not-allowed" : "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleDeleteMaterial(
+                      pendingDeleteMaterial.courseId,
+                      pendingDeleteMaterial.fileHash
+                    )
+                  }
+                  disabled={deletingMaterial}
+                  style={{
+                    flex: 1,
+                    padding: "11px",
+                    borderRadius: 14,
+                    border: "none",
+                    background: deletingMaterial
+                      ? "#fca5a5"
+                      : "linear-gradient(135deg,#ef4444,#dc2626)",
+                    color: "#fff",
+                    fontWeight: 800,
+                    fontSize: "0.9rem",
+                    cursor: deletingMaterial ? "not-allowed" : "pointer",
+                    fontFamily: "inherit",
+                    boxShadow: deletingMaterial ? "none" : "0 4px 16px rgba(239,68,68,0.35)",
+                  }}
+                >
+                  {deletingMaterial ? "Deleting…" : "Yes, Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
     </div>
     </div>
     );
@@ -838,6 +1091,15 @@ function TeacherTopHeader() {
     { id: "upload", label: "+ Upload Lesson", icon: Upload },
     { id: "upload_material", label: "+ Upload Material", icon: FileText },
   ];
+
+  const hasUploadedMaterialPreview =
+  !!lastMaterialUpload && lastMaterialUpload.courseId === materialCourseId;
+
+  const hasSelectedMaterialPreview =
+  !hasUploadedMaterialPreview && selectedMaterialPreviewItems.length > 0;
+
+  const showMaterialPreviewPanel =
+  hasUploadedMaterialPreview || hasSelectedMaterialPreview;
 
   return (
     <div style={{ background: bg, minHeight: "100vh" }}>
@@ -1573,6 +1835,7 @@ function TeacherTopHeader() {
                   >
                     Optional step
                   </p>
+
                   <p
                     style={{
                       fontSize: "0.83rem",
@@ -1581,27 +1844,22 @@ function TeacherTopHeader() {
                       lineHeight: 1.6,
                     }}
                   >
-                    Upload course materials for student chat support. This is separate from
-                    lesson tuning. After uploading, you can view the course and its materials
-                    in My Courses.
+                    Upload course materials for student chat support. This is separate from lesson tuning.
+                    After uploading, you can view the course and its materials in My Courses.
                   </p>
                 </div>
 
                 <div
                   style={{
-                    maxWidth:
-                      lastMaterialUpload && lastMaterialUpload.courseId === materialCourseId
-                        ? 980
-                        : 580,
+                    maxWidth: showMaterialPreviewPanel ? 1120 : 620,
                   }}
                 >
                   <div
                     style={{
                       display: "grid",
-                      gridTemplateColumns:
-                        lastMaterialUpload && lastMaterialUpload.courseId === materialCourseId
-                          ? "minmax(0, 580px) minmax(280px, 360px)"
-                          : "minmax(0, 580px)",
+                      gridTemplateColumns: showMaterialPreviewPanel
+                          ? "minmax(0, 620px) minmax(320px, 1fr)"
+                          : "minmax(0, 620px)",
                       gap: 18,
                       alignItems: "start",
                     }}
@@ -1616,6 +1874,7 @@ function TeacherTopHeader() {
                     >
                       <div>
                         <label className="label">Select Course</label>
+
                         <select
                           className="select"
                           value={materialCourseId}
@@ -1634,6 +1893,7 @@ function TeacherTopHeader() {
 
                       <div>
                         <label className="label">Upload PDF Files</label>
+
                         <div
                           style={{
                             border: "2px dashed #d1d5db",
@@ -1654,10 +1914,9 @@ function TeacherTopHeader() {
                             e.currentTarget.style.borderColor = "#d1d5db";
                           }}
                           onDrop={(e) => {
-                            e.preventDefault();
-                            setMaterialFiles(e.dataTransfer.files);
-                            setLastMaterialUpload(null);
-                            e.currentTarget.style.borderColor = "#d1d5db";
+                              e.preventDefault();
+                              updateMaterialSelection(e.dataTransfer.files);
+                              e.currentTarget.style.borderColor = "#d1d5db";
                           }}
                         >
                           <input
@@ -1667,8 +1926,7 @@ function TeacherTopHeader() {
                             style={{ display: "none" }}
                             id="material-upload"
                             onChange={(e) => {
-                              setMaterialFiles(e.target.files);
-                              setLastMaterialUpload(null);
+                              updateMaterialSelection(e.target.files);
                             }}
                           />
 
@@ -1678,6 +1936,7 @@ function TeacherTopHeader() {
                               color="#9ca3af"
                               style={{ margin: "0 auto 10px", display: "block" }}
                             />
+
                             <p
                               style={{
                                 color: textSecondary,
@@ -1724,6 +1983,7 @@ function TeacherTopHeader() {
                                   color="#f97316"
                                   style={{ flexShrink: 0 }}
                                 />
+
                                 <span
                                   style={{
                                     overflow: "hidden",
@@ -1767,86 +2027,298 @@ function TeacherTopHeader() {
                       </button>
                     </form>
 
-                    {lastMaterialUpload &&
-                      lastMaterialUpload.courseId === materialCourseId && (
-                        <div
-                          style={{
-                            padding: "1.1rem 1.15rem",
-                            borderRadius: 18,
-                            background: darkMode ? "rgba(139,92,246,0.13)" : "#f5f3ff",
-                            border: darkMode
-                              ? "1px solid rgba(167,139,250,0.32)"
-                              : "1px solid #c4b5fd",
-                            boxShadow: darkMode
-                              ? "0 8px 24px rgba(0,0,0,0.18)"
-                              : "0 8px 24px rgba(139,92,246,0.12)",
-                          }}
-                        >
+                    {showMaterialPreviewPanel && (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 14,
+                        }}
+                      >
+                        {hasUploadedMaterialPreview && lastMaterialUpload && (
                           <div
                             style={{
-                              width: 42,
-                              height: 42,
-                              borderRadius: 14,
-                              background: "linear-gradient(135deg,#8b5cf6,#ec4899)",
-                              color: "#fff",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: "1.1rem",
-                              marginBottom: 12,
+                              padding: "1.1rem 1.15rem",
+                              borderRadius: 18,
+                              background: darkMode ? "rgba(139,92,246,0.12)" : "#f5f3ff",
+                              border: darkMode
+                                ? "1px solid rgba(167,139,250,0.35)"
+                                : "1px solid #c4b5fd",
+                              boxShadow: darkMode
+                                ? "0 8px 24px rgba(0,0,0,0.18)"
+                                : "0 8px 24px rgba(139,92,246,0.10)",
                             }}
                           >
-                            📄
-                          </div>
+                            <div
+                              style={{
+                                width: 42,
+                                height: 42,
+                                borderRadius: 14,
+                                background: "linear-gradient(135deg,#8b5cf6,#ec4899)",
+                                color: "#fff",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: "1.15rem",
+                                marginBottom: 12,
+                              }}
+                            >
+                              📄
+                            </div>
 
+                            <div
+                              style={{
+                                fontSize: "0.95rem",
+                                fontWeight: 800,
+                                color: darkMode ? "#ddd6fe" : "#5b21b6",
+                                marginBottom: 6,
+                              }}
+                            >
+                              Material upload completed
+                            </div>
+
+                            <div
+                              style={{
+                                fontSize: "0.82rem",
+                                color: darkMode ? "#c4b5fd" : "#6d28d9",
+                                lineHeight: 1.55,
+                                marginBottom: 14,
+                              }}
+                            >
+                              {lastMaterialUpload.count} material
+                              {lastMaterialUpload.count > 1 ? "s" : ""} uploaded. Preview the
+                              uploaded PDF below to confirm it is the correct file.
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedCourseId(lastMaterialUpload.courseId);
+                                setView("course");
+                              }}
+                              style={{
+                                width: "100%",
+                                border: "none",
+                                borderRadius: 13,
+                                padding: "11px 14px",
+                                background: "linear-gradient(135deg,#8b5cf6,#ec4899)",
+                                color: "#fff",
+                                fontSize: "0.84rem",
+                                fontWeight: 800,
+                                cursor: "pointer",
+                                fontFamily: "inherit",
+                                boxShadow: "0 4px 14px rgba(139,92,246,0.28)",
+                              }}
+                            >
+                              View uploaded material →
+                            </button>
+                          </div>
+                        )}
+
+                        {hasSelectedMaterialPreview && (
                           <div
                             style={{
-                              fontSize: "0.95rem",
-                              fontWeight: 800,
-                              color: darkMode ? "#ddd6fe" : "#5b21b6",
-                              marginBottom: 6,
+                              padding: "1rem 1.1rem",
+                              borderRadius: 18,
+                              background: darkMode ? "rgba(59,130,246,0.10)" : "#eff6ff",
+                              border: darkMode
+                                ? "1px solid rgba(96,165,250,0.28)"
+                                : "1px solid #bfdbfe",
+                              boxShadow: "0 8px 24px rgba(59,130,246,0.10)",
                             }}
                           >
-                            Material upload completed
-                          </div>
+                            <div
+                              style={{
+                                fontSize: "0.95rem",
+                                fontWeight: 800,
+                                color: darkMode ? "#bfdbfe" : "#1d4ed8",
+                                marginBottom: 6,
+                              }}
+                            >
+                              Selected PDF preview
+                            </div>
 
+                            <div
+                              style={{
+                                fontSize: "0.82rem",
+                                color: darkMode ? "#dbeafe" : "#1e40af",
+                                lineHeight: 1.55,
+                              }}
+                            >
+                              You can preview the selected PDF before uploading to confirm it is the correct file.
+                            </div>
+                          </div>
+                        )}
+
+                        {hasUploadedMaterialPreview &&
+                          lastMaterialUpload &&
+                          lastMaterialUpload.items.length > 1 && (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                              {lastMaterialUpload.items.map((item, i) => (
+                                <button
+                                  key={`${item.name}-${i}`}
+                                  type="button"
+                                  onClick={() =>
+                                    setLastMaterialUpload((prev) =>
+                                      prev ? { ...prev, selectedIndex: i } : prev
+                                    )
+                                  }
+                                  style={{
+                                    border: "none",
+                                    borderRadius: 10,
+                                    padding: "8px 12px",
+                                    cursor: "pointer",
+                                    fontFamily: "inherit",
+                                    fontSize: "0.78rem",
+                                    fontWeight: 700,
+                                    background:
+                                      i === lastMaterialUpload.selectedIndex
+                                        ? "linear-gradient(135deg,#8b5cf6,#ec4899)"
+                                        : darkMode
+                                        ? "rgba(255,255,255,0.06)"
+                                        : "#fff",
+                                    color:
+                                      i === lastMaterialUpload.selectedIndex ? "#fff" : textPrimary,
+                                    boxShadow:
+                                      i === lastMaterialUpload.selectedIndex
+                                        ? "0 4px 12px rgba(139,92,246,0.25)"
+                                        : "none",
+                                  }}
+                                >
+                                  {item.name.length > 26 ? item.name.slice(0, 26) + "..." : item.name}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                        {hasSelectedMaterialPreview && selectedMaterialPreviewItems.length > 1 && (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                            {selectedMaterialPreviewItems.map((item, i) => (
+                              <button
+                                key={`${item.name}-${i}`}
+                                type="button"
+                                onClick={() => setSelectedMaterialPreviewIndex(i)}
+                                style={{
+                                  border: "none",
+                                  borderRadius: 10,
+                                  padding: "8px 12px",
+                                  cursor: "pointer",
+                                  fontFamily: "inherit",
+                                  fontSize: "0.78rem",
+                                  fontWeight: 700,
+                                  background:
+                                    i === selectedMaterialPreviewIndex
+                                      ? "linear-gradient(135deg,#3b82f6,#8b5cf6)"
+                                      : darkMode
+                                      ? "rgba(255,255,255,0.06)"
+                                      : "#fff",
+                                  color: i === selectedMaterialPreviewIndex ? "#fff" : textPrimary,
+                                  boxShadow:
+                                    i === selectedMaterialPreviewIndex
+                                      ? "0 4px 12px rgba(59,130,246,0.25)"
+                                      : "none",
+                                }}
+                              >
+                                {item.name.length > 26 ? item.name.slice(0, 26) + "..." : item.name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {hasUploadedMaterialPreview && lastMaterialUpload && (
                           <div
                             style={{
-                              fontSize: "0.82rem",
-                              color: darkMode ? "#e9d5ff" : "#6d28d9",
-                              lineHeight: 1.55,
-                              marginBottom: 14,
+                              borderRadius: 18,
+                              overflow: "hidden",
+                              border: darkMode
+                                ? "1px solid rgba(255,255,255,0.10)"
+                                : "1px solid #ddd6fe",
+                              background: darkMode ? "rgba(15,23,42,0.7)" : "#fff",
+                              boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
                             }}
                           >
-                            {lastMaterialUpload.count} material
-                            {lastMaterialUpload.count > 1 ? "s" : ""} uploaded. You can
-                            now view the uploaded material in the selected course.
-                          </div>
+                            <div
+                              style={{
+                                padding: "0.85rem 1rem",
+                                borderBottom: darkMode
+                                  ? "1px solid rgba(255,255,255,0.08)"
+                                  : "1px solid #ede9fe",
+                                fontWeight: 700,
+                                fontSize: "0.84rem",
+                                color: textPrimary,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                              }}
+                            >
+                              <FileText size={15} color="#8b5cf6" />
+                              <span>
+                                Previewing: {lastMaterialUpload.items[lastMaterialUpload.selectedIndex].name}
+                              </span>
+                            </div>
 
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedCourseId(lastMaterialUpload.courseId);
-                              setView("course");
-                            }}
+                            <iframe
+                              src={`${lastMaterialUpload.items[lastMaterialUpload.selectedIndex].url}#toolbar=1&navpanes=0`}
+                              title="Uploaded material preview"
+                              style={{
+                                width: "100%",
+                                height: 520,
+                                border: "none",
+                                display: "block",
+                                background: "#fff",
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        {hasSelectedMaterialPreview && (
+                          <div
                             style={{
-                              width: "100%",
-                              border: "none",
-                              borderRadius: 13,
-                              padding: "11px 14px",
-                              background: "linear-gradient(135deg,#8b5cf6,#ec4899)",
-                              color: "#fff",
-                              fontSize: "0.84rem",
-                              fontWeight: 800,
-                              cursor: "pointer",
-                              fontFamily: "inherit",
-                              boxShadow: "0 4px 14px rgba(139,92,246,0.28)",
+                              borderRadius: 18,
+                              overflow: "hidden",
+                              border: darkMode
+                                ? "1px solid rgba(255,255,255,0.10)"
+                                : "1px solid #bfdbfe",
+                              background: darkMode ? "rgba(15,23,42,0.7)" : "#fff",
+                              boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
                             }}
                           >
-                            View uploaded material →
-                          </button>
-                        </div>
-                      )}
+                            <div
+                              style={{
+                                padding: "0.85rem 1rem",
+                                borderBottom: darkMode
+                                  ? "1px solid rgba(255,255,255,0.08)"
+                                  : "1px solid #dbeafe",
+                                fontWeight: 700,
+                                fontSize: "0.84rem",
+                                color: textPrimary,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                              }}
+                            >
+                              <FileText size={15} color="#3b82f6" />
+                              <span>
+                                Previewing before upload:{" "}
+                                {selectedMaterialPreviewItems[selectedMaterialPreviewIndex].name}
+                              </span>
+                            </div>
+
+                             <iframe
+                              src={`${selectedMaterialPreviewItems[selectedMaterialPreviewIndex].url}#toolbar=1&navpanes=0`}
+                              title="Selected material preview"
+                              style={{
+                                width: "100%",
+                                height: 520,
+                                border: "none",
+                                display: "block",
+                                background: "#fff",
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </>
