@@ -2,6 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Chat } from "../types";
 import { API_ORIGIN } from "../services/api";
+import { TTSButton } from "../components/TTSButton";
 
 interface ChatPageProps {
   chatId: string;
@@ -112,7 +113,7 @@ function extractSlides(raw: string): LessonPageData | null {
 
   if (text.includes("```")) {
     const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-if (fenceMatch) text = fenceMatch[1].trim();
+    if (fenceMatch) text = fenceMatch[1].trim();
   }
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
@@ -343,9 +344,9 @@ function CopyableCodeBlock({ children }: { children: string }) {
           style={{ display: "flex", alignItems: "center", gap: 5, background: copied ? "#22c55e" : "#334155", border: "none", borderRadius: 6, padding: "3px 10px", cursor: "pointer", color: "#fff", fontSize: "0.72rem", fontWeight: 600, transition: "background 0.2s" }}
         >
           {copied ? (
-            <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Copied!</>
+            <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>Copied!</>
           ) : (
-            <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</>
+            <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>Copy</>
           )}
         </button>
       </div>
@@ -424,8 +425,6 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
-
-
   const bottomRef = useRef<HTMLDivElement>(null);
   const messages = chat.messages ?? [];
   const hasExchange = messages.length >= 2 && messages.at(-1)?.role === "assistant" && messages.at(-2)?.role === "user";
@@ -448,63 +447,63 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
     return () => clearInterval(interval);
   }, [chatId, messages.length, animateInitialMessage]);
 
-useEffect(() => {
-  if (!selectedImage) {
-    setSelectedImagePreviewUrl(null);
-    return;
+  useEffect(() => {
+    if (!selectedImage) {
+      setSelectedImagePreviewUrl(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(selectedImage);
+    setSelectedImagePreviewUrl(objectUrl);
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [selectedImage]);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+
+    const val = input.trim();
+
+    if (!val || streaming) return;
+
+    const imageToSend = selectedImage;
+
+    console.log("ChatPage imageToSend:", imageToSend);
+
+    onSend(val, imageToSend);
+
+    setInput("");
+    setSelectedImage(null);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   }
 
-  const objectUrl = URL.createObjectURL(selectedImage);
-  setSelectedImagePreviewUrl(objectUrl);
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
 
-  return () => URL.revokeObjectURL(objectUrl);
-}, [selectedImage]);
+    if (!file) return;
 
-function handleSubmit(e: React.FormEvent) {
-  e.preventDefault();
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
 
-  const val = input.trim();
+    if (!allowedTypes.includes(file.type)) {
+      alert("Please select a JPEG, PNG, or WEBP image.");
+      e.target.value = "";
+      return;
+    }
 
-  if (!val || streaming) return;
+    const maxSizeMb = 5;
+    const maxSizeBytes = maxSizeMb * 1024 * 1024;
 
-  const imageToSend = selectedImage;
+    if (file.size > maxSizeBytes) {
+      alert(`Image size must be smaller than ${maxSizeMb} MB.`);
+      e.target.value = "";
+      return;
+    }
 
-  console.log("ChatPage imageToSend:", imageToSend);
-
-  onSend(val, imageToSend);
-
-  setInput("");
-  setSelectedImage(null);
-
-  if (fileInputRef.current) {
-    fileInputRef.current.value = "";
+    setSelectedImage(file);
   }
-}
-
-function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-  const file = e.target.files?.[0];
-
-  if (!file) return;
-
-  const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-
-  if (!allowedTypes.includes(file.type)) {
-    alert("Please select a JPEG, PNG, or WEBP image.");
-    e.target.value = "";
-    return;
-  }
-
-  const maxSizeMb = 5;
-  const maxSizeBytes = maxSizeMb * 1024 * 1024;
-
-  if (file.size > maxSizeBytes) {
-    alert(`Image size must be smaller than ${maxSizeMb} MB.`);
-    e.target.value = "";
-    return;
-  }
-
-  setSelectedImage(file);
-}
 
   const courseLabel = chat.course_id ? chat.course_id.split("::")[1] ?? chat.course_id : null;
 
@@ -559,21 +558,21 @@ function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
         {messages.map((msg, i) => {
           const firstAssistantIndex = messages.findIndex((m) => m.role === "assistant");
 
-        const isFirstAssistant =
-          msg.role === "assistant" &&
-          firstAssistantIndex === i &&
-          isRichLessonContent(msg.content || "");
+          const isFirstAssistant =
+            msg.role === "assistant" &&
+            firstAssistantIndex === i &&
+            isRichLessonContent(msg.content || "");
 
-        const displayContent =
-          isFirstAssistant &&
-          animateInitialMessage &&
-          animatedChatId === chatId &&
-          !isJsonContent(msg.content || "")
-            ? animatedFirstMessage
-            : msg.content;
+          const displayContent =
+            isFirstAssistant &&
+              animateInitialMessage &&
+              animatedChatId === chatId &&
+              !isJsonContent(msg.content || "")
+              ? animatedFirstMessage
+              : msg.content;
           const rawImageUrl = ((msg as any).imagePreviewUrl || (msg as any).image_url) as
-          | string
-          | undefined;
+            | string
+            | undefined;
 
           const imagePreviewUrl = normalizeImageUrl(rawImageUrl);
 
@@ -597,19 +596,19 @@ function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
                 </div>
               )}
               <div
-                  style={{
-                    maxWidth: msg.role === "user" && imagePreviewUrl ? 460 : "75%",
-                    minWidth: msg.role === "user" && imagePreviewUrl ? 320 : undefined,
-                    padding: "12px 16px",
-                    borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                    background: msg.role === "user" ? "linear-gradient(135deg,#f97316,#ec4899)" : "#fff",
-                    color: msg.role === "user" ? "#fff" : "#111827",
-                    fontSize: "0.92rem",
-                    lineHeight: 1.65,
-                    boxShadow: msg.role === "user" ? "0 4px 14px rgba(249,115,22,0.3)" : "0 1px 6px rgba(0,0,0,0.06)",
-                    border: msg.role === "assistant" ? "1px solid #f3f4f6" : "none",
-                  }}
-                >
+                style={{
+                  maxWidth: msg.role === "user" && imagePreviewUrl ? 460 : "75%",
+                  minWidth: msg.role === "user" && imagePreviewUrl ? 320 : undefined,
+                  padding: "12px 16px",
+                  borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                  background: msg.role === "user" ? "linear-gradient(135deg,#f97316,#ec4899)" : "#fff",
+                  color: msg.role === "user" ? "#fff" : "#111827",
+                  fontSize: "0.92rem",
+                  lineHeight: 1.65,
+                  boxShadow: msg.role === "user" ? "0 4px 14px rgba(249,115,22,0.3)" : "0 1px 6px rgba(0,0,0,0.06)",
+                  border: msg.role === "assistant" ? "1px solid #f3f4f6" : "none",
+                }}
+              >
                 {msg.role === "user" && imagePreviewUrl && (
                   <button
                     type="button"
@@ -642,10 +641,10 @@ function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
                 )}
                 {displayContent ? (
                   msg.role === "user" ? (
-                  <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-                    {formatUserDisplayContent(displayContent || "")}
-                  </p>
-                ) : (
+                    <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+                      {formatUserDisplayContent(displayContent || "")}
+                    </p>
+                  ) : (
                     <ReactMarkdown components={{
                       p: ({ children }) => <p style={{ margin: "0.35rem 0", lineHeight: 1.65 }}>{children}</p>,
                       h1: ({ children }) => <h1 style={{ fontSize: "1.1rem", fontWeight: 700, margin: "0.7rem 0 0.35rem", color: "#111827" }}>{children}</h1>,
@@ -663,6 +662,13 @@ function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
                     }}>{displayContent}</ReactMarkdown>
                   )
                 ) : streaming && i === messages.length - 1 ? <span style={{ color: "#9ca3af", fontSize: "1.2rem" }}>▌</span> : null}
+
+                {/* TTS Button — sadece assistant mesajlarında, streaming bitmişken */}
+                {msg.role === "assistant" && !streaming && msg.content && (
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+                    <TTSButton text={msg.content} tone={chat.tone || "Professional Tutor"} />
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -803,16 +809,7 @@ function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
               flexShrink: 0,
             }}
           >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
               <circle cx="8.5" cy="8.5" r="1.5" />
               <polyline points="21 15 16 10 5 21" />
@@ -874,27 +871,9 @@ function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
             }}
           >
             {streaming ? (
-              <div
-                style={{
-                  width: 16,
-                  height: 16,
-                  border: "2px solid #9ca3af",
-                  borderTopColor: "transparent",
-                  borderRadius: "50%",
-                  animation: "spin 0.8s linear infinite",
-                }}
-              />
+              <div style={{ width: 16, height: 16, border: "2px solid #9ca3af", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
             ) : (
-              <svg
-                width="17"
-                height="17"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#fff"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13" />
                 <polygon points="22 2 15 22 11 13 2 9 22 2" />
               </svg>
@@ -902,91 +881,69 @@ function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
           </button>
         </form>
 
-        <p
-          style={{
-            fontSize: "0.72rem",
-            color: "#9ca3af",
-            textAlign: "center",
-            marginTop: 8,
-          }}
-        >
+        <p style={{ fontSize: "0.72rem", color: "#9ca3af", textAlign: "center", marginTop: 8 }}>
           Press Enter to send · Shift+Enter for a new line
         </p>
       </div>
 
       {previewImageUrl && (
-      <div
-        onClick={() => setPreviewImageUrl(null)}
-        style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(15, 23, 42, 0.78)",
-          backdropFilter: "blur(6px)",
-          zIndex: 9999,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "2rem",
-        }}
-      >
-        <button
-          type="button"
+        <div
           onClick={() => setPreviewImageUrl(null)}
           style={{
-            position: "absolute",
-            top: 20,
-            right: 24,
-            width: 42,
-            height: 42,
-            borderRadius: "50%",
-            border: "1px solid rgba(255,255,255,0.35)",
-            background: "rgba(255,255,255,0.12)",
-            color: "#fff",
-            fontSize: "1.4rem",
-            fontWeight: 700,
-            cursor: "pointer",
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.78)",
+            backdropFilter: "blur(6px)",
+            zIndex: 9999,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            padding: "2rem",
           }}
         >
-          ×
-        </button>
+          <button
+            type="button"
+            onClick={() => setPreviewImageUrl(null)}
+            style={{
+              position: "absolute",
+              top: 20,
+              right: 24,
+              width: 42,
+              height: 42,
+              borderRadius: "50%",
+              border: "1px solid rgba(255,255,255,0.35)",
+              background: "rgba(255,255,255,0.12)",
+              color: "#fff",
+              fontSize: "1.4rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            ×
+          </button>
 
-        <img
-          src={previewImageUrl}
-          alt="Uploaded screenshot preview"
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            maxWidth: "92vw",
-            maxHeight: "86vh",
-            objectFit: "contain",
-            borderRadius: 14,
-            background: "#fff",
-            boxShadow: "0 24px 80px rgba(0,0,0,0.45)",
-          }}
-        />
-      </div>
-    )}
+          <img
+            src={previewImageUrl}
+            alt="Uploaded screenshot preview"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: "92vw",
+              maxHeight: "86vh",
+              objectFit: "contain",
+              borderRadius: 14,
+              background: "#fff",
+              boxShadow: "0 24px 80px rgba(0,0,0,0.45)",
+            }}
+          />
+        </div>
+      )}
 
-      {/* --- ANIMATIONS --- */}
       <style>{`
-        @keyframes spin {
-          to {
-            transform: rotate(360deg);
-          }
-        }
-
-        @keyframes slideDown {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
     </div>
   );
