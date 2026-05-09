@@ -4,8 +4,8 @@ services/question_tracker.py
 Mimari:
   course → lesson → section → questions
 
-Threshold: TAMAMEN deterministik, section bazlı sayım.
-AI: SADECE optional keyword insight için (token hatası olsa da threshold çalışır).
+Threshold: DB bazlı sayım — restart'tan etkilenmez, gerçek 24h pencere.
+AI: SADECE optional keyword insight için.
 
 key = f"{lesson_id}::{section_index}"
 """
@@ -18,14 +18,9 @@ from sqlalchemy.orm import Session
 QUESTION_THRESHOLD = 5
 WINDOW_HOURS = 24
 
-# { key: [datetime, ...] }
-_question_log: dict = {}
-
-# { key: datetime } — spam önleme
+# Sadece spam önleme için in-memory
+# { key: datetime }
 _notified_at: dict = {}
-
-# { key: [str, ...] } — son sorular (AI insight için, opsiyonel)
-_question_texts: dict = {}
 
 
 # ── 1. Hybrid confusion filtresi (regex önce, AI fallback) ───────────────────
@@ -124,11 +119,48 @@ def _ai_is_confusion(message: str) -> bool:
         return False
 
 
-# ── 2. Cleanup ────────────────────────────────────────────────────────────────
-def _cleanup(key: str):
+# ── 2. DB helpers ────────────────────────────────────────────────────────────
+def _log_to_db(db: Session, lesson_id: str, section_index: int, course_id: str, question: str):
+    from models.question_log import QuestionLog
+    entry = QuestionLog(
+        lesson_id=lesson_id,
+        section_index=section_index,
+        course_id=course_id,
+        student_question=question,
+    )
+    db.add(entry)
+    db.commit()
+
+
+def _count_from_db(db: Session, lesson_id: str, section_index: int) -> int:
+    from models.question_log import QuestionLog
     cutoff = datetime.utcnow() - timedelta(hours=WINDOW_HOURS)
-    if key in _question_log:
-        _question_log[key] = [t for t in _question_log[key] if t > cutoff]
+    return (
+        db.query(QuestionLog)
+        .filter(
+            QuestionLog.lesson_id == lesson_id,
+            QuestionLog.section_index == section_index,
+            QuestionLog.asked_at >= cutoff,
+        )
+        .count()
+    )
+
+
+def _get_recent_questions(db: Session, lesson_id: str, section_index: int) -> list:
+    from models.question_log import QuestionLog
+    cutoff = datetime.utcnow() - timedelta(hours=WINDOW_HOURS)
+    rows = (
+        db.query(QuestionLog)
+        .filter(
+            QuestionLog.lesson_id == lesson_id,
+            QuestionLog.section_index == section_index,
+            QuestionLog.asked_at >= cutoff,
+        )
+        .order_by(QuestionLog.asked_at.desc())
+        .limit(10)
+        .all()
+    )
+    return [r.student_question for r in rows if r.student_question]
 
 
 # ── 3. Optional AI keyword insight (token hatası olsa da sistem çalışır) ──────
@@ -221,13 +253,17 @@ def track_question(
         return
 
     key = f"{lesson_id}::{section_index}"
-    _cleanup(key)
-
     now = datetime.utcnow()
-    _question_log.setdefault(key, []).append(now)
-    _question_texts.setdefault(key, []).append(student_question)
 
-    count = len(_question_log[key])
+    # DB'ye kaydet
+    try:
+        _log_to_db(db, lesson_id, section_index, course_id, student_question)
+    except Exception as e:
+        print(f"[QuestionTracker] DB log failed: {e}")
+        return
+
+    # DB'den say (gerçek 24h pencere)
+    count = _count_from_db(db, lesson_id, section_index)
     print(f"[QuestionTracker] key={key} section='{section_title}' count={count}/{QUESTION_THRESHOLD}")
 
     if count < QUESTION_THRESHOLD:
@@ -241,8 +277,9 @@ def track_question(
 
     _notified_at[key] = now
 
-    # Optional AI insight (hata alsa da devam et)
-    insight = _get_keyword_insights(_question_texts.get(key, []), section_title)
+    # Son soruları DB'den çek (AI insight için)
+    recent_questions = _get_recent_questions(db, lesson_id, section_index)
+    insight = _get_keyword_insights(recent_questions, section_title)
 
     try:
         from models.notification import Notification

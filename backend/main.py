@@ -18,6 +18,7 @@ from api.routes.analytics import router as analytics_router
 from database import Base, engine
 from models import User, Course, Lesson, Chat, Message, Material, CourseMaterial
 from models.calendar_event import CalendarEvent
+from models.question_log import QuestionLog
 
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
