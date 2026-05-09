@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import Optional
-from datetime import datetime
 
 from core.auth import get_current_user, require_teacher
 from database import get_db
@@ -24,6 +23,7 @@ def _notification_to_dict(n: Notification, is_read: bool) -> dict:
         "created_at": n.created_at.isoformat() if n.created_at else None,
         "created_by": n.created_by,
         "is_read": is_read,
+        "target_role": getattr(n, "target_role", "student"),
     }
 
 
@@ -34,14 +34,15 @@ def create_notification(
     message: str,
     created_by: str,
     type: str = "info",
+    target_role: str = "student",
 ):
-    """Helper to create a notification — call from other routes."""
     n = Notification(
         course_id=course_id,
         title=title,
         message=message,
         type=type,
         created_by=created_by,
+        target_role=target_role,
     )
     db.add(n)
     db.commit()
@@ -49,7 +50,7 @@ def create_notification(
     return n
 
 
-# ── GET /notifications ── current user's notifications (enrolled courses)
+# ── GET /notifications ────────────────────────────────────────────────────────
 @router.get("/")
 def get_my_notifications(
     current_user: dict = Depends(get_current_user),
@@ -62,21 +63,25 @@ def get_my_notifications(
     if not user:
         return {"notifications": [], "unread_count": 0}
 
-    # Teachers see notifications for their own courses
     if role == "teacher":
         from models.course import Course
         teacher_courses = db.query(Course).filter(Course.teacher_username == username).all()
         course_ids = [c.course_id for c in teacher_courses]
+        target_roles = ["teacher"]
     else:
         assignments = db.query(StudentCourseAssignment).filter_by(student_id=user.id).all()
         course_ids = [a.course_id for a in assignments]
+        target_roles = ["student"]
 
     if not course_ids:
         return {"notifications": [], "unread_count": 0}
 
     notifications = (
         db.query(Notification)
-        .filter(Notification.course_id.in_(course_ids))
+        .filter(
+            Notification.course_id.in_(course_ids),
+            Notification.target_role.in_(target_roles),
+        )
         .order_by(Notification.created_at.desc())
         .limit(50)
         .all()
@@ -98,7 +103,7 @@ def get_my_notifications(
     return {"notifications": result, "unread_count": unread_count}
 
 
-# ── PATCH /notifications/{id}/read ── mark single as read
+# ── PATCH /notifications/{id}/read ───────────────────────────────────────────
 @router.patch("/{notification_id}/read")
 def mark_read(
     notification_id: int,
@@ -118,7 +123,7 @@ def mark_read(
     return {"ok": True}
 
 
-# ── PATCH /notifications/read-all ── mark all as read
+# ── PATCH /notifications/read-all ────────────────────────────────────────────
 @router.patch("/read-all")
 def mark_all_read(
     current_user: dict = Depends(get_current_user),
@@ -135,14 +140,24 @@ def mark_all_read(
         from models.course import Course
         teacher_courses = db.query(Course).filter(Course.teacher_username == username).all()
         course_ids = [c.course_id for c in teacher_courses]
+        target_roles = ["teacher"]
     else:
         assignments = db.query(StudentCourseAssignment).filter_by(student_id=user.id).all()
         course_ids = [a.course_id for a in assignments]
+        target_roles = ["student"]
 
     if not course_ids:
         return {"ok": True}
 
-    notifications = db.query(Notification).filter(Notification.course_id.in_(course_ids)).all()
+    notifications = (
+        db.query(Notification)
+        .filter(
+            Notification.course_id.in_(course_ids),
+            Notification.target_role.in_(target_roles),
+        )
+        .all()
+    )
+
     existing_read_ids = set(
         r.notification_id
         for r in db.query(NotificationRead).filter_by(user_id=user.id).all()
@@ -156,7 +171,7 @@ def mark_all_read(
     return {"ok": True}
 
 
-# ── POST /notifications ── teacher sends manual announcement
+# ── POST /notifications ── teacher → student announcement ────────────────────
 class CreateNotificationRequest(BaseModel):
     course_id: str
     title: str
@@ -177,5 +192,6 @@ def send_notification(
         message=body.message,
         created_by=current_user["username"],
         type=body.type,
+        target_role="student",  # teacher'ın manuel bildirimi student'a gider
     )
     return _notification_to_dict(n, False)

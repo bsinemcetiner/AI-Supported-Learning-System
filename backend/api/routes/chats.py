@@ -15,6 +15,7 @@ from database import get_db
 from models import Chat, Message, User
 from services.rag_manager import RAGManager
 from services import ai_engine
+from services.question_tracker import track_question
 
 router = APIRouter(prefix="/chats", tags=["chats"])
 rag = RAGManager()
@@ -57,7 +58,7 @@ def _serialize_chat(chat: Chat) -> dict:
                 "content": m.content,
                 "created_at": m.created_at.isoformat() if m.created_at else None,
                 "image_url": (
-                    f"/{m.image_path}"
+                    f"http://127.0.0.1:8011/{m.image_path}"
                     if getattr(m, "image_path", None)
                     else None
                 ),
@@ -103,9 +104,7 @@ class CreateChatRequest(BaseModel):
     tone: str = "Professional Tutor"
     starter_message: Optional[str] = None
 
-@router.get("/streak")
-def get_streak(current_user=Depends(get_current_user)):
-    return {"streak": 0}
+
 @router.post("/", status_code=201)
 def create_chat(
     body: CreateChatRequest,
@@ -255,17 +254,9 @@ def send_message(
         chat.title = body.content[:40]
         db.commit()
 
-    # Skip the first assistant message (starter_message/lesson content) to avoid
-    # sending huge JSON context repeatedly. It is already used as course context.
-    messages_list = list(chat.messages)
-    first_assistant_idx = next(
-        (i for i, m in enumerate(messages_list) if m.sender == "assistant"),
-        None
-    )
     messages_for_ai = [
         {"role": m.sender, "content": m.content}
-        for i, m in enumerate(messages_list)
-        if not (i == first_assistant_idx and len(m.content) > 500)
+        for m in chat.messages
     ]
 
     if not body.stream:
@@ -316,6 +307,46 @@ def send_message(
             )
             db2.add(assistant_message)
             db2.commit()
+
+            # ── Question Tracker ─────────────────────────────────
+            if chat.lesson_id:
+                try:
+                    lesson = get_lesson_by_id(db2, chat.lesson_id)
+                    if lesson:
+                        from models.course import Course
+                        import os as _os, json as _json2
+                        course = db2.query(Course).filter(Course.course_id == chat.course_id).first()
+                        teacher_username = course.teacher_username if course else "unknown"
+
+                        # Section title tespit et
+                        section_index = chat.section_index if chat.section_index is not None else -1
+                        section_title = f"Section {section_index + 1}"
+                        if section_index >= 0:
+                            safe_id = chat.lesson_id.replace("/", "_").replace(":", "_")
+                            sections_path = _os.path.join("lesson_sections", f"{safe_id}_sections.json")
+                            if _os.path.exists(sections_path):
+                                try:
+                                    with open(sections_path, "r", encoding="utf-8") as _f:
+                                        _sections = _json2.load(_f)
+                                    if 0 <= section_index < len(_sections):
+                                        section_title = _sections[section_index].get("title", section_title)
+                                except Exception:
+                                    pass
+
+                        track_question(
+                            db=db2,
+                            lesson_id=chat.lesson_id,
+                            lesson_title=lesson.get("week_title", "Unknown Lesson"),
+                            section_index=section_index,
+                            section_title=section_title,
+                            course_id=chat.course_id or "",
+                            teacher_username=teacher_username,
+                            student_question=body.content,
+                        )
+                except Exception as te:
+                    print(f"[QuestionTracker] Non-fatal error: {te}")
+            # ──────────────────────────────────────────────────────
+
         finally:
             db2.close()
 

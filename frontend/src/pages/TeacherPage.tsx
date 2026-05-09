@@ -1,5 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { LassieLogo } from "../components/LassieLogo";
+import NotificationBell from "../components/notification/NotificationBell";
+import StudentInsightsWidget from "../components/StudentInsightsWidget";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BookOpen, Upload, FileText, CheckCircle2,
@@ -836,6 +838,8 @@ function TeacherTopHeader() {
           )}
         </motion.button>
 
+        <NotificationBell />
+
         {onSettings && (
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -1418,6 +1422,9 @@ function TeacherTopHeader() {
         {/* ── Quick Start ── */}
         {homeTab === "quick-start" && (
           <motion.div {...fadeUp}>
+        {/* Student Insights Widget */}
+        <StudentInsightsWidget darkMode={darkMode} />
+
         {/* Flow Info */}
         <div
           style={{
