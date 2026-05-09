@@ -16,8 +16,7 @@ import "./styles/theme.css";
 function StudentSidebar({
   username, dashView, onDashView, onLogout, onSettings,
   chatMap, activeChatId, onSelectChat, onDeleteChat,
-  teachingMode, teachingTone, onModeChange, onToneChange,
-  darkMode, onToggleDark,
+  darkMode, onToggleDark, sidebarOpen, onToggleSidebar,
 }: {
   username: string;
   dashView: string;
@@ -28,24 +27,11 @@ function StudentSidebar({
   activeChatId: string | null;
   onSelectChat: (chatId: string, courseId?: string) => void;
   onDeleteChat: (chatId: string) => void;
-  teachingMode: TeachingMode;
-  teachingTone: TeachingTone;
-  onModeChange: (mode: TeachingMode) => void;
-  onToneChange: (tone: TeachingTone) => void;
   darkMode: boolean;
   onToggleDark: () => void;
+  sidebarOpen: boolean;
+  onToggleSidebar: () => void;
 }) {
-  const TONES: TeachingTone[] = [
-    "Professional Tutor", "Friendly Mentor", "Simplified Explainer",
-    "Encouraging Coach", "Funny YouTuber", "Deep Scientist", "Simplified (for kids)",
-  ];
-  const MODES: { value: TeachingMode; label: string }[] = [
-    { value: "direct",     label: "📖 Direct Explanation" },
-    { value: "hint_first", label: "💡 Hint First" },
-    { value: "socratic",   label: "🧑‍🏫 Socratic Tutor" },
-    { value: "quiz_me",    label: "📝 Quiz Me" },
-  ];
-
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [hoveredChat, setHoveredChat] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -65,58 +51,99 @@ function StudentSidebar({
     .filter(([, chat]) => !search || (chat.title ?? "").toLowerCase().includes(search.toLowerCase()))
     .sort(([, a], [, b]) => new Date((b as any).created_at ?? 0).getTime() - new Date((a as any).created_at ?? 0).getTime());
 
-  const selectStyle: React.CSSProperties = {
-    width: "100%", padding: "9px 32px 9px 12px",
-    border: `1.5px solid ${inputBorder}`, borderRadius: 12,
-    fontSize: "0.82rem", fontFamily: "inherit",
-    color: textPrimary, background: inputBg,
-    outline: "none", cursor: "pointer", appearance: "none",
-    transition: "border-color 0.15s", boxSizing: "border-box",
-  };
-
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg> },
     { id: "browse",    label: "Browse",    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> },
     { id: "calendar",  label: "Calendar",  icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
   ];
 
+  const collapsed = !sidebarOpen;
+
   return (
-    <div style={{ width: 256, minWidth: 256, height: "100vh", background: sideBg, borderRight: `1px solid ${sideBorder}`, display: "flex", flexDirection: "column", position: "fixed", left: 0, top: 0, zIndex: 20, boxShadow: dm ? "4px 0 24px rgba(0,0,0,0.4)" : "4px 0 24px rgba(148,163,184,0.12)", fontFamily: "inherit", overflowY: "auto", transition: "background 0.2s, border-color 0.2s" }}>
+    <div style={{ width: collapsed ? 64 : 256, minWidth: collapsed ? 64 : 256, height: "100vh", background: sideBg, borderRight: `1px solid ${sideBorder}`, display: "flex", flexDirection: "column", position: "fixed", left: 0, top: 0, zIndex: 20, boxShadow: dm ? "4px 0 24px rgba(0,0,0,0.4)" : "4px 0 24px rgba(148,163,184,0.12)", fontFamily: "inherit", overflowY: collapsed ? "hidden" : "auto", transition: "width 0.25s ease, min-width 0.25s ease, background 0.2s, border-color 0.2s", overflow: "hidden" }}>
 
       {/* Logo */}
-      <div style={{ background: dm ? "rgba(249,115,22,0.08)" : "linear-gradient(135deg, #fff7ed, #fdf2f8)", padding: "1.25rem 1.5rem", borderBottom: `1px solid ${dm ? "rgba(249,115,22,0.2)" : "#fed7aa"}` }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <LassieLogo size={48} radius={16} />
-          <div>
-            <h1 style={{ fontWeight: 800, color: "#f97316", fontSize: "1.2rem", letterSpacing: "-0.02em", margin: 0, lineHeight: 1.1 }}>LASSIE</h1>
-            <p style={{ fontSize: "0.72rem", color: "rgba(249,115,22,0.65)", margin: 0, marginTop: 2 }}>Learning Assistant</p>
+      <div style={{ background: dm ? "rgba(249,115,22,0.08)" : "linear-gradient(135deg, #fff7ed, #fdf2f8)", padding: collapsed ? "1.25rem 0" : "1.25rem 1.5rem", borderBottom: `1px solid ${dm ? "rgba(249,115,22,0.2)" : "#fed7aa"}`, display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "space-between", flexShrink: 0 }}>
+        {collapsed ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+            <LassieLogo size={36} radius={12} />
+            <button onClick={onToggleSidebar} title="Expand sidebar"
+              style={{ width: 32, height: 32, borderRadius: 10, border: `1.5px solid ${dm ? "#334155" : "#fed7aa"}`, background: dm ? "#1e293b" : "rgba(249,115,22,0.08)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "all 0.15s" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={dm ? "#f97316" : "#c2410c"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </button>
           </div>
-        </div>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <LassieLogo size={48} radius={16} />
+              <div>
+                <h1 style={{ fontWeight: 800, color: "#f97316", fontSize: "1.2rem", letterSpacing: "-0.02em", margin: 0, lineHeight: 1.1 }}>LASSIE</h1>
+                <p style={{ fontSize: "0.72rem", color: "rgba(249,115,22,0.65)", margin: 0, marginTop: 2 }}>Learning Assistant</p>
+              </div>
+            </div>
+            {/* Collapse button */}
+            <button onClick={onToggleSidebar} title="Collapse sidebar"
+              style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${dm ? "#334155" : "#fed7aa"}`, background: dm ? "#1e293b" : "rgba(255,255,255,0.7)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, transition: "all 0.15s" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={dm ? "#94a3b8" : "#c2410c"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* User + dark toggle */}
-      <div style={{ padding: "1rem 1.5rem", borderBottom: `1px solid ${sideBorder}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 42, height: 42, background: "linear-gradient(135deg, #3b82f6, #06b6d4)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 4px 10px rgba(59,130,246,0.25)" }}>
-            <span style={{ color: "#fff", fontWeight: 700, fontSize: "1rem" }}>{username[0]?.toUpperCase()}</span>
-          </div>
-          <div>
-            <div style={{ fontWeight: 600, fontSize: "0.88rem", color: textPrimary }}>{username}</div>
-            <div style={{ fontSize: "0.7rem", color: textMuted, marginTop: 1 }}>Student</div>
+      {/* User + dark toggle - collapsed: show only avatar */}
+      {collapsed ? (
+        <div style={{ padding: "0.75rem 0", borderBottom: `1px solid ${sideBorder}`, display: "flex", justifyContent: "center", flexShrink: 0 }}>
+          <div style={{ width: 36, height: 36, background: "linear-gradient(135deg, #3b82f6, #06b6d4)", borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 10px rgba(59,130,246,0.25)" }}>
+            <span style={{ color: "#fff", fontWeight: 700, fontSize: "0.85rem" }}>{username[0]?.toUpperCase()}</span>
           </div>
         </div>
-        {/* Moon / Sun toggle */}
-        <button onClick={onToggleDark} title={dm ? "Light mode" : "Dark mode"}
-          style={{ width: 34, height: 34, borderRadius: "50%", border: `1px solid ${inputBorder}`, background: dm ? "#1e293b" : "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, transition: "background 0.2s" }}>
-          {dm ? (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-          ) : (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-          )}
-        </button>
-      </div>
+      ) : (
+        <div style={{ padding: "1rem 1.5rem", borderBottom: `1px solid ${sideBorder}`, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 42, height: 42, background: "linear-gradient(135deg, #3b82f6, #06b6d4)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 4px 10px rgba(59,130,246,0.25)" }}>
+              <span style={{ color: "#fff", fontWeight: 700, fontSize: "1rem" }}>{username[0]?.toUpperCase()}</span>
+            </div>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: "0.88rem", color: textPrimary }}>{username}</div>
+              <div style={{ fontSize: "0.7rem", color: textMuted, marginTop: 1 }}>Student</div>
+            </div>
+          </div>
+          {/* Moon / Sun toggle */}
+          <button onClick={onToggleDark} title={dm ? "Light mode" : "Dark mode"}
+            style={{ width: 34, height: 34, borderRadius: "50%", border: `1px solid ${inputBorder}`, background: dm ? "#1e293b" : "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, transition: "background 0.2s" }}>
+            {dm ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            )}
+          </button>
+        </div>
+      )}
 
-      {/* Nav */}
+      {/* Nav - collapsed: show icons only */}
+      {collapsed ? (
+        <div style={{ padding: "0.75rem 0", borderBottom: `1px solid ${sideBorder}`, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0 }}>
+          {navItems.map((item) => {
+            const active = dashView === item.id;
+            return (
+              <button key={item.id}
+                onClick={() => onDashView(item.id as "dashboard" | "browse" | "calendar")}
+                title={item.label}
+                style={{ width: 40, height: 40, borderRadius: 12, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s", background: active ? "linear-gradient(135deg, #f97316, #ec4899)" : "transparent", color: active ? "#fff" : textSec, boxShadow: active ? "0 4px 14px rgba(249,115,22,0.3)" : "none" }}>
+                {item.icon}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {/* Nav - expanded */}
+      {!collapsed && (
+      <>
       <div style={{ padding: "0.75rem", borderBottom: `1px solid ${sideBorder}` }}>
         {navItems.map((item) => {
           const active = dashView === item.id;
@@ -132,29 +159,6 @@ function StudentSidebar({
             </button>
           );
         })}
-      </div>
-
-      {/* Teaching Preferences */}
-      <div style={{ padding: "0.9rem 1rem", borderBottom: `1px solid ${sideBorder}` }}>
-        <p style={{ fontSize: "0.6rem", fontWeight: 700, color: textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>Teaching Preferences</p>
-        <div style={{ marginBottom: 10 }}>
-          <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 500, color: textSec, marginBottom: 5 }}>Tone</label>
-          <div style={{ position: "relative" }}>
-            <select value={teachingTone} onChange={(e) => onToneChange(e.target.value as TeachingTone)} style={selectStyle}>
-              {TONES.map((t) => <option key={t}>{t}</option>)}
-            </select>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", right: 9, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><polyline points="6 9 12 15 18 9"/></svg>
-          </div>
-        </div>
-        <div>
-          <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 500, color: textSec, marginBottom: 5 }}>Teaching Mode</label>
-          <div style={{ position: "relative" }}>
-            <select value={teachingMode} onChange={(e) => onModeChange(e.target.value as TeachingMode)} style={selectStyle}>
-              {MODES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
-            </select>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", right: 9, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><polyline points="6 9 12 15 18 9"/></svg>
-          </div>
-        </div>
       </div>
 
       {/* Recent Chats */}
@@ -199,9 +203,27 @@ function StudentSidebar({
           })}
         </div>
       </div>
+      </>
+      )}
 
       {/* Footer */}
-      <div style={{ padding: "0.75rem", borderTop: `1px solid ${sideBorder}` }}>
+      {collapsed ? (
+        <div style={{ padding: "0.5rem 0", borderTop: `1px solid ${sideBorder}`, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0 }}>
+          <button onClick={onSettings} title="Settings"
+            style={{ width: 40, height: 40, borderRadius: 12, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: textSec, transition: "background 0.15s" }}
+            onMouseEnter={(e) => e.currentTarget.style.background = hoverBg}
+            onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.55 }}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+          <button onClick={onLogout} title="Logout"
+            style={{ width: 40, height: 40, borderRadius: 12, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444", transition: "background 0.15s" }}
+            onMouseEnter={(e) => e.currentTarget.style.background = "#fef2f2"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </button>
+        </div>
+      ) : (
+      <div style={{ padding: "0.75rem", borderTop: `1px solid ${sideBorder}`, flexShrink: 0 }}>
         <button onClick={onSettings}
           style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 12, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: "0.85rem", fontWeight: 500, color: textSec, background: "transparent", textAlign: "left", marginBottom: 2, transition: "background 0.15s" }}
           onMouseEnter={(e) => e.currentTarget.style.background = hoverBg}
@@ -217,6 +239,7 @@ function StudentSidebar({
           Logout
         </button>
       </div>
+      )}
     </div>
   );
 }
@@ -276,6 +299,7 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("student_dark") === "1");
   const [authLoading, setAuthLoading] = useState(true);
   const [inactiveLogout, setInactiveLogout] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(() => localStorage.getItem("student_sidebar") !== "0");
 
   function persistNav(chatId: string | null, courseId: string | null, view: string) {
     if (chatId) localStorage.setItem("last_chat_id", chatId);
@@ -526,18 +550,16 @@ export default function App() {
           activeChatId={activeChatId}
           onSelectChat={handleOpenChat}
           onDeleteChat={handleDeleteChat}
-          teachingMode={teachingMode}
-          teachingTone={teachingTone}
-          onModeChange={handleModeChange}
-          onToneChange={handleToneChange}
           onDashView={(v) => { setDashView(v); setActiveChatId(null); setDashboardCourseId(null); persistNav(null, null, v); }}
           onLogout={requestLogout}
           onSettings={() => setSettingsOpen(true)}
           darkMode={darkMode}
           onToggleDark={toggleDark}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={() => setSidebarOpen(prev => { const next = !prev; localStorage.setItem("student_sidebar", next ? "1" : "0"); return next; })}
         />
 
-        <div style={{ marginLeft: 256, flex: 1, position: "relative", overflow: "hidden", background: mainBg, transition: "background 0.3s" }}>
+        <div style={{ marginLeft: sidebarOpen ? 256 : 64, flex: 1, position: "relative", overflow: "hidden", background: mainBg, transition: "margin-left 0.25s ease, background 0.3s" }}>
           <div style={{ position: "absolute", top: 18, right: 24, zIndex: 300 }}>
             <NotificationBell />
           </div>
@@ -571,6 +593,10 @@ export default function App() {
                 onSend={(content, image) => handleSendMessage(activeChatId, content, image)}
                 onRegenerate={() => handleRegenerate(activeChatId)}
                 onBack={() => setActiveChatId(null)}
+                teachingMode={teachingMode}
+                teachingTone={teachingTone}
+                onModeChange={handleModeChange}
+                onToneChange={handleToneChange}
               />
             </div>
           )}

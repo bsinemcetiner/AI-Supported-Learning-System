@@ -4,6 +4,11 @@ import type { Chat } from "../types";
 import { API_ORIGIN } from "../services/api";
 import { TTSButton } from "../components/TTSButton";
 
+type TeachingMode = "direct" | "hint_first" | "socratic" | "quiz_me";
+type TeachingTone =
+  | "Professional Tutor" | "Friendly Mentor" | "Simplified Explainer"
+  | "Encouraging Coach" | "Funny YouTuber" | "Deep Scientist" | "Simplified (for kids)";
+
 interface ChatPageProps {
   chatId: string;
   chat: Chat;
@@ -12,6 +17,10 @@ interface ChatPageProps {
   onSend: (content: string, image?: File | null) => void;
   onRegenerate: () => void;
   onBack: () => void;
+  teachingMode: TeachingMode;
+  teachingTone: TeachingTone;
+  onModeChange: (mode: TeachingMode) => void;
+  onToneChange: (tone: TeachingTone) => void;
 }
 
 
@@ -416,7 +425,7 @@ function RichLessonView({ content }: { content: string }) {
   );
 }
 
-export default function ChatPage({ chatId, chat, streaming, animateInitialMessage = false, onSend, onRegenerate, onBack }: ChatPageProps) {
+export default function ChatPage({ chatId, chat, streaming, animateInitialMessage = false, onSend, onRegenerate, onBack, teachingMode, teachingTone, onModeChange, onToneChange }: ChatPageProps) {
   const [input, setInput] = useState("");
   const [animatedFirstMessage, setAnimatedFirstMessage] = useState("");
   const [animatedChatId, setAnimatedChatId] = useState<string | null>(null);
@@ -507,29 +516,76 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
 
   const courseLabel = chat.course_id ? chat.course_id.split("::")[1] ?? chat.course_id : null;
 
+  const MODES: { value: TeachingMode; label: string; icon: string }[] = [
+    { value: "direct",     label: "Direct Explanation", icon: "📖" },
+    { value: "hint_first", label: "Hint First",         icon: "💡" },
+    { value: "socratic",   label: "Socratic Tutor",     icon: "🧑‍🏫" },
+    { value: "quiz_me",    label: "Quiz Me",            icon: "📝" },
+  ];
+  const TONES: TeachingTone[] = [
+    "Professional Tutor", "Friendly Mentor", "Simplified Explainer",
+    "Encouraging Coach", "Funny YouTuber", "Deep Scientist", "Simplified (for kids)",
+  ];
+
+  const selectStyle: React.CSSProperties = {
+    appearance: "none", border: "1.5px solid #e5e7eb", borderRadius: 10,
+    background: "#f9fafb", color: "#374151", fontSize: "0.78rem",
+    fontFamily: "inherit", fontWeight: 600, cursor: "pointer",
+    padding: "5px 26px 5px 9px", outline: "none", transition: "border-color 0.15s",
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "#f8fafc" }}>
       {/* --- HEADER --- */}
-      <div style={{ padding: "1rem 1.5rem", background: "#fff", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.04)", position: "relative", zIndex: 50 }}>
+      <div style={{ padding: "0.75rem 1.5rem", background: "#fff", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.04)", position: "relative", zIndex: 50, flexWrap: "wrap" }}>
+        {/* Left: back + icon + title */}
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid #e5e7eb", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           </button>
-          <div style={{ width: 40, height: 40, borderRadius: 14, background: "linear-gradient(135deg,#f97316,#ec4899)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 40, height: 40, borderRadius: 14, background: "linear-gradient(135deg,#f97316,#ec4899)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
           </div>
           <div>
             <p style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111827", margin: 0 }}>{chat.title || "Learning Chat"}</p>
             <p style={{ fontSize: "0.75rem", color: "#9ca3af", margin: 0 }}>
-              {courseLabel && <span>{courseLabel} · </span>}
-              <span style={{ color: "#f97316", fontWeight: 600 }}>{chat.mode}</span>
-              {chat.tone && <span> · {chat.tone}</span>}
+              {courseLabel && <span>{courseLabel}</span>}
             </p>
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        {/* Right: mode + tone dropdowns + regenerate */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginRight: 52 }}>
+          {/* Mode dropdown */}
+          <div style={{ position: "relative" }}>
+            <select
+              value={teachingMode}
+              onChange={(e) => onModeChange(e.target.value as TeachingMode)}
+              style={selectStyle}
+              title="Teaching Mode"
+            >
+              {MODES.map((m) => (
+                <option key={m.value} value={m.value}>{m.icon} {m.label}</option>
+              ))}
+            </select>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", right: 7, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+
+          {/* Tone dropdown */}
+          <div style={{ position: "relative" }}>
+            <select
+              value={teachingTone}
+              onChange={(e) => onToneChange(e.target.value as TeachingTone)}
+              style={selectStyle}
+              title="Teaching Tone"
+            >
+              {TONES.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", right: 7, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+
           {hasExchange && !streaming && (
             <button onClick={onRegenerate} style={{ padding: "7px 14px", borderRadius: 10, border: "1px solid #e5e7eb", background: "#fff", color: "#374151", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>
