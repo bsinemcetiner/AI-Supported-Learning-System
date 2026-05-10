@@ -75,11 +75,8 @@ export default function AuthPage({ onLogin, onAdminLogin }: AuthPageProps) {
   const [loginPass, setLoginPass] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showAdminModal, setShowAdminModal] = useState(false);
   const [adminUser, setAdminUser] = useState("");
   const [adminPass, setAdminPass] = useState("");
-  const [adminError, setAdminError] = useState("");
-  const [adminLoading, setAdminLoading] = useState(false);
 
   const startCountdown = () => {
     setCountdown(60);
@@ -89,7 +86,20 @@ export default function AuthPage({ onLogin, onAdminLogin }: AuthPageProps) {
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault(); setError(""); setLoading(true);
-    try { const res = await authApi.login(loginUser.trim(), loginPass); tokenStore.set(res.access_token); onLogin(res.user); }
+    try {
+      // Önce admin login dene
+      try {
+        await adminLogin(loginUser.trim(), loginPass);
+        setLoading(false);
+        onAdminLogin();
+        return;
+      } catch {
+        // Admin değil, normal login'e devam et
+      }
+      const res = await authApi.login(loginUser.trim(), loginPass);
+      tokenStore.set(res.access_token);
+      onLogin(res.user);
+    }
     catch (e: any) { setError(e.message); } finally { setLoading(false); }
   }
   async function handleSendOtp(e: React.FormEvent) {
@@ -113,11 +123,6 @@ export default function AuthPage({ onLogin, onAdminLogin }: AuthPageProps) {
     setLoading(true);
     try { await authApi.sendOtp(email.trim()); startCountdown(); setOtp(""); setOtpError(""); }
     catch (e: any) { setOtpError(e.message); } finally { setLoading(false); }
-  }
-  async function handleAdminLogin(e: React.FormEvent) {
-    e.preventDefault(); setAdminError(""); setAdminLoading(true);
-    try { await adminLogin(adminUser.trim(), adminPass); setShowAdminModal(false); onAdminLogin(); }
-    catch (e: any) { setAdminError(e.message); } finally { setAdminLoading(false); }
   }
 
   const gradBtn = (disabled = false): React.CSSProperties => ({
@@ -309,41 +314,8 @@ export default function AuthPage({ onLogin, onAdminLogin }: AuthPageProps) {
           </div>
         </div>
 
-        <button onClick={() => { setShowAdminModal(true); setAdminError(""); }}
-          style={{ background: "none", border: "none", color: "#9ca3af", fontSize: "0.85rem", cursor: "pointer", marginTop: 16, opacity: 0.7 }}>
-          ← Admin Login
-        </button>
       </div>
 
-      {/* Admin Modal */}
-      {showAdminModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
-          onClick={() => setShowAdminModal(false)}>
-          <div style={{ background: "#fff", borderRadius: 24, padding: "2.5rem", width: "100%", maxWidth: 400, boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}
-            onClick={(e) => e.stopPropagation()}>
-            <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-              <div style={{ fontSize: "2.5rem", marginBottom: 10 }}>🛡</div>
-              <h2 style={{ fontSize: "1.4rem", fontWeight: 700, color: "#111827", marginBottom: 6 }}>Admin Login</h2>
-              <p style={{ fontSize: "0.9rem", color: "#6b7280", margin: 0 }}>Only authorized admins can access.</p>
-            </div>
-            <form onSubmit={handleAdminLogin} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {adminError && <div className="alert alert-error">{adminError}</div>}
-              <div>
-                <label style={labelCss}>Username</label>
-                <input style={inputCss} placeholder="admin" value={adminUser} onChange={(e) => setAdminUser(e.target.value)} required />
-              </div>
-              <div>
-                <label style={labelCss}>Password</label>
-                <input style={inputCss} type="password" placeholder="••••••••" value={adminPass} onChange={(e) => setAdminPass(e.target.value)} required />
-              </div>
-              <button type="submit" disabled={adminLoading} style={gradBtn(adminLoading)}>
-                {adminLoading ? "Logging in…" : "Login →"}
-              </button>
-              <button type="button" onClick={() => setShowAdminModal(false)} style={{ background: "none", border: "none", color: "#9ca3af", fontSize: "0.9rem", cursor: "pointer", fontFamily: "inherit", textAlign: "center" }}>Cancel</button>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
