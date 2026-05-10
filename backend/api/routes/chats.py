@@ -437,52 +437,94 @@ async def send_image_question(
     )
 
     lesson_params = _get_lesson_ai_params(db, chat.lesson_id)
+    lesson_context = _get_chat_context(db, chat, clean_question)
+    has_lesson_context = bool(lesson_context and lesson_context.strip())
 
-    image_context = f"""
-    The student uploaded an image/screenshot.
+    # Ders bağlamı varsa görsel alakalı mı diye önce kontrol et
+    if chat.lesson_id and has_lesson_context and extracted_text:
+        relevance_check_messages = [
+            {
+                "role": "user",
+                "content": f"""You are a strict relevance checker for an educational platform.
 
-    OCR text extracted from the uploaded image:
-    {extracted_text}
+A student is currently studying this lesson:
+---
+{lesson_context[:1500]}
+---
 
-    Important rules:
-    - The student's question is about the uploaded image.
-    - Use the OCR text above as the primary source.
-    - Do NOT answer from previous chat messages, lesson materials, or course materials unless the student explicitly asks to connect the image with the lesson.
-    - If the OCR text is incomplete or unclear, say that the screenshot text is partly unclear and explain only what can be read.
-    """.strip()
+The student uploaded an image. The text extracted from the image is:
+---
+{extracted_text[:1000]}
+---
 
-    question_lower = clean_question.lower()
+Your ONLY job: decide if the image content is DIRECTLY related to this specific lesson.
 
-    wants_course_connection = any(
-        phrase in question_lower
-        for phrase in [
-            "according to the lesson",
-            "according to course",
-            "course material",
-            "lesson material",
-            "relate to the lesson",
-            "connect to the lesson",
-            "compare with the lesson",
+Rules:
+- Answer ONLY with "YES" or "NO".
+- YES only if the image clearly contains content from THIS lesson (same topic, same concepts, same code examples, same subject matter).
+- NO if the image is from a different subject, different course, personal document, unrelated homework, or general internet content even if it is vaguely similar.
+- Being the same general field (e.g. both are programming) is NOT enough — it must match THIS specific lesson's content.
+
+Answer:"""
+            }
         ]
-    )
 
-    if wants_course_connection:
-        lesson_context = _get_chat_context(db, chat, clean_question)
+        relevance_response = ai_engine.generate_ai_response(
+            messages=relevance_check_messages,
+            context="",
+            teaching_style="Professional Tutor",
+            mode="direct",
+            custom_prompt="",
+            feedback_history=[],
+        )
 
-        if lesson_context and lesson_context.strip():
+        is_relevant = relevance_response.strip().upper().startswith("YES")
+
+        if not is_relevant:
             context = f"""
-    Uploaded image context:
-    {image_context}
+The student uploaded an image that is NOT related to the current lesson.
 
-    Relevant course / lesson context:
-    {lesson_context}
+Respond ONLY with this message in the student's language:
+"Bu görsel mevcut ders içeriğiyle ilgili görünmüyor. Lütfen çalıştığın derse ait bir görsel veya ekran görüntüsü yükle."
 
-    Use the uploaded image as the main source. Use the course context only to support or connect the explanation.
-    """.strip()
+If the student is writing in English, respond:
+"This image doesn't appear to be related to the current lesson. Please upload an image or screenshot that is relevant to the lesson you are studying."
+
+Do not explain anything else.
+""".strip()
         else:
-            context = image_context
+            context = f"""
+The student is studying a lesson and uploaded a relevant image.
+
+LESSON CONTEXT:
+{lesson_context}
+
+OCR text extracted from the uploaded image:
+{extracted_text}
+
+Answer the student's question using both the image content and the lesson context.
+""".strip()
+
+    elif chat.lesson_id and has_lesson_context and not extracted_text:
+        # Görsel var ama OCR metni çıkarılamadı
+        context = f"""
+The student uploaded an image but no text could be extracted from it.
+
+LESSON CONTEXT:
+{lesson_context}
+
+Only answer if the student's question is clearly about the lesson. Otherwise ask them to describe the image content.
+""".strip()
     else:
-        context = image_context
+        context = f"""
+The student uploaded an image/screenshot.
+
+OCR text extracted from the uploaded image:
+{extracted_text}
+
+Answer based on the uploaded image content.
+If the OCR text is incomplete or unclear, say so and explain only what can be read.
+""".strip()
 
     messages_for_ai = [
         {
