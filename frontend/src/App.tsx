@@ -597,6 +597,7 @@ export default function App() {
                 teachingTone={teachingTone}
                 onModeChange={handleModeChange}
                 onToneChange={handleToneChange}
+                darkMode={darkMode}
               />
             </div>
           )}

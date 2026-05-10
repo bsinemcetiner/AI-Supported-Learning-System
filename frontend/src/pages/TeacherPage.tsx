@@ -338,7 +338,7 @@ function CourseSelect({
   const [lessonMap, setLessonMap] = useState<Record<string, Record<string, Lesson>>>({});
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error" | "info"; text: string } | null>(null);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem("teacher_dark") === "1");
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
   const [pendingDeleteMaterial, setPendingDeleteMaterial] = useState<{
@@ -817,7 +817,7 @@ function TeacherTopHeader() {
         <motion.button
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => setDarkMode(!darkMode)}
+          onClick={() => { const next = !darkMode; setDarkMode(next); localStorage.setItem("teacher_dark", next ? "1" : "0"); }}
           style={{
             width: 40,
             height: 40,

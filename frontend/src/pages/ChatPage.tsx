@@ -253,10 +253,17 @@ function HighlightBox({ text, grad }: { text: string; grad: string }) {
   );
 }
 
-function SlideCard({ slide, index }: { slide: Slide; index: number }) {
+function SlideCard({ slide, index, darkMode = false }: { slide: Slide; index: number; darkMode?: boolean }) {
   const ac = accent(slide.type);
+  const dm = darkMode;
+  const slideBg = dm ? "#1e293b" : "#fff";
+  const slideText = dm ? "#e2e8f0" : "#374151";
+  const slideBorder = dm ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)";
+  const tableRowEven = dm ? "#0f172a" : "#f9fafb";
+  const tableRowOdd = dm ? "#1e293b" : "#fff";
+  const tableBorder = dm ? "#334155" : "#f3f4f6";
   return (
-    <div style={{ background: "#fff", borderRadius: 16, overflow: "hidden", border: "1px solid rgba(0,0,0,0.07)", boxShadow: "0 2px 16px rgba(0,0,0,0.05)", marginBottom: 16 }}>
+    <div style={{ background: slideBg, borderRadius: 16, overflow: "hidden", border: `1px solid ${slideBorder}`, boxShadow: "0 2px 16px rgba(0,0,0,0.05)", marginBottom: 16 }}>
       <div style={{ background: ac.grad, padding: "12px 18px", display: "flex", alignItems: "center", gap: 10 }}>
         <span style={{ fontSize: "1.2rem" }}>{ac.icon}</span>
         <div>
@@ -271,19 +278,19 @@ function SlideCard({ slide, index }: { slide: Slide; index: number }) {
           <>
             {(slide as IntroSlide).image_keyword && <HeroImage keyword={(slide as IntroSlide).image_keyword!} />}
             <p style={{ fontSize: "0.95rem", color: "#6366f1", fontWeight: 700, margin: "0 0 8px" }}>{(slide as IntroSlide).subtitle}</p>
-            <p style={{ fontSize: "0.9rem", color: "#374151", lineHeight: 1.8, margin: 0 }}>{(slide as IntroSlide).body}</p>
+            <p style={{ fontSize: "0.9rem", color: slideText, lineHeight: 1.8, margin: 0 }}>{(slide as IntroSlide).body}</p>
           </>
         )}
         {(slide.type === "concept" || slide.type === "example") && (
           <>
-            <p style={{ fontSize: "0.9rem", color: "#374151", lineHeight: 1.85, margin: 0 }}>{(slide as ConceptSlide).body}</p>
+            <p style={{ fontSize: "0.9rem", color: slideText, lineHeight: 1.85, margin: 0 }}>{(slide as ConceptSlide).body}</p>
             {slide.highlight && <HighlightBox text={slide.highlight} grad={ac.grad} />}
           </>
         )}
         {slide.type === "deep_dive" && (
           <div style={{ overflow: "hidden" }}>
             {slide.image_keyword && <SideImage keyword={slide.image_keyword} />}
-            <p style={{ fontSize: "0.9rem", color: "#374151", lineHeight: 1.85, margin: 0 }}>{(slide as ConceptSlide).body}</p>
+            <p style={{ fontSize: "0.9rem", color: slideText, lineHeight: 1.85, margin: 0 }}>{(slide as ConceptSlide).body}</p>
             {slide.highlight && <HighlightBox text={slide.highlight} grad={ac.grad} />}
           </div>
         )}
@@ -296,9 +303,9 @@ function SlideCard({ slide, index }: { slide: Slide; index: number }) {
                     <th key={i} style={{ background: ac.grad, color: "#fff", padding: "9px 12px", textAlign: "left", fontWeight: 700, fontSize: "0.8rem" }}>{h}</th>
                   ))}</tr></thead>
                   <tbody>{(slide as ComparisonSlide).table.rows.map((row, ri) => (
-                    <tr key={ri} style={{ background: ri % 2 === 0 ? "#f9fafb" : "#fff" }}>
+                    <tr key={ri} style={{ background: ri % 2 === 0 ? tableRowEven : tableRowOdd }}>
                       {row.map((cell, ci) => (
-                        <td key={ci} style={{ padding: "8px 12px", color: ci === 0 ? "#111827" : "#374151", fontWeight: ci === 0 ? 600 : 400, borderBottom: "1px solid #f3f4f6" }}>{cell}</td>
+                        <td key={ci} style={{ padding: "8px 12px", color: slideText, fontWeight: ci === 0 ? 600 : 400, borderBottom: `1px solid ${tableBorder}` }}>{cell}</td>
                       ))}
                     </tr>
                   ))}</tbody>
@@ -312,9 +319,9 @@ function SlideCard({ slide, index }: { slide: Slide; index: number }) {
           <>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
               {((slide as SummarySlide).points || []).map((pt, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px", background: ac.light, borderRadius: 10 }}>
+                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px", background: dm ? "rgba(255,255,255,0.06)" : ac.light, borderRadius: 10 }}>
                   <div style={{ width: 24, height: 24, borderRadius: "50%", background: ac.grad, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.72rem", fontWeight: 800, flexShrink: 0 }}>{i + 1}</div>
-                  <span style={{ fontSize: "0.88rem", color: "#374151", lineHeight: 1.6 }}>{pt}</span>
+                  <span style={{ fontSize: "0.88rem", color: slideText, lineHeight: 1.6 }}>{pt}</span>
                 </div>
               ))}
             </div>
@@ -366,7 +373,7 @@ function CopyableCodeBlock({ children }: { children: string }) {
   );
 }
 
-function RichLessonView({ content }: { content: string }) {
+function RichLessonView({ content, darkMode = false }: { content: string; darkMode?: boolean }) {
   const sections = extractSections(content);
   if (sections) {
     return (
@@ -425,7 +432,7 @@ function RichLessonView({ content }: { content: string }) {
   );
 }
 
-export default function ChatPage({ chatId, chat, streaming, animateInitialMessage = false, onSend, onRegenerate, onBack, teachingMode, teachingTone, onModeChange, onToneChange }: ChatPageProps) {
+export default function ChatPage({ chatId, chat, streaming, animateInitialMessage = false, onSend, onRegenerate, onBack, teachingMode, teachingTone, onModeChange, onToneChange, darkMode = false }: ChatPageProps) {
   const [input, setInput] = useState("");
   const [animatedFirstMessage, setAnimatedFirstMessage] = useState("");
   const [animatedChatId, setAnimatedChatId] = useState<string | null>(null);
@@ -433,6 +440,24 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
   const [selectedImagePreviewUrl, setSelectedImagePreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+
+
+  // Dark mode colors
+  const dm = darkMode;
+  const pageBg   = dm ? "#0f172a" : "#f8fafc";
+  const headerBg = dm ? "#1e293b" : "#fff";
+  const headerBorder = dm ? "#334155" : "#f3f4f6";
+  const textPrimary = dm ? "#f1f5f9" : "#111827";
+  const textMuted = dm ? "#64748b" : "#9ca3af";
+  const inputAreaBg = dm ? "#1e293b" : "#fff";
+  const inputBg  = dm ? "#0f172a" : "#f8fafc";
+  const inputBorder = dm ? "#334155" : "#e5e7eb";
+  const asstBg   = dm ? "#1e293b" : "#fff";
+  const asstBorder = dm ? "#334155" : "#f3f4f6";
+  const asstText = dm ? "#e2e8f0" : "#111827";
+  const selectBg = dm ? "#0f172a" : "#f9fafb";
+  const selectColor = dm ? "#e2e8f0" : "#374151";
+  const selectBorder = dm ? "#334155" : "#e5e7eb";
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const messages = chat.messages ?? [];
@@ -535,20 +560,20 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "#f8fafc" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: pageBg }}>
       {/* --- HEADER --- */}
-      <div style={{ padding: "0.75rem 1.5rem", background: "#fff", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.04)", position: "relative", zIndex: 50, flexWrap: "wrap" }}>
+      <div style={{ padding: "0.75rem 1.5rem", background: headerBg, borderBottom: `1px solid ${headerBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.04)", position: "relative", zIndex: 50, flexWrap: "wrap" }}>
         {/* Left: back + icon + title */}
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid #e5e7eb", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: "50%", border: `1px solid ${inputBorder}`, background: headerBg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           </button>
           <div style={{ width: 40, height: 40, borderRadius: 14, background: "linear-gradient(135deg,#f97316,#ec4899)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
           </div>
           <div>
-            <p style={{ fontWeight: 700, fontSize: "0.95rem", color: "#111827", margin: 0 }}>{chat.title || "Learning Chat"}</p>
-            <p style={{ fontSize: "0.75rem", color: "#9ca3af", margin: 0 }}>
+            <p style={{ fontWeight: 700, fontSize: "0.95rem", color: textPrimary, margin: 0 }}>{chat.title || "Learning Chat"}</p>
+            <p style={{ fontSize: "0.75rem", color: textMuted, margin: 0 }}>
               {courseLabel && <span>{courseLabel}</span>}
             </p>
           </div>
@@ -587,7 +612,7 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
           </div>
 
           {hasExchange && !streaming && (
-            <button onClick={onRegenerate} style={{ padding: "7px 14px", borderRadius: 10, border: "1px solid #e5e7eb", background: "#fff", color: "#374151", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}>
+            <button onClick={onRegenerate} style={{ padding: "7px 14px", borderRadius: 10, border: `1px solid ${inputBorder}`, background: headerBg, color: selectColor, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>
               Regenerate
             </button>
@@ -638,9 +663,9 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
                 <div style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg,#f97316,#ec4899)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z" /></svg>
                 </div>
-                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em" }}>Lesson Content</span>
+                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: textMuted, textTransform: "uppercase", letterSpacing: "0.07em" }}>Lesson Content</span>
               </div>
-              <RichLessonView content={displayContent || ""} />
+              <RichLessonView content={displayContent || ""} darkMode={darkMode} />
             </div>
           );
 
@@ -662,7 +687,7 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
                   fontSize: "0.92rem",
                   lineHeight: 1.65,
                   boxShadow: msg.role === "user" ? "0 4px 14px rgba(249,115,22,0.3)" : "0 1px 6px rgba(0,0,0,0.06)",
-                  border: msg.role === "assistant" ? "1px solid #f3f4f6" : "none",
+                  border: msg.role === "assistant" ? `1px solid ${asstBorder}` : "none",
                 }}
               >
                 {msg.role === "user" && imagePreviewUrl && (
@@ -714,7 +739,7 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
                         return <code style={{ background: "#f3f4f6", padding: "0.12rem 0.35rem", borderRadius: 6, fontSize: "0.85rem", fontFamily: "monospace", color: "#374151" }}>{children}</code>;
                       },
                       pre: ({ children }) => <>{children}</>,
-                      strong: ({ children }) => <strong style={{ fontWeight: 700, color: "#111827" }}>{children}</strong>,
+                      strong: ({ children }) => <strong style={{ fontWeight: 700, color: asstText }}>{children}</strong>,
                     }}>{displayContent}</ReactMarkdown>
                   )
                 ) : streaming && i === messages.length - 1 ? <span style={{ color: "#9ca3af", fontSize: "1.2rem" }}>▌</span> : null}
@@ -733,7 +758,7 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
       </div>
 
       {/* --- INPUT AREA --- */}
-      <div style={{ padding: "1rem 1.5rem", background: "#fff", borderTop: "1px solid #f3f4f6" }}>
+      <div style={{ padding: "1rem 1.5rem", background: inputAreaBg, borderTop: `1px solid ${headerBorder}` }}>
         {selectedImage && selectedImagePreviewUrl && (
           <div
             style={{
@@ -937,7 +962,7 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
           </button>
         </form>
 
-        <p style={{ fontSize: "0.72rem", color: "#9ca3af", textAlign: "center", marginTop: 8 }}>
+        <p style={{ fontSize: "0.72rem", color: textMuted, textAlign: "center", marginTop: 8 }}>
           Press Enter to send · Shift+Enter for a new line
         </p>
       </div>
