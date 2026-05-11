@@ -15,7 +15,6 @@ from database import get_db
 from models import Chat, Message, User
 from services.rag_manager import RAGManager
 from services import ai_engine
-from services.question_tracker import track_question
 
 router = APIRouter(prefix="/chats", tags=["chats"])
 rag = RAGManager()
@@ -58,7 +57,7 @@ def _serialize_chat(chat: Chat) -> dict:
                 "content": m.content,
                 "created_at": m.created_at.isoformat() if m.created_at else None,
                 "image_url": (
-                    f"http://127.0.0.1:8011/{m.image_path}"
+                    f"/{m.image_path}"
                     if getattr(m, "image_path", None)
                     else None
                 ),
@@ -104,7 +103,37 @@ class CreateChatRequest(BaseModel):
     tone: str = "Professional Tutor"
     starter_message: Optional[str] = None
 
+@router.get("/streak")
+def get_streak(current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    from datetime import datetime, timedelta, timezone
+    from sqlalchemy import func as sqlfunc
 
+    rows = (
+        db.query(sqlfunc.date(Message.created_at))
+        .join(Chat, Chat.id == Message.chat_id)
+        .filter(Chat.user_id == _get_db_user(db, current_user["username"]).id, Message.sender == "user")
+        .distinct()
+        .order_by(sqlfunc.date(Message.created_at).desc())
+        .all()
+    )
+
+    if not rows:
+        return {"streak": 0}
+
+    active_days = sorted({r[0] for r in rows}, reverse=True)
+    today = datetime.now(timezone.utc).date()
+
+    if active_days[0] < today - timedelta(days=1):
+        return {"streak": 0}
+
+    streak = 1
+    for i in range(1, len(active_days)):
+        if active_days[i - 1] - active_days[i] == timedelta(days=1):
+            streak += 1
+        else:
+            break
+
+    return {"streak": streak}
 @router.post("/", status_code=201)
 def create_chat(
     body: CreateChatRequest,
@@ -254,9 +283,17 @@ def send_message(
         chat.title = body.content[:40]
         db.commit()
 
+    # Skip the first assistant message (starter_message/lesson content) to avoid
+    # sending huge JSON context repeatedly. It is already used as course context.
+    messages_list = list(chat.messages)
+    first_assistant_idx = next(
+        (i for i, m in enumerate(messages_list) if m.sender == "assistant"),
+        None
+    )
     messages_for_ai = [
         {"role": m.sender, "content": m.content}
-        for m in chat.messages
+        for i, m in enumerate(messages_list)
+        if not (i == first_assistant_idx and len(m.content) > 500)
     ]
 
     if not body.stream:
@@ -307,46 +344,6 @@ def send_message(
             )
             db2.add(assistant_message)
             db2.commit()
-
-            # ── Question Tracker ─────────────────────────────────
-            if chat.lesson_id:
-                try:
-                    lesson = get_lesson_by_id(db2, chat.lesson_id)
-                    if lesson:
-                        from models.course import Course
-                        import os as _os, json as _json2
-                        course = db2.query(Course).filter(Course.course_id == chat.course_id).first()
-                        teacher_username = course.teacher_username if course else "unknown"
-
-                        # Section title tespit et
-                        section_index = chat.section_index if chat.section_index is not None else -1
-                        section_title = f"Section {section_index + 1}"
-                        if section_index >= 0:
-                            safe_id = chat.lesson_id.replace("/", "_").replace(":", "_")
-                            sections_path = _os.path.join("lesson_sections", f"{safe_id}_sections.json")
-                            if _os.path.exists(sections_path):
-                                try:
-                                    with open(sections_path, "r", encoding="utf-8") as _f:
-                                        _sections = _json2.load(_f)
-                                    if 0 <= section_index < len(_sections):
-                                        section_title = _sections[section_index].get("title", section_title)
-                                except Exception:
-                                    pass
-
-                        track_question(
-                            db=db2,
-                            lesson_id=chat.lesson_id,
-                            lesson_title=lesson.get("week_title", "Unknown Lesson"),
-                            section_index=section_index,
-                            section_title=section_title,
-                            course_id=chat.course_id or "",
-                            teacher_username=teacher_username,
-                            student_question=body.content,
-                        )
-                except Exception as te:
-                    print(f"[QuestionTracker] Non-fatal error: {te}")
-            # ──────────────────────────────────────────────────────
-
         finally:
             db2.close()
 
@@ -437,94 +434,52 @@ async def send_image_question(
     )
 
     lesson_params = _get_lesson_ai_params(db, chat.lesson_id)
-    lesson_context = _get_chat_context(db, chat, clean_question)
-    has_lesson_context = bool(lesson_context and lesson_context.strip())
 
-    # Ders bağlamı varsa görsel alakalı mı diye önce kontrol et
-    if chat.lesson_id and has_lesson_context and extracted_text:
-        relevance_check_messages = [
-            {
-                "role": "user",
-                "content": f"""You are a strict relevance checker for an educational platform.
+    image_context = f"""
+    The student uploaded an image/screenshot.
 
-A student is currently studying this lesson:
----
-{lesson_context[:1500]}
----
+    OCR text extracted from the uploaded image:
+    {extracted_text}
 
-The student uploaded an image. The text extracted from the image is:
----
-{extracted_text[:1000]}
----
+    Important rules:
+    - The student's question is about the uploaded image.
+    - Use the OCR text above as the primary source.
+    - Do NOT answer from previous chat messages, lesson materials, or course materials unless the student explicitly asks to connect the image with the lesson.
+    - If the OCR text is incomplete or unclear, say that the screenshot text is partly unclear and explain only what can be read.
+    """.strip()
 
-Your ONLY job: decide if the image content is DIRECTLY related to this specific lesson.
+    question_lower = clean_question.lower()
 
-Rules:
-- Answer ONLY with "YES" or "NO".
-- YES only if the image clearly contains content from THIS lesson (same topic, same concepts, same code examples, same subject matter).
-- NO if the image is from a different subject, different course, personal document, unrelated homework, or general internet content even if it is vaguely similar.
-- Being the same general field (e.g. both are programming) is NOT enough — it must match THIS specific lesson's content.
-
-Answer:"""
-            }
+    wants_course_connection = any(
+        phrase in question_lower
+        for phrase in [
+            "according to the lesson",
+            "according to course",
+            "course material",
+            "lesson material",
+            "relate to the lesson",
+            "connect to the lesson",
+            "compare with the lesson",
         ]
+    )
 
-        relevance_response = ai_engine.generate_ai_response(
-            messages=relevance_check_messages,
-            context="",
-            teaching_style="Professional Tutor",
-            mode="direct",
-            custom_prompt="",
-            feedback_history=[],
-        )
+    if wants_course_connection:
+        lesson_context = _get_chat_context(db, chat, clean_question)
 
-        is_relevant = relevance_response.strip().upper().startswith("YES")
-
-        if not is_relevant:
+        if lesson_context and lesson_context.strip():
             context = f"""
-The student uploaded an image that is NOT related to the current lesson.
+    Uploaded image context:
+    {image_context}
 
-Respond ONLY with this message in the student's language:
-"Bu görsel mevcut ders içeriğiyle ilgili görünmüyor. Lütfen çalıştığın derse ait bir görsel veya ekran görüntüsü yükle."
+    Relevant course / lesson context:
+    {lesson_context}
 
-If the student is writing in English, respond:
-"This image doesn't appear to be related to the current lesson. Please upload an image or screenshot that is relevant to the lesson you are studying."
-
-Do not explain anything else.
-""".strip()
+    Use the uploaded image as the main source. Use the course context only to support or connect the explanation.
+    """.strip()
         else:
-            context = f"""
-The student is studying a lesson and uploaded a relevant image.
-
-LESSON CONTEXT:
-{lesson_context}
-
-OCR text extracted from the uploaded image:
-{extracted_text}
-
-Answer the student's question using both the image content and the lesson context.
-""".strip()
-
-    elif chat.lesson_id and has_lesson_context and not extracted_text:
-        # Görsel var ama OCR metni çıkarılamadı
-        context = f"""
-The student uploaded an image but no text could be extracted from it.
-
-LESSON CONTEXT:
-{lesson_context}
-
-Only answer if the student's question is clearly about the lesson. Otherwise ask them to describe the image content.
-""".strip()
+            context = image_context
     else:
-        context = f"""
-The student uploaded an image/screenshot.
-
-OCR text extracted from the uploaded image:
-{extracted_text}
-
-Answer based on the uploaded image content.
-If the OCR text is incomplete or unclear, say so and explain only what can be read.
-""".strip()
+        context = image_context
 
     messages_for_ai = [
         {

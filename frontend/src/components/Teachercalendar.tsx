@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { events as eventsApi } from "../services/api";
 import type { CalendarEvent } from "../services/api";
 
@@ -276,11 +277,31 @@ export function TeacherCalendar({ darkMode, cardBg, textPrimary, textSecondary, 
         </div>
       </div>
 
-      {/* Modal */}
-      {showForm && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}
-          onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}>
-          <div style={{ background: darkMode ? "#1e293b" : "#fff", borderRadius: 20, padding: "1.5rem", width: 400, maxWidth: "90vw", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+      {/* Modal – rendered via portal so parent overflow/transform can't clip it */}
+      {showForm && createPortal(
+        <div
+          style={{
+            position: "fixed", inset: 0,
+            background: "rgba(0,0,0,0.45)",
+            zIndex: 99999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}
+        >
+          <div style={{
+            background: darkMode ? "#1e293b" : "#fff",
+            borderRadius: 20,
+            padding: "1.5rem",
+            width: 400,
+            maxWidth: "90vw",
+            maxHeight: "85vh",
+            overflowY: "auto",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+            position: "relative",
+          }}>
             <h3 style={{ fontSize: "1rem", fontWeight: 700, color: textPrimary, marginBottom: "1rem" }}>
               {editingEvent ? "Edit Event" : "New Event"}
             </h3>
@@ -335,7 +356,8 @@ export function TeacherCalendar({ darkMode, cardBg, textPrimary, textSecondary, 
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -1,298 +1,385 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { events as eventsApi } from "../services/api";
+import type { CalendarEvent } from "../services/api";
 
-type CalEvent = {
-  id: string;
-  title: string;
-  date: string; // "YYYY-MM-DD"
-  time: string;
-  color: string;
-};
+const COLORS = [
+  { label: "Blue",   value: "#3b82f6" },
+  { label: "Red",    value: "#ef4444" },
+  { label: "Purple", value: "#8b5cf6" },
+  { label: "Green",  value: "#10b981" },
+  { label: "Orange", value: "#f97316" },
+  { label: "Pink",   value: "#ec4899" },
+];
 
-const COLORS = ["#3b82f6", "#ef4444", "#8b5cf6", "#10b981", "#f59e0b", "#ec4899", "#f97316"];
-const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const DAYS = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const dayNames   = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
-function dateStr(y: number, m: number, d: number) {
-  return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-}
-
-function fmtDate(ds: string, opts: Intl.DateTimeFormatOptions) {
-  return new Date(ds + "T00:00:00").toLocaleDateString("en-GB", opts);
-}
-
-export function TeacherCalendar({
-  darkMode,
-  cardBg,
-  textPrimary,
-  textSecondary,
-  borderColor,
-}: {
-  darkMode: boolean;
-  cardBg: string;
-  textPrimary: string;
-  textSecondary: string;
-  borderColor: string;
+export function TeacherCalendar({ darkMode, cardBg, textPrimary, textSecondary, borderColor }: {
+  darkMode: boolean; cardBg: string; textPrimary: string; textSecondary: string; borderColor: string;
 }) {
-  const today = new Date();
-  const todayDs = dateStr(today.getFullYear(), today.getMonth(), today.getDate());
-
-  const [cur, setCur] = useState({ y: today.getFullYear(), m: today.getMonth() });
-  const [selDate, setSelDate] = useState<string | null>(null);
-  const [events, setEvents] = useState<CalEvent[]>([
-    { id: "1", title: "CE350 Linux Utilities", date: "2026-04-23", time: "09:00–10:30", color: "#3b82f6" },
-    { id: "2", title: "Assignment 2 Deadline", date: "2026-04-25", time: "23:59", color: "#ef4444" },
-    { id: "3", title: "Midterm Exam", date: "2026-04-28", time: "10:00–12:00", color: "#8b5cf6" },
-  ]);
-  const [form, setForm] = useState({ title: "", date: todayDs, time: "", color: COLORS[0] });
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [myEvents, setMyEvents] = useState<CalendarEvent[]>([]);
+  const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
 
-  const getEventsFor = (ds: string) => events.filter((e) => e.date === ds);
+  const [fTitle, setFTitle] = useState("");
+  const [fDesc, setFDesc] = useState("");
+  const [fDate, setFDate] = useState("");
+  const [fTime, setFTime] = useState("");
+  const [fColor, setFColor] = useState("#3b82f6");
+  const [fShared, setFShared] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
-  const upcoming = events
-    .filter((e) => e.date >= todayDs)
-    .sort((a, b) => a.date.localeCompare(b.date))
+  async function loadEvents() {
+    setLoading(true);
+    try { setMyEvents(await eventsApi.getMine()); }
+    catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
+  }
+
+  useEffect(() => { loadEvents(); }, []);
+
+  function openCreateForm(date?: Date) {
+    setEditingEvent(null);
+    setFTitle(""); setFDesc(""); setFTime(""); setFColor("#3b82f6"); setFShared(false);
+    setFDate(date ? dateStr(date) : "");
+    setShowForm(true);
+  }
+
+  function openEditForm(ev: CalendarEvent) {
+    setEditingEvent(ev);
+    setFTitle(ev.title); setFDesc(ev.description); setFDate(ev.event_date);
+    setFTime(ev.event_time); setFColor(ev.color); setFShared(ev.is_shared);
+    setShowForm(true);
+  }
+
+  async function handleSave() {
+    if (!fTitle.trim() || !fDate) { setError("Title and date are required."); return; }
+    setSaving(true); setError("");
+    try {
+      if (editingEvent) {
+        await eventsApi.update(editingEvent.id, { title: fTitle, description: fDesc, event_date: fDate, event_time: fTime, color: fColor, is_shared: fShared });
+      } else {
+        await eventsApi.create({ title: fTitle, description: fDesc, event_date: fDate, event_time: fTime, color: fColor, is_shared: fShared });
+      }
+      setShowForm(false); setEditingEvent(null);
+      await loadEvents();
+    } catch (e: any) { setError(e.message); }
+    finally { setSaving(false); }
+  }
+
+  async function handleDelete(id: number) {
+    if (!window.confirm("Delete this event?")) return;
+    try { await eventsApi.delete(id); await loadEvents(); }
+    catch (e: any) { setError(e.message); }
+  }
+
+  async function toggleShare(ev: CalendarEvent) {
+    try { await eventsApi.update(ev.id, { is_shared: !ev.is_shared }); await loadEvents(); }
+    catch (e: any) { setError(e.message); }
+  }
+
+  function dateStr(d: Date) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
+  function parseDate(s: string) {
+    const [y, m, d] = s.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  const daysInMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  const firstDay    = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1).getDay();
+
+  const isToday = (day: number) => {
+    const t = new Date();
+    return day === t.getDate() && currentDate.getMonth() === t.getMonth() && currentDate.getFullYear() === t.getFullYear();
+  };
+
+  const curMonthStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}`;
+  const eventsThisMonth = myEvents.filter(e => e.event_date.startsWith(curMonthStr));
+
+  function getEventsForDay(day: number) {
+    const ds = `${curMonthStr}-${String(day).padStart(2, "0")}`;
+    return eventsThisMonth.filter(e => e.event_date === ds);
+  }
+
+  const selectedEvents = selectedDate ? getEventsForDay(selectedDate.getDate()) : [];
+
+  const upcoming = [...myEvents]
+    .filter(e => e.event_date >= dateStr(new Date()))
+    .sort((a, b) => a.event_date.localeCompare(b.event_date))
     .slice(0, 5);
 
-  const first = new Date(cur.y, cur.m, 1).getDay();
-  const total = new Date(cur.y, cur.m + 1, 0).getDate();
-
-  function handleAdd() {
-    if (!form.title.trim() || !form.date) return;
-    setEvents((prev) => [
-      ...prev,
-      { id: Date.now().toString(), title: form.title.trim(), date: form.date, time: form.time || "—", color: form.color },
-    ]);
-    const d = new Date(form.date + "T00:00:00");
-    setCur({ y: d.getFullYear(), m: d.getMonth() });
-    setSelDate(form.date);
-    setForm((f) => ({ ...f, title: "", time: "" }));
-    setShowForm(false);
+  const cells: JSX.Element[] = [];
+  for (let i = 0; i < firstDay(currentDate); i++) cells.push(<div key={`e${i}`} />);
+  for (let day = 1; day <= daysInMonth(currentDate); day++) {
+    const todayFlag = isToday(day);
+    const evts = getEventsForDay(day);
+    const ds = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    cells.push(
+      <button key={day}
+        onClick={() => { setSelectedDate(ds); openCreateForm(ds); }}
+        onContextMenu={(e) => { e.preventDefault(); setSelectedDate(ds); }}
+        style={{
+          height: 36, borderRadius: 8, border: "none", cursor: "pointer",
+          fontFamily: "inherit", fontSize: "0.8rem", fontWeight: 600,
+          position: "relative", transition: "all 0.15s",
+          background: todayFlag ? "linear-gradient(135deg, #f97316, #ec4899)"
+            : evts.length > 0 ? (darkMode ? "rgba(59,130,246,0.2)" : "#eff6ff")
+            : "transparent",
+          color: todayFlag ? "#fff" : evts.length > 0 ? "#3b82f6" : textPrimary,
+          boxShadow: todayFlag ? "0 3px 10px rgba(249,115,22,0.35)" : "none",
+        }}
+        onMouseEnter={(e) => { if (!todayFlag) e.currentTarget.style.background = darkMode ? "rgba(255,255,255,0.08)" : "#f1f5f9"; }}
+        onMouseLeave={(e) => { if (!todayFlag) e.currentTarget.style.background = evts.length > 0 ? (darkMode ? "rgba(59,130,246,0.2)" : "#eff6ff") : "transparent"; }}
+        title="Click to add event"
+      >
+        {day}
+        {evts.length > 0 && (
+          <div style={{ position: "absolute", bottom: 2, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 2 }}>
+            {evts.slice(0, 3).map((ev, i) => (
+              <div key={i} style={{ width: 4, height: 4, borderRadius: "50%", background: ev.color }} />
+            ))}
+          </div>
+        )}
+      </button>
+    );
   }
 
-  function handleDelete(id: string) {
-    setEvents((prev) => prev.filter((e) => e.id !== id));
-  }
+  return (
+    <div style={{ background: cardBg, backdropFilter: "blur(20px)", borderRadius: 20, border: `1px solid ${borderColor}`, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", padding: "1.25rem", marginTop: "1.25rem" }}>
+      {error && (
+        <div style={{ background: "#fee2e2", color: "#dc2626", borderRadius: 10, padding: "7px 12px", fontSize: "0.82rem", marginBottom: 10 }}>
+          {error} <button onClick={() => setError("")} style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", color: "#dc2626" }}>✕</button>
+        </div>
+      )}
 
-  const cell: React.CSSProperties = {
-    aspectRatio: "1",
-    border: "none",
-    background: "transparent",
-    cursor: "pointer",
-    borderRadius: 6,
-    fontSize: "0.78rem",
-    fontWeight: 500,
-    fontFamily: "inherit",
-    position: "relative",
+      {/* Two-column layout: calendar left, upcoming + selected right */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 20 }}>
+
+        {/* LEFT: calendar */}
+        <div>
+          {/* Header */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ padding: 7, background: "linear-gradient(135deg, #f97316, #ec4899)", borderRadius: 10 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              </div>
+              <span style={{ fontSize: "0.95rem", fontWeight: 700, color: textPrimary }}>Calendar</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))}
+                style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${borderColor}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={textSecondary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <span style={{ fontSize: "0.85rem", fontWeight: 700, color: textPrimary, minWidth: 110, textAlign: "center" }}>
+                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+              </span>
+              <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))}
+                style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${borderColor}`, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={textSecondary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+              <button onClick={() => openCreateForm()}
+                style={{ padding: "5px 12px", borderRadius: 8, background: "linear-gradient(135deg, #f97316, #ec4899)", color: "#fff", border: "none", cursor: "pointer", fontSize: "0.78rem", fontWeight: 700, fontFamily: "inherit" }}>
+                + New
+              </button>
+            </div>
+          </div>
+
+          {/* Day labels */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3, marginBottom: 4 }}>
+            {dayNames.map((d) => (
+              <div key={d} style={{ textAlign: "center", fontSize: "0.68rem", fontWeight: 700, color: textSecondary, padding: "3px 0" }}>{d}</div>
+            ))}
+          </div>
+
+          {/* Grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3 }}>
+            {cells}
+          </div>
+        </div>
+
+        {/* RIGHT: selected day + upcoming */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
+          {/* Selected day events */}
+          {selectedDate ? (
+            <div style={{ background: darkMode ? "rgba(15,23,42,0.5)" : "#f8fafc", borderRadius: 14, padding: "0.9rem" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <p style={{ fontSize: "0.75rem", fontWeight: 700, color: textSecondary, margin: 0 }}>
+                  {selectedDate.toLocaleDateString("en-US", { month: "short", day: "numeric", weekday: "short" })}
+                </p>
+                <button onClick={() => openCreateForm(selectedDate)}
+                  style={{ fontSize: "0.72rem", fontWeight: 700, color: "#f97316", background: "none", border: "none", cursor: "pointer" }}>
+                  + Add
+                </button>
+              </div>
+              {selectedEvents.length === 0 ? (
+                <p style={{ fontSize: "0.78rem", color: textSecondary, margin: 0 }}>No events.</p>
+              ) : selectedEvents.map((ev) => (
+                <div key={ev.id} style={{ padding: "8px 10px", borderRadius: 10, marginBottom: 5, borderLeft: `3px solid ${ev.color}`, background: darkMode ? "rgba(255,255,255,0.04)" : "#fff" }}>
+                  <p style={{ fontWeight: 600, color: textPrimary, fontSize: "0.8rem", margin: "0 0 2px" }}>{ev.title}</p>
+                  {ev.event_time && <p style={{ fontSize: "0.7rem", color: textSecondary, margin: "0 0 5px" }}>🕐 {ev.event_time}</p>}
+                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                    <button onClick={() => toggleShare(ev)}
+                      style={{ padding: "3px 8px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: "0.68rem", fontWeight: 700, fontFamily: "inherit",
+                        background: ev.is_shared ? "linear-gradient(135deg, #10b981, #14b8a6)" : (darkMode ? "#334155" : "#e2e8f0"),
+                        color: ev.is_shared ? "#fff" : textSecondary }}>
+                      {ev.is_shared ? "👥 Shared" : "Share"}
+                    </button>
+                    <button onClick={() => openEditForm(ev)}
+                      style={{ padding: "3px 8px", borderRadius: 6, border: `1px solid ${borderColor}`, cursor: "pointer", fontSize: "0.68rem", fontWeight: 600, background: "transparent", color: textSecondary, fontFamily: "inherit" }}>
+                      Edit
+                    </button>
+                    <button onClick={() => handleDelete(ev.id)}
+                      style={{ padding: "3px 8px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: "0.68rem", fontWeight: 600, background: "#fee2e2", color: "#dc2626", fontFamily: "inherit" }}>
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ background: darkMode ? "rgba(15,23,42,0.5)" : "#f8fafc", borderRadius: 14, padding: "0.9rem" }}>
+              <p style={{ fontSize: "0.75rem", color: textSecondary, margin: 0 }}>Click a date to view or add events.</p>
+            </div>
+          )}
+
+          {/* Upcoming */}
+          <div style={{ background: darkMode ? "rgba(15,23,42,0.5)" : "#f8fafc", borderRadius: 14, padding: "0.9rem", flex: 1 }}>
+            <p style={{ fontSize: "0.72rem", fontWeight: 700, color: textSecondary, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              Upcoming {loading && "…"}
+            </p>
+            {upcoming.length === 0 ? (
+              <p style={{ fontSize: "0.78rem", color: textSecondary, margin: 0 }}>No upcoming events.</p>
+            ) : upcoming.map((ev) => (
+              <div key={ev.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: `1px solid ${borderColor}`, cursor: "pointer" }}
+                onClick={() => { const d = parseDate(ev.event_date); setCurrentDate(new Date(d.getFullYear(), d.getMonth(), 1)); setSelectedDate(d); }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = "0.75"}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}>
+                <div style={{ width: 7, height: 7, borderRadius: "50%", background: ev.color, flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontWeight: 600, color: textPrimary, fontSize: "0.78rem", margin: "0 0 1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.title}</p>
+                  <p style={{ fontSize: "0.68rem", color: textSecondary, margin: 0 }}>
+                    {new Date(ev.event_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    {ev.event_time ? ` · ${ev.event_time}` : ""}
+                  </p>
+                </div>
+                {ev.is_shared && <span style={{ fontSize: "0.6rem", background: "rgba(16,185,129,0.12)", color: "#059669", borderRadius: 99, padding: "1px 6px", fontWeight: 700, flexShrink: 0 }}>Shared</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Modal – rendered via portal so parent overflow/transform can't clip it */}
+      {showForm && createPortal(
+        <div
+  style={{
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.45)",
+    zIndex: 99999,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: textPrimary,
-  };
+    padding: "24px",
+    boxSizing: "border-box",
+  }}
+  onClick={(e) => {
+    if (e.target === e.currentTarget) {
+      setShowForm(false);
+      setError("");
+    }
+  }}
+>
+  <div
+    style={{
+      background: darkMode ? "#1e293b" : "#fff",
+      borderRadius: 20,
+      width: 440,
+      maxWidth: "calc(100vw - 48px)",
+      maxHeight: "calc(100vh - 48px)",
+      overflowY: "auto",
+      boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+      display: "flex",
+      flexDirection: "column",
+    }}
+  >
+    <div style={{ padding: "1.4rem 1.5rem 1.2rem" }}>
+            <h3 style={{ fontSize: "1rem", fontWeight: 700, color: textPrimary, marginBottom: "1rem" }}>
+           {editingEvent ? "Edit Event" : "New Event TEST"}
+            </h3>
+            {error && <div style={{ background: "#fee2e2", color: "#dc2626", borderRadius: 8, padding: "6px 12px", fontSize: "0.8rem", marginBottom: 10 }}>{error}</div>}
 
-  const sectionLabel: React.CSSProperties = {
-    fontSize: "0.65rem",
-    fontWeight: 700,
-    color: textSecondary,
-    textTransform: "uppercase",
-    letterSpacing: ".06em",
-    marginBottom: 6,
-  };
+            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 600, color: textSecondary, marginBottom: 5 }}>Title *</label>
+            <input value={fTitle} onChange={e => setFTitle(e.target.value)} placeholder="e.g. Midterm Exam"
+              style={{ width: "100%", padding: "9px 11px", borderRadius: 9, border: `1px solid ${borderColor}`, outline: "none", fontSize: "0.88rem", fontFamily: "inherit", background: darkMode ? "#0f172a" : "#f9fafb", color: textPrimary, boxSizing: "border-box", marginBottom: 10 }} />
 
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: 16,
-        alignItems: "start",
-        marginTop: "1.25rem",
-      }}
-    >
-      {/* ── LEFT: Calendar ── */}
-      <div
-        style={{
-          background: cardBg,
-          borderRadius: 16,
-          border: `1px solid ${borderColor}`,
-          padding: "1.25rem",
-        }}
-      >
-        {/* Month nav */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <div>
-            <div style={{ fontSize: "1rem", fontWeight: 700, color: textPrimary }}>{MONTHS[cur.m]}</div>
-            <div style={{ fontSize: "0.75rem", color: textSecondary }}>{cur.y}</div>
-          </div>
-          <div style={{ display: "flex", gap: 4 }}>
-            {["‹", "›"].map((ch, i) => (
-              <button
-                key={ch}
-                onClick={() => setCur((c) => {
-                  let m = c.m + (i === 0 ? -1 : 1);
-                  let y = c.y;
-                  if (m < 0) { m = 11; y--; }
-                  if (m > 11) { m = 0; y++; }
-                  return { y, m };
-                })}
-                style={{ width: 28, height: 28, borderRadius: 7, border: `1px solid ${borderColor}`, background: "transparent", cursor: "pointer", fontSize: "0.9rem", color: textSecondary, display: "flex", alignItems: "center", justifyContent: "center" }}
-              >
-                {ch}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Day labels */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2, marginBottom: 4 }}>
-          {DAYS.map((d) => (
-            <div key={d} style={{ textAlign: "center", fontSize: "0.7rem", color: textSecondary, padding: "2px 0", fontWeight: 600 }}>{d}</div>
-          ))}
-        </div>
-
-        {/* Day grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2, marginBottom: 12 }}>
-          {Array.from({ length: first }).map((_, i) => <div key={`e${i}`} />)}
-          {Array.from({ length: total }).map((_, i) => {
-            const day = i + 1;
-            const ds = dateStr(cur.y, cur.m, day);
-            const isToday = ds === todayDs;
-            const isSel = ds === selDate && !isToday;
-            const hasEv = getEventsFor(ds).length > 0;
-            return (
-              <button
-                key={day}
-                onClick={() => setSelDate(ds === selDate ? null : ds)}
-                style={{
-                  ...cell,
-                  background: isToday ? "linear-gradient(135deg,#f97316,#ec4899)" : "transparent",
-                  color: isToday ? "#fff" : hasEv ? "#3b82f6" : textPrimary,
-                  outline: isSel ? "1.5px solid #f97316" : "none",
-                  outlineOffset: -1,
-                }}
-              >
-                {day}
-                {hasEv && !isToday && (
-                  <span style={{ position: "absolute", bottom: 2, left: "50%", transform: "translateX(-50%)", width: 4, height: 4, borderRadius: "50%", background: "#3b82f6", display: "block" }} />
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Selected day events */}
-        {selDate && (
-          <div style={{ borderTop: `1px solid ${borderColor}`, paddingTop: 10, marginBottom: 10 }}>
-            <div style={sectionLabel}>
-              {fmtDate(selDate, { day: "numeric", month: "long" })}
-            </div>
-            {getEventsFor(selDate).length === 0 ? (
-              <div style={{ fontSize: "0.78rem", color: textSecondary }}>No events</div>
-            ) : (
-              getEventsFor(selDate).map((ev) => (
-                <div key={ev.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
-                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: ev.color, flexShrink: 0, display: "block" }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "0.82rem", fontWeight: 600, color: textPrimary }}>{ev.title}</div>
-                    <div style={{ fontSize: "0.72rem", color: textSecondary }}>{ev.time}</div>
-                  </div>
-                  <button
-                    onClick={() => handleDelete(ev.id)}
-                    style={{ background: "transparent", border: "none", cursor: "pointer", color: textSecondary, fontSize: "0.75rem", padding: "0 2px", lineHeight: 1 }}
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        )}
-
-        {/* Upcoming */}
-        <div style={{ borderTop: `1px solid ${borderColor}`, paddingTop: 10 }}>
-          <div style={sectionLabel}>Upcoming</div>
-          {upcoming.length === 0 ? (
-            <div style={{ fontSize: "0.78rem", color: textSecondary }}>No upcoming events</div>
-          ) : upcoming.map((ev) => (
-            <div key={ev.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: ev.color, flexShrink: 0, display: "block" }} />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
               <div>
-                <div style={{ fontSize: "0.82rem", fontWeight: 600, color: textPrimary }}>{ev.title}</div>
-                <div style={{ fontSize: "0.72rem", color: textSecondary }}>
-                  {fmtDate(ev.date, { day: "numeric", month: "short" })} · {ev.time}
-                </div>
+                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 600, color: textSecondary, marginBottom: 5 }}>Date *</label>
+                <input type="date" value={fDate} onChange={e => setFDate(e.target.value)}
+                  style={{ width: "100%", padding: "9px 11px", borderRadius: 9, border: `1px solid ${borderColor}`, outline: "none", fontSize: "0.85rem", fontFamily: "inherit", background: darkMode ? "#0f172a" : "#f9fafb", color: textPrimary, boxSizing: "border-box" }} />
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── RIGHT: Add Event ── */}
-      <div
-        style={{
-          background: cardBg,
-          borderRadius: 16,
-          border: `1px solid ${borderColor}`,
-          padding: "1.25rem",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <div style={{ fontSize: "1rem", fontWeight: 700, color: textPrimary }}>Add Event</div>
-          <button
-            onClick={() => setShowForm((v) => !v)}
-            style={{ fontSize: "0.8rem", color: "#f97316", background: "transparent", border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 700 }}
-          >
-            {showForm ? "Close" : "+ New"}
-          </button>
-        </div>
-
-        {showForm && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {[
-              { label: "Title", key: "title", type: "text", placeholder: "Event title" },
-              { label: "Date", key: "date", type: "date", placeholder: "" },
-              { label: "Time", key: "time", type: "text", placeholder: "09:00–10:30" },
-            ].map(({ label, key, type, placeholder }) => (
-              <div key={key}>
-                <div style={{ fontSize: "0.72rem", color: textSecondary, marginBottom: 4, fontWeight: 600 }}>{label}</div>
-                <input
-                  type={type}
-                  placeholder={placeholder}
-                  value={(form as any)[key]}
-                  onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-                  style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: `1px solid ${borderColor}`, background: darkMode ? "rgba(255,255,255,0.05)" : "#f9fafb", color: textPrimary, fontFamily: "inherit", fontSize: "0.85rem" }}
-                />
-              </div>
-            ))}
-
-            <div>
-              <div style={{ fontSize: "0.72rem", color: textSecondary, marginBottom: 6, fontWeight: 600 }}>Color</div>
-              <div style={{ display: "flex", gap: 6 }}>
-                {COLORS.map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => setForm((f) => ({ ...f, color: c }))}
-                    style={{ width: 22, height: 22, borderRadius: "50%", background: c, border: form.color === c ? "2.5px solid " + textPrimary : "2.5px solid transparent", cursor: "pointer", padding: 0 }}
-                  />
-                ))}
+              <div>
+                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 600, color: textSecondary, marginBottom: 5 }}>Time</label>
+                <input value={fTime} onChange={e => setFTime(e.target.value)} placeholder="10:00-12:00"
+                  style={{ width: "100%", padding: "9px 11px", borderRadius: 9, border: `1px solid ${borderColor}`, outline: "none", fontSize: "0.85rem", fontFamily: "inherit", background: darkMode ? "#0f172a" : "#f9fafb", color: textPrimary, boxSizing: "border-box" }} />
               </div>
             </div>
 
-            <button
-              onClick={handleAdd}
-              disabled={!form.title.trim()}
-              style={{ padding: "9px", background: "linear-gradient(135deg,#f97316,#ec4899)", color: "#fff", border: "none", borderRadius: 10, fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", opacity: form.title.trim() ? 1 : 0.5, marginTop: 4 }}
-            >
-              Add Event →
-            </button>
-          </div>
-        )}
+            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 600, color: textSecondary, marginBottom: 5 }}>Description</label>
+            <textarea value={fDesc} onChange={e => setFDesc(e.target.value)} placeholder="Details…" rows={2}
+              style={{ width: "100%", padding: "9px 11px", borderRadius: 9, border: `1px solid ${borderColor}`, outline: "none", fontSize: "0.85rem", fontFamily: "inherit", background: darkMode ? "#0f172a" : "#f9fafb", color: textPrimary, boxSizing: "border-box", resize: "vertical", marginBottom: 10 }} />
 
-        {!showForm && (
-          <div style={{ fontSize: "0.82rem", color: textSecondary }}>
-            Click <strong style={{ color: "#f97316" }}>+ New</strong> to add an event to the calendar.
+            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 600, color: textSecondary, marginBottom: 7 }}>Color</label>
+            <div style={{ display: "flex", gap: 7, marginBottom: 12 }}>
+              {COLORS.map(c => (
+                <button key={c.value} onClick={() => setFColor(c.value)} title={c.label}
+                  style={{ width: 24, height: 24, borderRadius: "50%", background: c.value, border: fColor === c.value ? "3px solid #0f172a" : "2px solid transparent", cursor: "pointer", outline: "none" }} />
+              ))}
+            </div>
+
+            <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: "1rem" }}>
+              <div onClick={() => setFShared(!fShared)}
+                style={{ width: 40, height: 22, borderRadius: 99, background: fShared ? "linear-gradient(135deg, #10b981, #14b8a6)" : (darkMode ? "#334155" : "#e2e8f0"), position: "relative", transition: "background 0.2s", cursor: "pointer", flexShrink: 0 }}>
+                <div style={{ position: "absolute", top: 2, left: fShared ? 20 : 2, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }} />
+              </div>
+              <span style={{ fontSize: "0.82rem", fontWeight: 600, color: textPrimary }}>Share with students</span>
+            </label>
+            {fShared && <p style={{ fontSize: "0.75rem", color: "#10b981", marginTop: -8, marginBottom: 12 }}>✓ Visible in student calendar.</p>}
+
+           <div
+  style={{
+    display: "flex",
+    gap: 8,
+    position: "sticky",
+    bottom: 0,
+    background: darkMode ? "#1e293b" : "#fff",
+    paddingTop: 12,
+    paddingBottom: 2,
+  }}
+>
+  <button onClick={() => { setShowForm(false); setError(""); }} disabled={saving}
+                style={{ flex: 1, padding: "9px", borderRadius: 11, border: `1px solid ${borderColor}`, background: "transparent", cursor: "pointer", fontSize: "0.88rem", fontWeight: 600, color: textSecondary, fontFamily: "inherit" }}>
+                Cancel
+              </button>
+              <button onClick={handleSave} disabled={saving}
+                style={{ flex: 2, padding: "9px", borderRadius: 11, border: "none", background: "linear-gradient(135deg, #f97316, #ec4899)", color: "#fff", cursor: "pointer", fontSize: "0.88rem", fontWeight: 700, fontFamily: "inherit" }}>
+                {saving ? "Saving…" : editingEvent ? "Save Changes" : "Create Event"}
+              </button>
+                     </div>
           </div>
-        )}
-      </div>
+        </div>
+      </div>,
+      document.body
+    )}
     </div>
   );
 }

@@ -13,7 +13,6 @@ interface DashboardPageProps {
   dashView?: string;
   onDashViewChange?: (v: string) => void;
   username?: string;
-  darkMode?: boolean;
 }
 
 type CourseTab = "lessons" | "materials";
@@ -49,7 +48,7 @@ function getCourseEmoji(name: string) {
 export default function DashboardPage({
   onOpenChat, teachingMode, teachingTone,
   selectedCourseId, onSelectedCourseChange,
-  dashView = "dashboard", onDashViewChange, username = "", darkMode = false,
+  dashView = "dashboard", onDashViewChange, username = "",
 }: DashboardPageProps) {
   const [courseMap, setCourseMap] = useState<Record<string, Course>>({});
   const [allCourses, setAllCourses] = useState<Record<string, Course>>({});
@@ -62,23 +61,6 @@ export default function DashboardPage({
   const [error, setError] = useState("");
   const [viewingPdf, setViewingPdf] = useState<string | null>(null);
   const [streak, setStreak] = useState<number>(0);
-
-  // Dark mode colors
-  const dm = darkMode;
-  const cardBg = dm ? "#1e293b" : "#fff";
-  const cardBorder = dm ? "#334155" : "#e2e8f0";
-  const textPrimary = dm ? "#f1f5f9" : "#0f172a";
-  const textSecondary = dm ? "#94a3b8" : "#64748b";
-  const textMuted = dm ? "#64748b" : "#94a3b8";
-  const inputBg = dm ? "#1e293b" : "#fff";
-  const inputBorder = dm ? "#334155" : "#e2e8f0";
-  const hoverBg = dm ? "#334155" : "#f8fafc";
-  const progressBg = dm ? "#1e293b" : "#f1f5f9";
-  const sectionBg = dm ? "linear-gradient(135deg, #1e293b, #0f172a)" : "linear-gradient(135deg, #f8fafc, #f1f5f9)";
-  const emptyBg = dm ? "linear-gradient(135deg, #1e293b, #0f172a)" : "linear-gradient(135deg, #fff7ed, #fdf2f8)";
-  const emptyBorder = dm ? "#334155" : "#fdba74";
-
-
 
   useEffect(() => {
     chatsApi.getStreak().then((r) => setStreak(r.streak)).catch(() => {});
@@ -245,7 +227,7 @@ async function startLessonChat(lesson: Lesson) {
         </button>
 
         {/* Lesson header */}
-        <div style={{ background: cardBg, borderRadius: 20, border: `1px solid ${cardBorder}`, padding: "1.5rem", marginBottom: "1.5rem", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+        <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #e2e8f0", padding: "1.5rem", marginBottom: "1.5rem", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div style={{ width: 52, height: 52, borderRadius: 16, background: `linear-gradient(135deg, ${color.from}, ${color.to})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 4px 14px rgba(0,0,0,0.15)" }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -264,32 +246,32 @@ async function startLessonChat(lesson: Lesson) {
             <p>Loading sections…</p>
           </div>
         ) : sections.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "3rem", background: cardBg, borderRadius: 20, border: `1px solid ${cardBorder}`, color: textMuted }}>
+          <div style={{ textAlign: "center", padding: "3rem", background: "#fff", borderRadius: 20, border: "1px solid #e2e8f0", color: "#94a3b8" }}>
             <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>📭</div>
             <p style={{ fontWeight: 600, color: "#374151" }}>No sections published yet</p>
             <p style={{ fontSize: "0.85rem" }}>Your teacher hasn't published this lesson's sections yet.</p>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <p style={{ fontSize: "0.82rem", color: textMuted, fontWeight: 600, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            <p style={{ fontSize: "0.82rem", color: "#94a3b8", fontWeight: 600, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>
               {sections.length} Section{sections.length !== 1 ? "s" : ""} — Click any to start chatting
             </p>
             {sections.map((section, idx) => (
               <div key={idx}
                 onClick={() => startSectionChat(selectedLesson, section)}
-                style={{ background: cardBg, borderRadius: 18, border: `2px solid ${cardBorder}`, padding: "1.1rem 1.25rem", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", transition: "all 0.15s", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
+                style={{ background: "#fff", borderRadius: 18, border: "2px solid #e2e8f0", padding: "1.1rem 1.25rem", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", transition: "all 0.15s", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#fdba74"; e.currentTarget.style.boxShadow = "0 4px 16px rgba(249,115,22,0.1)"; e.currentTarget.style.transform = "translateX(4px)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = cardBorder; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.04)"; e.currentTarget.style.transform = "translateX(0)"; }}>
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.04)"; e.currentTarget.style.transform = "translateX(0)"; }}>
                 {/* Section number */}
                 <div style={{ width: 44, height: 44, borderRadius: 14, background: "linear-gradient(135deg, #f97316, #ec4899)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 4px 12px rgba(249,115,22,0.25)" }}>
                   <span style={{ color: "#fff", fontWeight: 800, fontSize: "0.9rem" }}>{idx + 1}</span>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontWeight: 700, fontSize: "1rem", color: textPrimary, margin: "0 0 4px" }}>{section.title}</p>
+                  <p style={{ fontWeight: 700, fontSize: "1rem", color: "#0f172a", margin: "0 0 4px" }}>{section.title}</p>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: "0.72rem", color: textMuted, fontWeight: 500 }}>p.{section.page_start}–{section.page_end}</span>
+                    <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: 500 }}>p.{section.page_start}–{section.page_end}</span>
                     {section.summary && (
-                      <span style={{ fontSize: "0.75rem", color: textSecondary }}>{section.summary.length > 60 ? section.summary.slice(0, 60) + "…" : section.summary}</span>
+                      <span style={{ fontSize: "0.75rem", color: "#64748b" }}>{section.summary.length > 60 ? section.summary.slice(0, 60) + "…" : section.summary}</span>
                     )}
                   </div>
                 </div>
@@ -343,7 +325,7 @@ async function startLessonChat(lesson: Lesson) {
         </button>
 
         {/* Course header card */}
-        <div style={{ background: cardBg, borderRadius: 24, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", border: `1px solid ${cardBorder}`, overflow: "hidden", marginBottom: "1.5rem" }}>
+        <div style={{ background: "#fff", borderRadius: 24, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", border: "1px solid #e2e8f0", overflow: "hidden", marginBottom: "1.5rem" }}>
           <div style={{ height: 128, background: `linear-gradient(135deg, ${color.from}, ${color.to})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "5rem", position: "relative" }}>
             <div style={{ position: "absolute", top: -20, right: -20, width: 100, height: 100, background: "rgba(255,255,255,0.1)", borderRadius: "50%" }} />
             {emoji}
@@ -351,8 +333,8 @@ async function startLessonChat(lesson: Lesson) {
           <div style={{ padding: "1.5rem" }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1.25rem", gap: 16 }}>
               <div>
-                <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: textPrimary, margin: "0 0 6px", letterSpacing: "-0.02em" }}>{course?.course_name}</h1>
-                <p style={{ fontSize: "0.88rem", color: textSecondary, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+                <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "#0f172a", margin: "0 0 6px", letterSpacing: "-0.02em" }}>{course?.course_name}</h1>
+                <p style={{ fontSize: "0.88rem", color: "#64748b", margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
                   {course?.teacher_username}
                 </p>
@@ -364,12 +346,12 @@ async function startLessonChat(lesson: Lesson) {
             </div>
 
             {/* Progress */}
-            <div style={{ background: sectionBg, borderRadius: 16, padding: "1.1rem 1.25rem", border: `1px solid ${cardBorder}` }}>
+            <div style={{ background: "linear-gradient(135deg, #f8fafc, #f1f5f9)", borderRadius: 16, padding: "1.1rem 1.25rem", border: "1px solid #e2e8f0" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <span style={{ fontSize: "0.72rem", fontWeight: 700, color: textSecondary, textTransform: "uppercase", letterSpacing: "0.08em" }}>Your Progress</span>
+                <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em" }}>Your Progress</span>
                 <span style={{ fontSize: "1.4rem", fontWeight: 800, background: "linear-gradient(135deg, #f97316, #ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{progress}%</span>
               </div>
-              <div style={{ height: 10, background: dm ? "#334155" : "#fff", borderRadius: 99, overflow: "hidden", boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)", marginBottom: 12 }}>
+              <div style={{ height: 10, background: "#fff", borderRadius: 99, overflow: "hidden", boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)", marginBottom: 12 }}>
                 <div style={{ height: "100%", width: `${progress}%`, background: "linear-gradient(135deg, #f97316, #ec4899)", borderRadius: 99, transition: "width 0.8s ease" }} />
               </div>
               <div style={{ display: "flex", gap: 20, fontSize: "0.82rem" }}>
@@ -389,10 +371,10 @@ async function startLessonChat(lesson: Lesson) {
         </div>
 
         {/* Tabs */}
-        <div style={{ display: "flex", gap: 8, marginBottom: "1.5rem", background: cardBg, borderRadius: 18, padding: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid ${cardBorder}` }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: "1.5rem", background: "#fff", borderRadius: 18, padding: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #e2e8f0" }}>
           {[{ key: "lessons", label: "📚 Lessons" }, { key: "materials", label: "📄 Materials" }].map((t) => (
             <button key={t.key} onClick={() => { setActiveTab(t.key as CourseTab); localStorage.setItem("student_active_tab", t.key); }}
-              style={{ flex: 1, padding: "10px", borderRadius: 12, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: "0.9rem", fontWeight: 600, transition: "all 0.15s", background: activeTab === t.key ? "linear-gradient(135deg, #f97316, #ec4899)" : "transparent", color: activeTab === t.key ? "#fff" : textSecondary, boxShadow: activeTab === t.key ? "0 4px 12px rgba(249,115,22,0.3)" : "none" }}>
+              style={{ flex: 1, padding: "10px", borderRadius: 12, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: "0.9rem", fontWeight: 600, transition: "all 0.15s", background: activeTab === t.key ? "linear-gradient(135deg, #f97316, #ec4899)" : "transparent", color: activeTab === t.key ? "#fff" : "#64748b", boxShadow: activeTab === t.key ? "0 4px 12px rgba(249,115,22,0.3)" : "none" }}>
               {t.label}
             </button>
           ))}
@@ -410,9 +392,9 @@ async function startLessonChat(lesson: Lesson) {
                     {lessonList.map((lesson, idx) => (
                       <div key={lesson.lesson_id}
                         onClick={() => openLesson(lesson)}
-                        style={{ background: cardBg, borderRadius: 18, border: `2px solid ${cardBorder}`, padding: "1.1rem 1.25rem", display: "flex", alignItems: "center", gap: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.04)", cursor: "pointer", transition: "all 0.15s" }}
+                        style={{ background: "#fff", borderRadius: 18, border: "2px solid #e2e8f0", padding: "1.1rem 1.25rem", display: "flex", alignItems: "center", gap: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.04)", cursor: "pointer", transition: "all 0.15s" }}
                         onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#fdba74"; e.currentTarget.style.boxShadow = "0 4px 16px rgba(249,115,22,0.1)"; e.currentTarget.style.transform = "translateX(4px)"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = cardBorder; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.04)"; e.currentTarget.style.transform = "translateX(0)"; }}>
+                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.04)"; e.currentTarget.style.transform = "translateX(0)"; }}>
                         <div style={{ width: 52, height: 52, borderRadius: 16, background: "linear-gradient(135deg, #f97316, #ec4899)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 4px 12px rgba(249,115,22,0.25)" }}>
                           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                         </div>
@@ -444,7 +426,7 @@ async function startLessonChat(lesson: Lesson) {
                     <div key={m.file_hash}>
                       <div
                         onClick={() => setViewingPdf(viewingPdf === m.file_hash ? null : m.file_hash)}
-                        style={{ background: cardBg, borderRadius: 14, border: `2px solid ${viewingPdf === m.file_hash ? "#f97316" : cardBorder}`, padding: "0.9rem 1.1rem", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", transition: "all 0.15s" }}
+                        style={{ background: "#fff", borderRadius: 14, border: `2px solid ${viewingPdf === m.file_hash ? "#f97316" : "#e2e8f0"}`, padding: "0.9rem 1.1rem", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", transition: "all 0.15s" }}
                         onMouseEnter={(e) => { if (viewingPdf !== m.file_hash) e.currentTarget.style.borderColor = "#fdba74"; }}
                         onMouseLeave={(e) => { if (viewingPdf !== m.file_hash) e.currentTarget.style.borderColor = "#e2e8f0"; }}
                       >
@@ -473,7 +455,7 @@ async function startLessonChat(lesson: Lesson) {
                   ))}
                 </div>
                 {/* Chat with materials */}
-                <div style={{ background: cardBg, borderRadius: 18, border: `2px solid ${cardBorder}`, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+                <div style={{ background: "#fff", borderRadius: 18, border: "2px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
                   <div style={{ background: "linear-gradient(135deg, #fff7ed, #fdf2f8)", padding: "1.25rem 1.5rem", borderBottom: "2px solid #fed7aa" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
                       <div style={{ width: 44, height: 44, background: "linear-gradient(135deg, #f97316, #ec4899)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(249,115,22,0.3)" }}>
@@ -536,7 +518,7 @@ async function startLessonChat(lesson: Lesson) {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </div>
             <input type="text" placeholder="Search for courses…"
-              style={{ width: "100%", paddingLeft: 48, paddingRight: 16, paddingTop: 14, paddingBottom: 14, background: inputBg, border: `1px solid ${inputBorder}`, borderRadius: 18, fontSize: "0.95rem", fontFamily: "inherit", outline: "none", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", boxSizing: "border-box", color: textPrimary }} />
+              style={{ width: "100%", paddingLeft: 48, paddingRight: 16, paddingTop: 14, paddingBottom: 14, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 18, fontSize: "0.95rem", fontFamily: "inherit", outline: "none", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", boxSizing: "border-box" }} />
           </div>
         </div>
         {browseLoading ? <p style={{ color: "#64748b", textAlign: "center", padding: "3rem" }}>Loading…</p> : (
@@ -547,7 +529,7 @@ async function startLessonChat(lesson: Lesson) {
               const emoji = getCourseEmoji(course.course_name);
               return (
                 <div key={id} onClick={() => isEnrolled && openCourse(id)}
-                  style={{ background: cardBg, borderRadius: 20, border: `1px solid ${cardBorder}`, overflow: "hidden", cursor: isEnrolled ? "pointer" : "default", transition: "all 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
+                  style={{ background: "#fff", borderRadius: 20, border: "1px solid #e2e8f0", overflow: "hidden", cursor: isEnrolled ? "pointer" : "default", transition: "all 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
                   onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-6px)"; e.currentTarget.style.boxShadow = "0 12px 32px rgba(0,0,0,0.1)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.04)"; }}>
                   <div style={{ height: 120, background: `linear-gradient(135deg, ${color.from}, ${color.to})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "3.5rem", position: "relative" }}>
@@ -634,13 +616,13 @@ async function startLessonChat(lesson: Lesson) {
           { label: "Course Materials", value: totalMaterials, grad: "linear-gradient(135deg, #f97316, #ec4899)", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> },
           { label: "Learning Streak", value: streak > 0 ? `${streak} day${streak !== 1 ? "s" : ""}` : "Start today!", grad: "linear-gradient(135deg, #f59e0b, #f97316)", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> },
         ].map((stat) => (
-          <div key={stat.label} style={{ background: cardBg, borderRadius: 20, border: `1px solid ${cardBorder}`, padding: "1.25rem 1.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+          <div key={stat.label} style={{ background: "#fff", borderRadius: 20, border: "1px solid #e2e8f0", padding: "1.25rem 1.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
               <div style={{ width: 46, height: 46, borderRadius: 14, background: stat.grad, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(0,0,0,0.15)" }}>
                 {stat.icon}
               </div>
             </div>
-            <p style={{ fontSize: "0.82rem", color: textSecondary, margin: "0 0 4px" }}>{stat.label}</p>
+            <p style={{ fontSize: "0.82rem", color: "#64748b", margin: "0 0 4px" }}>{stat.label}</p>
             <p style={{ fontSize: "1.7rem", fontWeight: 800, background: stat.grad, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", margin: 0, lineHeight: 1 }}>{stat.value}</p>
           </div>
         ))}
@@ -649,7 +631,7 @@ async function startLessonChat(lesson: Lesson) {
       {/* My Courses */}
       <div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
-          <h2 style={{ fontSize: "1.4rem", fontWeight: 800, color: textPrimary, margin: 0 }}>My Courses</h2>
+          <h2 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#0f172a", margin: 0 }}>My Courses</h2>
           <button onClick={() => onDashViewChange?.("browse")}
             style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: "linear-gradient(135deg, #f97316, #ec4899)", color: "#fff", border: "none", borderRadius: 12, fontSize: "0.88rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 12px rgba(249,115,22,0.3)" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -658,11 +640,11 @@ async function startLessonChat(lesson: Lesson) {
         </div>
 
         {enrolledList.length === 0 ? (
-          <div style={{ background: emptyBg, borderRadius: 24, border: `2px dashed ${emptyBorder}`, padding: "3rem", textAlign: "center" }}>
+          <div style={{ background: "linear-gradient(135deg, #fff7ed, #fdf2f8)", borderRadius: 24, border: "2px dashed #fdba74", padding: "3rem", textAlign: "center" }}>
             <div style={{ width: 72, height: 72, background: "linear-gradient(135deg, #f97316, #ec4899)", borderRadius: 22, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", boxShadow: "0 8px 24px rgba(249,115,22,0.3)" }}>
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
             </div>
-            <p style={{ fontSize: "1.1rem", fontWeight: 700, color: textPrimary, marginBottom: 8 }}>You haven't enrolled in any courses yet.</p>
+            <p style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>You haven't enrolled in any courses yet.</p>
             <button onClick={() => onDashViewChange?.("browse")}
               style={{ marginTop: 8, padding: "12px 24px", background: "linear-gradient(135deg, #f97316, #ec4899)", color: "#fff", border: "none", borderRadius: 14, fontSize: "0.9rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 14px rgba(249,115,22,0.3)" }}>
               Browse courses →
@@ -679,7 +661,7 @@ async function startLessonChat(lesson: Lesson) {
               const progress = 0;
               return (
                 <div key={id} onClick={() => openCourse(id)}
-                  style={{ background: cardBg, borderRadius: 20, border: `1px solid ${cardBorder}`, overflow: "hidden", cursor: "pointer", transition: "all 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
+                  style={{ background: "#fff", borderRadius: 20, border: "1px solid #e2e8f0", overflow: "hidden", cursor: "pointer", transition: "all 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
                   onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.02) translateY(-4px)"; e.currentTarget.style.boxShadow = "0 12px 32px rgba(0,0,0,0.1)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1) translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.04)"; }}>
                   {/* Top color bar */}
@@ -702,12 +684,12 @@ async function startLessonChat(lesson: Lesson) {
                         <span style={{ fontSize: "0.78rem", color: "#64748b" }}>Progress</span>
                         <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#0f172a" }}>{progress}%</span>
                       </div>
-                      <div style={{ height: 8, background: progressBg, borderRadius: 99, overflow: "hidden" }}>
+                      <div style={{ height: 8, background: "#f1f5f9", borderRadius: 99, overflow: "hidden" }}>
                         <div style={{ height: "100%", width: `${progress}%`, background: `linear-gradient(135deg, ${color.from}, ${color.to})`, borderRadius: 99 }} />
                       </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: "0.78rem", color: textSecondary }}>{completed}/{total} lessons</span>
+                      <span style={{ fontSize: "0.78rem", color: "#64748b" }}>{completed}/{total} lessons</span>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                     </div>
                   </div>
