@@ -1,0 +1,53 @@
+============================= test session starts =============================
+platform win32 -- Python 3.9.13, pytest-8.4.2, pluggy-1.6.0 -- D:\AI-Supported-Learning-System\backend\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\AI-Supported-Learning-System\backend
+plugins: anyio-4.12.1, cov-7.1.0
+collecting ... collected 38 items
+
+tests/test_auth.py::TestSignup::test_teacher_signup_successful PASSED    [  2%]
+tests/test_auth.py::TestSignup::test_student_signup_successful PASSED    [  5%]
+tests/test_auth.py::TestSignup::test_duplicate_username_rejected PASSED  [  7%]
+tests/test_auth.py::TestSignup::test_signup_without_otp_rejected PASSED  [ 10%]
+tests/test_auth.py::TestSignup::test_empty_full_name_rejected PASSED     [ 13%]
+tests/test_auth.py::TestSignup::test_empty_username_rejected PASSED      [ 15%]
+tests/test_auth.py::TestSignup::test_empty_password_rejected PASSED      [ 18%]
+tests/test_auth.py::TestLogin::test_teacher_login_successful PASSED      [ 21%]
+tests/test_auth.py::TestLogin::test_student_login_successful PASSED      [ 23%]
+tests/test_auth.py::TestLogin::test_wrong_password_rejected PASSED       [ 26%]
+tests/test_auth.py::TestLogin::test_nonexistent_user_rejected PASSED     [ 28%]
+tests/test_auth.py::TestLogin::test_token_content_correct PASSED         [ 31%]
+tests/test_auth.py::TestLogin::test_valid_token_accesses_protected_endpoint PASSED [ 34%]
+tests/test_auth.py::TestLogin::test_no_token_protected_endpoint_rejected PASSED [ 36%]
+tests/test_auth.py::TestLogin::test_fake_token_rejected PASSED           [ 39%]
+tests/test_auth.py::TestEmailRoleRules::test_std_ieu_edu_tr_is_student PASSED [ 42%]
+tests/test_auth.py::TestEmailRoleRules::test_ieu_edu_tr_is_teacher PASSED [ 44%]
+tests/test_auth.py::TestEmailRoleRules::test_invalid_domain_returns_none PASSED [ 47%]
+tests/test_auth.py::TestEmailRoleRules::test_case_insensitive_email PASSED [ 50%]
+tests/test_courses.py::TestCourseCreation::test_kayaoguz_can_create_course PASSED [ 52%]
+tests/test_courses.py::TestCourseCreation::test_student_cannot_create_course PASSED [ 55%]
+tests/test_courses.py::TestCourseCreation::test_no_token_cannot_create_course PASSED [ 57%]
+tests/test_courses.py::TestCourseCreation::test_multiple_courses_can_be_created PASSED [ 60%]
+tests/test_courses.py::TestCourseListing::test_kayaoguz_can_see_his_courses PASSED [ 63%]
+tests/test_courses.py::TestCourseListing::test_all_courses_listed PASSED [ 65%]
+tests/test_courses.py::TestCourseListing::test_student_mine_endpoint_forbidden PASSED [ 68%]
+tests/test_courses.py::TestCourseEnrollment::test_emiray_can_enroll PASSED [ 71%]
+tests/test_courses.py::TestCourseEnrollment::test_yasemin_can_enroll PASSED [ 73%]
+tests/test_courses.py::TestCourseEnrollment::test_meltem_can_enroll PASSED [ 76%]
+tests/test_courses.py::TestCourseEnrollment::test_betul_can_enroll PASSED [ 78%]
+tests/test_courses.py::TestCourseEnrollment::test_duplicate_enrollment_rejected PASSED [ 81%]
+tests/test_courses.py::TestCourseEnrollment::test_teacher_cannot_enroll PASSED [ 84%]
+tests/test_courses.py::TestCourseEnrollment::test_all_four_students_can_enroll PASSED [ 86%]
+tests/test_courses.py::TestCourseUnenroll::test_emiray_can_unenroll PASSED [ 89%]
+tests/test_courses.py::TestCourseUnenroll::test_unenroll_without_enrollment_rejected PASSED [ 92%]
+tests/test_courses.py::TestCourseUnenroll::test_reenroll_after_unenroll PASSED [ 94%]
+tests/test_courses.py::TestAssignedCourses::test_betul_can_see_enrolled_courses PASSED [ 97%]
+tests/test_courses.py::TestAssignedCourses::test_assigned_empty_when_not_enrolled PASSED [100%]
+
+============================== warnings summary ===============================
+schemas\admin.py:7
+  D:\AI-Supported-Learning-System\backend\tests\..\schemas\admin.py:7: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class AdminOut(BaseModel):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 38 passed, 1 warning in 11.27s ========================

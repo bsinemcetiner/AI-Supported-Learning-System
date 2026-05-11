@@ -1,0 +1,123 @@
+============================= test session starts =============================
+platform win32 -- Python 3.9.13, pytest-8.4.2, pluggy-1.6.0 -- D:\AI-Supported-Learning-System\backend\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\AI-Supported-Learning-System\backend
+plugins: anyio-4.12.1, cov-7.1.0
+collecting ... collected 74 items
+
+tests/test_notifications.py::TestSendNotification::test_kayaoguz_can_send_notification PASSED [  1%]
+tests/test_notifications.py::TestSendNotification::test_student_cannot_send_notification PASSED [  2%]
+tests/test_notifications.py::TestSendNotification::test_yasemin_cannot_send_notification PASSED [  4%]
+tests/test_notifications.py::TestSendNotification::test_no_token_cannot_send_notification PASSED [  5%]
+tests/test_notifications.py::TestGetNotifications::test_emiray_gets_notifications_for_enrolled_course PASSED [  6%]
+tests/test_notifications.py::TestGetNotifications::test_all_enrolled_students_see_notification PASSED [  8%]
+tests/test_notifications.py::TestGetNotifications::test_kayaoguz_sees_struggle_alert_notifications PASSED [  9%]
+tests/test_notifications.py::TestGetNotifications::test_teacher_cannot_see_student_targeted_notifications PASSED [ 10%]
+tests/test_notifications.py::TestGetNotifications::test_unenrolled_student_does_not_see_notification PASSED [ 12%]
+tests/test_notifications.py::TestGetNotifications::test_no_courses_returns_empty PASSED [ 13%]
+tests/test_notifications.py::TestGetNotifications::test_no_token_cannot_get_notifications PASSED [ 14%]
+tests/test_notifications.py::TestGetNotifications::test_notification_contains_correct_fields PASSED [ 16%]
+tests/test_notifications.py::TestGetNotifications::test_new_notification_is_unread PASSED [ 17%]
+tests/test_notifications.py::TestMarkAsRead::test_emiray_can_mark_notification_as_read PASSED [ 18%]
+tests/test_notifications.py::TestMarkAsRead::test_marking_already_read_is_idempotent PASSED [ 20%]
+tests/test_notifications.py::TestMarkAsRead::test_unread_count_decreases_after_mark_read PASSED [ 21%]
+tests/test_notifications.py::TestMarkAsRead::test_no_token_cannot_mark_as_read PASSED [ 22%]
+tests/test_notifications.py::TestMarkAllRead::test_emiray_can_mark_all_as_read PASSED [ 24%]
+tests/test_notifications.py::TestMarkAllRead::test_all_students_can_mark_all_as_read PASSED [ 25%]
+tests/test_notifications.py::TestMarkAllRead::test_no_token_cannot_mark_all_as_read PASSED [ 27%]
+tests/test_admin.py::TestAdminLogin::test_admin_login_successful PASSED  [ 28%]
+tests/test_admin.py::TestAdminLogin::test_admin_login_wrong_password PASSED [ 29%]
+tests/test_admin.py::TestAdminLogin::test_admin_login_nonexistent_user PASSED [ 31%]
+tests/test_admin.py::TestAdminAuthorization::test_no_token_cannot_list_students PASSED [ 32%]
+tests/test_admin.py::TestAdminAuthorization::test_regular_user_token_cannot_access_admin PASSED [ 33%]
+tests/test_admin.py::TestAdminAuthorization::test_teacher_token_cannot_access_admin PASSED [ 35%]
+tests/test_admin.py::TestAdminAuthorization::test_fake_admin_token_rejected PASSED [ 36%]
+tests/test_admin.py::TestAdminListing::test_admin_can_list_students PASSED [ 37%]
+tests/test_admin.py::TestAdminListing::test_admin_can_list_teachers PASSED [ 39%]
+tests/test_admin.py::TestAdminListing::test_admin_can_list_courses PASSED [ 40%]
+tests/test_admin.py::TestAdminListing::test_student_list_contains_correct_fields PASSED [ 41%]
+tests/test_admin.py::TestAdminListing::test_empty_student_list_returns_empty_array PASSED [ 43%]
+tests/test_admin.py::TestAdminCourseAssignment::test_admin_can_assign_course_to_student PASSED [ 44%]
+tests/test_admin.py::TestAdminCourseAssignment::test_admin_can_get_student_courses PASSED [ 45%]
+tests/test_admin.py::TestAdminCourseAssignment::test_admin_can_remove_course_from_student FAILED [ 47%]
+tests/test_admin.py::TestAdminCourseAssignment::test_admin_can_assign_all_students_to_course PASSED [ 48%]
+tests/test_events.py::TestTeacherEvents::test_kayaoguz_can_create_event PASSED [ 50%]
+tests/test_events.py::TestTeacherEvents::test_student_cannot_create_teacher_event PASSED [ 51%]
+tests/test_events.py::TestTeacherEvents::test_all_students_cannot_create_teacher_events PASSED [ 52%]
+tests/test_events.py::TestTeacherEvents::test_kayaoguz_can_list_his_events PASSED [ 54%]
+tests/test_events.py::TestTeacherEvents::test_student_cannot_list_teacher_mine_events PASSED [ 55%]
+tests/test_events.py::TestTeacherEvents::test_kayaoguz_can_update_his_event PASSED [ 56%]
+tests/test_events.py::TestTeacherEvents::test_cannot_update_another_teachers_event PASSED [ 58%]
+tests/test_events.py::TestTeacherEvents::test_kayaoguz_can_delete_his_event PASSED [ 59%]
+tests/test_events.py::TestTeacherEvents::test_delete_nonexistent_event PASSED [ 60%]
+tests/test_events.py::TestTeacherEvents::test_no_token_cannot_access_events PASSED [ 62%]
+tests/test_events.py::TestSharedEvents::test_shared_event_visible_to_all_students PASSED [ 63%]
+tests/test_events.py::TestSharedEvents::test_non_shared_event_not_in_shared_list PASSED [ 64%]
+tests/test_events.py::TestSharedEvents::test_shared_event_visible_to_teacher_too PASSED [ 66%]
+tests/test_events.py::TestSharedEvents::test_event_can_be_updated_to_shared PASSED [ 67%]
+tests/test_events.py::TestPersonalEvents::test_emiray_can_create_personal_event PASSED [ 68%]
+tests/test_events.py::TestPersonalEvents::test_all_students_can_create_personal_events PASSED [ 70%]
+tests/test_events.py::TestPersonalEvents::test_students_only_see_their_own_personal_events PASSED [ 71%]
+tests/test_events.py::TestPersonalEvents::test_emiray_can_update_her_personal_event PASSED [ 72%]
+tests/test_events.py::TestPersonalEvents::test_cannot_update_another_students_personal_event PASSED [ 74%]
+tests/test_events.py::TestPersonalEvents::test_meltem_can_delete_her_personal_event PASSED [ 75%]
+tests/test_events.py::TestPersonalEvents::test_cannot_delete_another_students_personal_event PASSED [ 77%]
+tests/test_events.py::TestPersonalEvents::test_kayaoguz_can_also_create_personal_event PASSED [ 78%]
+tests/test_analytics.py::TestAnalyticsAccess::test_kayaoguz_can_access_analytics PASSED [ 79%]
+tests/test_analytics.py::TestAnalyticsAccess::test_student_cannot_access_analytics PASSED [ 81%]
+tests/test_analytics.py::TestAnalyticsAccess::test_yasemin_cannot_access_analytics PASSED [ 82%]
+tests/test_analytics.py::TestAnalyticsAccess::test_no_token_cannot_access_analytics PASSED [ 83%]
+tests/test_analytics.py::TestAnalyticsStructure::test_empty_courses_returns_empty_struggles PASSED [ 85%]
+tests/test_analytics.py::TestAnalyticsStructure::test_response_contains_correct_top_level_fields PASSED [ 86%]
+tests/test_analytics.py::TestAnalyticsStructure::test_default_request_returns_200 PASSED [ 87%]
+tests/test_analytics.py::TestAnalyticsStructure::test_custom_hours_parameter_accepted PASSED [ 89%]
+tests/test_analytics.py::TestAnalyticsContent::test_struggle_alert_appears_in_analytics PASSED [ 90%]
+tests/test_analytics.py::TestAnalyticsContent::test_struggle_item_contains_correct_fields PASSED [ 91%]
+tests/test_analytics.py::TestAnalyticsContent::test_non_struggle_notifications_excluded PASSED [ 93%]
+tests/test_analytics.py::TestAnalyticsContent::test_multiple_sections_in_analytics PASSED [ 94%]
+tests/test_analytics.py::TestAnalyticsContent::test_results_sorted_by_question_count_descending PASSED [ 95%]
+tests/test_analytics.py::TestAnalyticsContent::test_hours_filter_excludes_old_alerts PASSED [ 97%]
+tests/test_analytics.py::TestAnalyticsContent::test_keywords_extracted_correctly PASSED [ 98%]
+tests/test_analytics.py::TestAnalyticsContent::test_total_questions_sum_is_correct PASSED [100%]
+
+================================== FAILURES ===================================
+_____ TestAdminCourseAssignment.test_admin_can_remove_course_from_student _____
+
+self = <backend.tests.test_admin.TestAdminCourseAssignment object at 0x000002764D7F0340>
+client = <starlette.testclient.TestClient object at 0x000002764DC0EB20>
+admin_token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwicm9sZSI6ImFkbWluIiwiZXhwIjoxNzc4NTY4MjE3fQ.1ULDwxmgkkqRmkTNxPhi64q_iz3M6P0-jqPXi4Ghquc'
+kayaoguz_token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJrYXlhb2d1eiIsInJvbGUiOiJ0ZWFjaGVyIiwiZXhwIjoxNzc4NTQzMDE3fQ.aY8NBmojj08FbTvXMMNhmE3WEjQF-uTMgQoz6A181EA'
+emiray_token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlbWlyYXlkdXJtYXoiLCJyb2xlIjoic3R1ZGVudCIsImV4cCI6MTc3ODU0MzAxN30.dXCC_6E1c_WWiizF5LY9zVvLUn8O0mm79PybvjV8Q_A'
+
+    def test_admin_can_remove_course_from_student(self, client, admin_token,
+                                                    kayaoguz_token, emiray_token):
+        """Admin should be able to remove a course from a student."""
+        course_res = client.post("/api/courses/",
+                                  json={"course_name": "Remove Test Course"},
+                                  headers=auth(kayaoguz_token))
+        course_id = course_res.json()["course_id"]
+    
+        students = client.get("/api/admin/students",
+                              headers=admin_auth(admin_token)).json()
+        emiray = next(s for s in students if s["username"] == "emiraydurmaz")
+    
+        client.post("/api/admin/assign",
+                    json={"student_id": emiray["id"], "course_id": course_id},
+                    headers=admin_auth(admin_token))
+    
+        import json
+>       res = client.delete("/api/admin/remove",
+                            content=json.dumps({"student_id": emiray["id"], "course_id": course_id}),
+                            headers={**admin_auth(admin_token), "Content-Type": "application/json"})
+E       TypeError: delete() got an unexpected keyword argument 'content'
+
+tests\test_admin.py:278: TypeError
+============================== warnings summary ===============================
+schemas\admin.py:7
+  D:\AI-Supported-Learning-System\backend\tests\..\schemas\admin.py:7: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class AdminOut(BaseModel):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_admin.py::TestAdminCourseAssignment::test_admin_can_remove_course_from_student
+================== 1 failed, 73 passed, 1 warning in 38.22s ===================

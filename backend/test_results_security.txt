@@ -1,0 +1,42 @@
+============================= test session starts =============================
+platform win32 -- Python 3.9.13, pytest-8.4.2, pluggy-1.6.0 -- D:\AI-Supported-Learning-System\backend\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\AI-Supported-Learning-System\backend
+plugins: anyio-4.12.1, cov-7.1.0
+collecting ... collected 27 items
+
+tests/test_security.py::TestTokenSecurity::test_expired_token_rejected PASSED [  3%]
+tests/test_security.py::TestTokenSecurity::test_completely_fake_token_rejected PASSED [  7%]
+tests/test_security.py::TestTokenSecurity::test_wrong_signature_token_rejected PASSED [ 11%]
+tests/test_security.py::TestTokenSecurity::test_token_without_username_rejected PASSED [ 14%]
+tests/test_security.py::TestTokenSecurity::test_malformed_authorization_header_rejected PASSED [ 18%]
+tests/test_security.py::TestTokenSecurity::test_empty_authorization_header_rejected PASSED [ 22%]
+tests/test_security.py::TestTokenSecurity::test_no_authorization_header_rejected PASSED [ 25%]
+tests/test_security.py::TestTokenSecurity::test_student_cannot_access_teacher_endpoint PASSED [ 29%]
+tests/test_security.py::TestTokenSecurity::test_teacher_cannot_access_student_endpoint PASSED [ 33%]
+tests/test_security.py::TestTokenSecurity::test_forged_role_in_token_rejected PASSED [ 37%]
+tests/test_security.py::TestTokenSecurity::test_valid_student_token_accepted_on_student_endpoint PASSED [ 40%]
+tests/test_security.py::TestTokenSecurity::test_valid_teacher_token_accepted_on_teacher_endpoint PASSED [ 44%]
+tests/test_security.py::TestTokenSecurity::test_all_students_cannot_access_teacher_endpoints PASSED [ 48%]
+tests/test_security.py::TestTokenSecurity::test_all_students_cannot_upload_lesson PASSED [ 51%]
+tests/test_security.py::TestTokenSecurity::test_teacher_cannot_access_all_student_endpoints PASSED [ 55%]
+tests/test_security.py::TestSQLInjection::test_sql_injection_in_login_username PASSED [ 59%]
+tests/test_security.py::TestSQLInjection::test_sql_injection_in_login_password PASSED [ 62%]
+tests/test_security.py::TestSQLInjection::test_sql_injection_in_signup_username PASSED [ 66%]
+tests/test_security.py::TestSQLInjection::test_sql_injection_in_course_name PASSED [ 70%]
+tests/test_security.py::TestSQLInjection::test_sql_injection_in_chat_title PASSED [ 74%]
+tests/test_security.py::TestSQLInjection::test_sql_injection_tables_still_exist_after_attempts PASSED [ 77%]
+tests/test_security.py::TestOTPSecurity::test_invalid_domain_rejected_before_otp_sent PASSED [ 81%]
+tests/test_security.py::TestOTPSecurity::test_invalid_domain_hotmail_rejected PASSED [ 85%]
+tests/test_security.py::TestOTPSecurity::test_already_registered_email_rejected PASSED [ 88%]
+tests/test_security.py::TestOTPSecurity::test_otp_email_sent_to_correct_address PASSED [ 92%]
+tests/test_security.py::TestOTPSecurity::test_otp_email_not_sent_for_invalid_domain PASSED [ 96%]
+tests/test_security.py::TestOTPSecurity::test_signup_without_otp_verification_rejected PASSED [100%]
+
+============================== warnings summary ===============================
+schemas\admin.py:7
+  D:\AI-Supported-Learning-System\backend\tests\..\schemas\admin.py:7: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class AdminOut(BaseModel):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 27 passed, 1 warning in 9.45s ========================

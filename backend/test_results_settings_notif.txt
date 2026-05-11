@@ -1,0 +1,62 @@
+============================= test session starts =============================
+platform win32 -- Python 3.9.13, pytest-8.4.2, pluggy-1.6.0 -- D:\AI-Supported-Learning-System\backend\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\AI-Supported-Learning-System\backend
+plugins: anyio-4.12.1, cov-7.1.0
+collecting ... collected 19 items
+
+tests/test_notifications.py::TestSendNotification::test_kayaoguz_can_send_notification PASSED [  5%]
+tests/test_notifications.py::TestSendNotification::test_student_cannot_send_notification PASSED [ 10%]
+tests/test_notifications.py::TestSendNotification::test_yasemin_cannot_send_notification PASSED [ 15%]
+tests/test_notifications.py::TestSendNotification::test_no_token_cannot_send_notification PASSED [ 21%]
+tests/test_notifications.py::TestGetNotifications::test_emiray_gets_notifications_for_enrolled_course PASSED [ 26%]
+tests/test_notifications.py::TestGetNotifications::test_all_enrolled_students_see_notification PASSED [ 31%]
+tests/test_notifications.py::TestGetNotifications::test_kayaoguz_sees_notifications_for_his_courses FAILED [ 36%]
+tests/test_notifications.py::TestGetNotifications::test_unenrolled_student_does_not_see_notification PASSED [ 42%]
+tests/test_notifications.py::TestGetNotifications::test_no_courses_returns_empty PASSED [ 47%]
+tests/test_notifications.py::TestGetNotifications::test_no_token_cannot_get_notifications PASSED [ 52%]
+tests/test_notifications.py::TestGetNotifications::test_notification_contains_correct_fields PASSED [ 57%]
+tests/test_notifications.py::TestGetNotifications::test_new_notification_is_unread PASSED [ 63%]
+tests/test_notifications.py::TestMarkAsRead::test_emiray_can_mark_notification_as_read PASSED [ 68%]
+tests/test_notifications.py::TestMarkAsRead::test_marking_already_read_is_idempotent PASSED [ 73%]
+tests/test_notifications.py::TestMarkAsRead::test_unread_count_decreases_after_mark_read PASSED [ 78%]
+tests/test_notifications.py::TestMarkAsRead::test_no_token_cannot_mark_as_read PASSED [ 84%]
+tests/test_notifications.py::TestMarkAllRead::test_emiray_can_mark_all_as_read PASSED [ 89%]
+tests/test_notifications.py::TestMarkAllRead::test_all_students_can_mark_all_as_read PASSED [ 94%]
+tests/test_notifications.py::TestMarkAllRead::test_no_token_cannot_mark_all_as_read PASSED [100%]
+
+================================== FAILURES ===================================
+____ TestGetNotifications.test_kayaoguz_sees_notifications_for_his_courses ____
+
+self = <backend.tests.test_notifications.TestGetNotifications object at 0x000001E048FBD430>
+client = <starlette.testclient.TestClient object at 0x000001E049195FD0>
+kayaoguz_token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJrYXlhb2d1eiIsInJvbGUiOiJ0ZWFjaGVyIiwiZXhwIjoxNzc4NTQyMjExfQ.UoSogmQ0CdUtVf4avfMhtfdAtSkLHvc6LZzfDN7zxnc'
+
+    def test_kayaoguz_sees_notifications_for_his_courses(
+            self, client, kayaoguz_token):
+        """Kaya Oguz should see notifications for his own courses."""
+        # Create course and notification in same client/DB session
+        res = client.post("/api/courses/",
+                          json={"course_name": "Test Course"},
+                          headers=auth(kayaoguz_token))
+        assert res.status_code == 201
+        cid = res.json()["course_id"]
+    
+        create_notification(client, kayaoguz_token, cid,
+                            title="Material Uploaded", message="New PDF added.")
+        res = client.get("/api/notifications/", headers=auth(kayaoguz_token))
+        assert res.status_code == 200
+        titles = [n["title"] for n in res.json()["notifications"]]
+>       assert "Material Uploaded" in titles
+E       AssertionError: assert 'Material Uploaded' in []
+
+tests\test_notifications.py:211: AssertionError
+============================== warnings summary ===============================
+schemas\admin.py:7
+  D:\AI-Supported-Learning-System\backend\tests\..\schemas\admin.py:7: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class AdminOut(BaseModel):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_notifications.py::TestGetNotifications::test_kayaoguz_sees_notifications_for_his_courses
+=================== 1 failed, 18 passed, 1 warning in 6.02s ===================

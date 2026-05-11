@@ -1,0 +1,45 @@
+============================= test session starts =============================
+platform win32 -- Python 3.9.13, pytest-8.4.2, pluggy-1.6.0 -- D:\AI-Supported-Learning-System\backend\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\AI-Supported-Learning-System\backend
+plugins: anyio-4.12.1, cov-7.1.0
+collecting ... collected 30 items
+
+tests/test_lessons.py::TestLessonUpload::test_kayaoguz_can_upload_lesson PASSED [  3%]
+tests/test_lessons.py::TestLessonUpload::test_duplicate_week_title_rejected PASSED [  6%]
+tests/test_lessons.py::TestLessonUpload::test_student_cannot_upload_lesson PASSED [ 10%]
+tests/test_lessons.py::TestLessonUpload::test_no_token_cannot_upload_lesson PASSED [ 13%]
+tests/test_lessons.py::TestLessonUpload::test_multiple_weeks_can_be_uploaded PASSED [ 16%]
+tests/test_lessons.py::TestLessonRetrieval::test_get_lessons_by_course PASSED [ 20%]
+tests/test_lessons.py::TestLessonRetrieval::test_get_single_lesson PASSED [ 23%]
+tests/test_lessons.py::TestLessonRetrieval::test_get_nonexistent_lesson_returns_404 PASSED [ 26%]
+tests/test_lessons.py::TestLessonRetrieval::test_get_sections PASSED     [ 30%]
+tests/test_lessons.py::TestLessonRetrieval::test_student_can_get_lessons_by_course PASSED [ 33%]
+tests/test_lessons.py::TestLessonFeedback::test_kayaoguz_can_submit_feedback PASSED [ 36%]
+tests/test_lessons.py::TestLessonFeedback::test_feedback_with_custom_prompt PASSED [ 40%]
+tests/test_lessons.py::TestLessonFeedback::test_student_cannot_submit_feedback PASSED [ 43%]
+tests/test_lessons.py::TestLessonFeedback::test_feedback_on_nonexistent_lesson PASSED [ 46%]
+tests/test_lessons.py::TestLessonFeedback::test_kayaoguz_can_update_preview_question PASSED [ 50%]
+tests/test_lessons.py::TestLessonFeedback::test_student_cannot_update_preview_question PASSED [ 53%]
+tests/test_lessons.py::TestSectionApproval::test_kayaoguz_can_approve_section PASSED [ 56%]
+tests/test_lessons.py::TestSectionApproval::test_approve_section_without_draft_rejected PASSED [ 60%]
+tests/test_lessons.py::TestSectionApproval::test_student_cannot_approve_section PASSED [ 63%]
+tests/test_lessons.py::TestSectionApproval::test_kayaoguz_can_unapprove_section PASSED [ 66%]
+tests/test_lessons.py::TestSectionApproval::test_invalid_section_index_rejected PASSED [ 70%]
+tests/test_lessons.py::TestLessonPublish::test_publish_without_approved_sections_rejected PASSED [ 73%]
+tests/test_lessons.py::TestLessonPublish::test_kayaoguz_can_publish_lesson PASSED [ 76%]
+tests/test_lessons.py::TestLessonPublish::test_student_cannot_publish PASSED [ 80%]
+tests/test_lessons.py::TestLessonPublish::test_toggle_publish_true PASSED [ 83%]
+tests/test_lessons.py::TestLessonPublish::test_toggle_publish_false PASSED [ 86%]
+tests/test_lessons.py::TestLessonChat::test_emiray_can_start_chat_on_published_lesson PASSED [ 90%]
+tests/test_lessons.py::TestLessonChat::test_yasemin_cannot_chat_on_unpublished_lesson PASSED [ 93%]
+tests/test_lessons.py::TestLessonChat::test_no_token_cannot_start_chat PASSED [ 96%]
+tests/test_lessons.py::TestLessonChat::test_emiray_starting_chat_twice_returns_same_chat PASSED [100%]
+
+============================== warnings summary ===============================
+schemas\admin.py:7
+  D:\AI-Supported-Learning-System\backend\tests\..\schemas\admin.py:7: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class AdminOut(BaseModel):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 30 passed, 1 warning in 9.76s ========================

@@ -10,7 +10,7 @@ import uuid
 
 from sqlalchemy.orm import Session, joinedload
 
-from core.auth import get_current_user
+from core.auth import get_current_user, require_student
 from database import get_db
 from models import Chat, Message, User
 from services.rag_manager import RAGManager
@@ -78,7 +78,7 @@ def _get_db_user(db: Session, username: str) -> User:
 
 @router.get("/")
 def list_chats(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_student),
     db: Session = Depends(get_db),
 ):
     db_user = _get_db_user(db, current_user["username"])
@@ -137,7 +137,7 @@ def get_streak(current_user=Depends(get_current_user), db: Session = Depends(get
 @router.post("/", status_code=201)
 def create_chat(
     body: CreateChatRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_student),
     db: Session = Depends(get_db),
 ):
     db_user = _get_db_user(db, current_user["username"])
@@ -173,7 +173,7 @@ def create_chat(
 @router.delete("/{chat_id}")
 def remove_chat(
     chat_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_student),
     db: Session = Depends(get_db),
 ):
     db_user = _get_db_user(db, current_user["username"])
@@ -195,7 +195,7 @@ class RenameRequest(BaseModel):
 def rename(
     chat_id: int,
     body: RenameRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_student),
     db: Session = Depends(get_db),
 ):
     db_user = _get_db_user(db, current_user["username"])
@@ -230,7 +230,7 @@ MAX_IMAGE_SIZE_MB = 5
 def send_message(
     chat_id: int,
     body: SendMessageRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_student),
     db: Session = Depends(get_db),
 ):
     db_user = _get_db_user(db, current_user["username"])
@@ -357,7 +357,7 @@ async def send_image_question(
     question: str = Form(...),
     stream: bool = Form(True),
     image: UploadFile = File(...),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_student),
     db: Session = Depends(get_db),
 ):
     db_user = _get_db_user(db, current_user["username"])
@@ -561,7 +561,7 @@ async def send_image_question(
 @router.post("/{chat_id}/regenerate")
 def regenerate(
     chat_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_student),
     db: Session = Depends(get_db),
 ):
     db_user = _get_db_user(db, current_user["username"])
@@ -645,7 +645,7 @@ class UpdateSettingsRequest(BaseModel):
 def update_settings(
     chat_id: int,
     body: UpdateSettingsRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_student),
     db: Session = Depends(get_db),
 ):
     db_user = _get_db_user(db, current_user["username"])

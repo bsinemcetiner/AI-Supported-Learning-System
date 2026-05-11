@@ -1,0 +1,42 @@
+============================= test session starts =============================
+platform win32 -- Python 3.9.13, pytest-8.4.2, pluggy-1.6.0 -- D:\AI-Supported-Learning-System\backend\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\AI-Supported-Learning-System\backend
+plugins: anyio-4.12.1, cov-7.1.0
+collecting ... collected 27 items
+
+tests/test_chats.py::TestChatCreation::test_emiray_can_create_chat PASSED [  3%]
+tests/test_chats.py::TestChatCreation::test_chat_with_starter_message PASSED [  7%]
+tests/test_chats.py::TestChatCreation::test_no_token_cannot_create_chat PASSED [ 11%]
+tests/test_chats.py::TestChatCreation::test_teacher_cannot_create_chat PASSED [ 14%]
+tests/test_chats.py::TestChatCreation::test_chat_with_different_tones PASSED [ 18%]
+tests/test_chats.py::TestChatHistory::test_emiray_can_list_her_chats PASSED [ 22%]
+tests/test_chats.py::TestChatHistory::test_users_cannot_see_each_others_chats PASSED [ 25%]
+tests/test_chats.py::TestChatHistory::test_empty_chat_list_returns_empty_dict PASSED [ 29%]
+tests/test_chats.py::TestChatHistory::test_no_token_cannot_list_chats PASSED [ 33%]
+tests/test_chats.py::TestChatHistory::test_chat_contains_correct_fields PASSED [ 37%]
+tests/test_chats.py::TestSendMessage::test_emiray_can_send_message PASSED [ 40%]
+tests/test_chats.py::TestSendMessage::test_message_appears_in_chat_history PASSED [ 44%]
+tests/test_chats.py::TestSendMessage::test_cannot_send_to_nonexistent_chat PASSED [ 48%]
+tests/test_chats.py::TestSendMessage::test_cannot_send_to_another_users_chat PASSED [ 51%]
+tests/test_chats.py::TestSendMessage::test_no_token_cannot_send_message PASSED [ 55%]
+tests/test_chats.py::TestSendMessage::test_multiple_students_send_messages PASSED [ 59%]
+tests/test_chats.py::TestChatOperations::test_emiray_can_rename_chat PASSED [ 62%]
+tests/test_chats.py::TestChatOperations::test_rename_with_empty_title_rejected PASSED [ 66%]
+tests/test_chats.py::TestChatOperations::test_cannot_rename_another_users_chat PASSED [ 70%]
+tests/test_chats.py::TestChatOperations::test_betul_can_delete_chat PASSED [ 74%]
+tests/test_chats.py::TestChatOperations::test_cannot_delete_another_users_chat PASSED [ 77%]
+tests/test_chats.py::TestChatOperations::test_delete_nonexistent_chat PASSED [ 81%]
+tests/test_chats.py::TestChatOperations::test_update_chat_settings PASSED [ 85%]
+tests/test_chats.py::TestChatOperations::test_update_only_tone PASSED    [ 88%]
+tests/test_chats.py::TestChatOperations::test_cannot_update_another_users_chat_settings PASSED [ 92%]
+tests/test_chats.py::TestRegenerate::test_cannot_regenerate_empty_chat PASSED [ 96%]
+tests/test_chats.py::TestRegenerate::test_cannot_regenerate_another_users_chat PASSED [100%]
+
+============================== warnings summary ===============================
+schemas\admin.py:7
+  D:\AI-Supported-Learning-System\backend\tests\..\schemas\admin.py:7: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class AdminOut(BaseModel):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 27 passed, 1 warning in 9.64s ========================
