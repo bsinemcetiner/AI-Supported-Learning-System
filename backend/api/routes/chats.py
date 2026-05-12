@@ -7,6 +7,7 @@ from typing import Optional
 import json
 from pathlib import Path
 import uuid
+import re
 
 from sqlalchemy.orm import Session, joinedload
 
@@ -225,6 +226,115 @@ ALLOWED_IMAGE_CONTENT_TYPES = {
 }
 
 MAX_IMAGE_SIZE_MB = 5
+RELEVANCE_BLOCKED_REPLY = (
+    "This image does not seem related to the selected course or lesson. "
+    "Please upload an image that belongs to this chat's course/lesson content, "
+    "or open the correct course chat."
+)
+
+RELEVANCE_STOPWORDS = {
+    # English common words
+    "the", "and", "or", "to", "of", "in", "on", "for", "with", "a", "an",
+    "is", "are", "was", "were", "be", "been", "being", "this", "that",
+    "these", "those", "it", "its", "as", "at", "by", "from", "into",
+    "about", "than", "then", "so", "if", "not", "no", "yes", "can",
+    "could", "would", "should", "must", "may", "might", "will", "shall",
+    "do", "does", "did", "done", "use", "used", "using", "only", "also",
+    "very", "more", "most", "some", "any", "each", "every", "all",
+
+    # Generic lesson/chat words
+    "student", "uploaded", "image", "screenshot", "question", "answer",
+    "lesson", "section", "course", "material", "content", "page", "pages",
+    "example", "examples", "explain", "explanation", "concept", "topic",
+
+    # Turkish common words
+    "ve", "veya", "ile", "için", "bu", "şu", "bir", "olan", "olarak",
+    "ders", "konu", "materyal", "görsel", "resim", "soru", "cevap",
+    "anlat", "anlatır", "mısın", "misin", "nedir", "ne", "nasıl",
+
+    # Too generic human/social words
+    "people", "person", "human", "humans", "being", "beings", "means",
+    "public", "private", "problem", "issue", "issues", "risk", "risks",
+    "important", "rule", "rules", "principle", "principles",
+}
+
+WEAK_RELEVANCE_TOKENS = {
+    # Programming tokens that can appear in unrelated screenshots too
+    "public", "private", "protected", "static", "class", "object", "method",
+    "function", "return", "string", "number", "value", "values", "data",
+    "type", "types", "list", "array", "true", "false", "null", "void",
+
+    # Generic academic/social tokens
+    "principle", "problem", "issue", "people", "human", "public", "only",
+    "used", "using", "means", "risk", "risks", "important", "rule",
+}
+
+
+def _extract_relevance_tokens(text: str) -> set[str]:
+    if not text:
+        return set()
+
+    text = text.lower()
+
+    tokens = re.findall(r"[a-zA-ZğüşöçıİĞÜŞÖÇ0-9#+.]{3,}", text)
+
+    cleaned_tokens = set()
+
+    for token in tokens:
+        token = token.strip(".,:;!?()[]{}\"'`")
+
+        if not token:
+            continue
+
+        if token in RELEVANCE_STOPWORDS:
+            continue
+
+        if token.isdigit():
+            continue
+
+        cleaned_tokens.add(token)
+
+    return cleaned_tokens
+
+
+def _is_image_related_to_selected_context(
+    *,
+    extracted_text: str,
+    question: str,
+    selected_context: str,
+) -> bool:
+    """
+    The uploaded image must share meaningful, domain-specific tokens with the
+    selected course/lesson context. Weak/common overlaps like 'public', 'people',
+    'principle', 'used' are ignored.
+    """
+    if not selected_context or not selected_context.strip():
+        return False
+
+    image_side_tokens = _extract_relevance_tokens(f"{question}\n{extracted_text}")
+    context_tokens = _extract_relevance_tokens(selected_context)
+
+    if not image_side_tokens or not context_tokens:
+        return False
+
+    overlap = image_side_tokens.intersection(context_tokens)
+
+    strong_overlap = {
+        token
+        for token in overlap
+        if token not in WEAK_RELEVANCE_TOKENS
+        and len(token) >= 4
+    }
+
+    # Debug için geçici açabilirsin:
+    print("IMAGE_RELEVANCE_DEBUG:", {
+        "image_tokens_sample": sorted(list(image_side_tokens))[:40],
+        "overlap": sorted(list(overlap))[:40],
+        "strong_overlap": sorted(list(strong_overlap))[:40],
+        "strong_overlap_count": len(strong_overlap),
+    })
+
+    return len(strong_overlap) >= 3
 
 @router.post("/{chat_id}/messages")
 def send_message(
@@ -435,6 +545,43 @@ async def send_image_question(
 
     lesson_params = _get_lesson_ai_params(db, chat.lesson_id)
 
+    selected_context = ""
+
+    if chat.lesson_id or chat.course_id:
+        selected_context = _get_chat_context(
+            db,
+            chat,
+            f"{clean_question}\n{extracted_text}"
+        )
+
+        is_related = _is_image_related_to_selected_context(
+            extracted_text=extracted_text,
+            question=clean_question,
+            selected_context=selected_context,
+        )
+
+        if not is_related:
+            assistant_message = Message(
+                chat_id=chat.id,
+                sender="assistant",
+                content=RELEVANCE_BLOCKED_REPLY,
+            )
+            db.add(assistant_message)
+            db.commit()
+
+            if stream:
+                def blocked_stream():
+                    yield f"data: {json.dumps({'delta': RELEVANCE_BLOCKED_REPLY})}\n\n"
+                    yield f"data: {json.dumps({'done': True, 'extracted_text': extracted_text})}\n\n"
+
+                return StreamingResponse(blocked_stream(), media_type="text/event-stream")
+
+            return {
+                "role": "assistant",
+                "content": RELEVANCE_BLOCKED_REPLY,
+                "extracted_text": extracted_text,
+            }
+
     image_context = f"""
     The student uploaded an image/screenshot.
 
@@ -444,40 +591,25 @@ async def send_image_question(
     Important rules:
     - The student's question is about the uploaded image.
     - Use the OCR text above as the primary source.
-    - Do NOT answer from previous chat messages, lesson materials, or course materials unless the student explicitly asks to connect the image with the lesson.
+    - If this chat is connected to a course or lesson, the answer must stay within that selected course/lesson.
+    - Do not explain unrelated topics from other courses or lessons.
     - If the OCR text is incomplete or unclear, say that the screenshot text is partly unclear and explain only what can be read.
     """.strip()
 
-    question_lower = clean_question.lower()
-
-    wants_course_connection = any(
-        phrase in question_lower
-        for phrase in [
-            "according to the lesson",
-            "according to course",
-            "course material",
-            "lesson material",
-            "relate to the lesson",
-            "connect to the lesson",
-            "compare with the lesson",
-        ]
-    )
-
-    if wants_course_connection:
-        lesson_context = _get_chat_context(db, chat, clean_question)
-
-        if lesson_context and lesson_context.strip():
-            context = f"""
+    if selected_context and selected_context.strip():
+        context = f"""
     Uploaded image context:
     {image_context}
 
-    Relevant course / lesson context:
-    {lesson_context}
+    Selected course / lesson context:
+    {selected_context}
 
-    Use the uploaded image as the main source. Use the course context only to support or connect the explanation.
+    Rules:
+    - The uploaded image has already passed a relevance check.
+    - Use the uploaded image as the main source.
+    - Use the selected course/lesson context as the boundary.
+    - Do not explain topics outside the selected course/lesson.
     """.strip()
-        else:
-            context = image_context
     else:
         context = image_context
 
