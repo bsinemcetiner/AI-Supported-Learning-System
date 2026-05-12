@@ -3,6 +3,7 @@ import { LassieLogo } from "./components/LassieLogo";
 import { token as tokenStore, chats as chatsApi, settings as settingsApi } from "./services/api";
 import type { User, ChatMap, TeachingMode, TeachingTone } from "./types";
 import StudentCalendar from "./pages/StudentCalendar";
+import NotesPage from "./pages/NotesPage";
 import AuthPage from "./pages/AuthPage";
 import DashboardPage from "./pages/DashboardPage";
 import ChatPage from "./pages/ChatPage";
@@ -20,7 +21,7 @@ function StudentSidebar({
 }: {
   username: string;
   dashView: string;
-  onDashView: (v: "dashboard" | "browse" | "calendar") => void;
+  onDashView: (v: "dashboard" | "browse" | "calendar" | "notes") => void;
   onLogout: () => void;
   onSettings: () => void;
   chatMap: ChatMap;
@@ -55,6 +56,7 @@ function StudentSidebar({
     { id: "dashboard", label: "Dashboard", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg> },
     { id: "browse",    label: "Browse",    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> },
     { id: "calendar",  label: "Calendar",  icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
+    { id: "notes",     label: "My Notes",  icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> },
   ];
 
   const collapsed = !sidebarOpen;
@@ -131,8 +133,7 @@ function StudentSidebar({
             const active = dashView === item.id;
             return (
               <button key={item.id}
-                onClick={() => onDashView(item.id as "dashboard" | "browse" | "calendar")}
-                title={item.label}
+                onClick={() => onDashView(item.id as "dashboard" | "browse" | "calendar" | "notes")}
                 style={{ width: 40, height: 40, borderRadius: 12, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s", background: active ? "linear-gradient(135deg, #f97316, #ec4899)" : "transparent", color: active ? "#fff" : textSec, boxShadow: active ? "0 4px 14px rgba(249,115,22,0.3)" : "none" }}>
                 {item.icon}
               </button>
@@ -150,7 +151,7 @@ function StudentSidebar({
           const hovered = hoveredItem === item.id;
           return (
             <button key={item.id}
-              onClick={() => onDashView(item.id as "dashboard" | "browse" | "calendar")}
+              onClick={() => onDashView(item.id as "dashboard" | "browse" | "calendar" | "notes")}
               onMouseEnter={() => setHoveredItem(item.id)}
               onMouseLeave={() => setHoveredItem(null)}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", borderRadius: 14, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: "0.88rem", fontWeight: active ? 700 : 500, marginBottom: 3, transition: "all 0.15s", background: active ? "linear-gradient(135deg, #f97316, #ec4899)" : hovered ? hoverBg : "transparent", color: active ? "#fff" : textSec, boxShadow: active ? "0 4px 14px rgba(249,115,22,0.3)" : "none", textAlign: "left" }}>
@@ -291,7 +292,7 @@ export default function App() {
   const [dashboardCourseId, setDashboardCourseId] = useState<string | null>(() => localStorage.getItem("last_course_id"));
   const [streaming, setStreaming] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [dashView, setDashView] = useState<"dashboard" | "browse" | "calendar">(() => (localStorage.getItem("last_dash_view") as any) || "dashboard");
+  const [dashView, setDashView] = useState<"dashboard" | "browse" | "calendar" | "notes">(() => (localStorage.getItem("last_dash_view") as any) || "dashboard");
   const [teachingMode, setTeachingMode] = useState<TeachingMode>("direct");
   const [teachingTone, setTeachingTone] = useState<TeachingTone>("Professional Tutor");
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
@@ -560,14 +561,21 @@ export default function App() {
         />
 
         <div style={{ marginLeft: sidebarOpen ? 256 : 64, flex: 1, position: "relative", overflow: "hidden", background: mainBg, transition: "margin-left 0.25s ease, background 0.3s" }}>
-          <div style={{ position: "absolute", top: 18, right: 24, zIndex: 300 }}>
-            <NotificationBell />
-          </div>
+          {/* Notification bell — only shown on dashboard, not over chat (chat has its own header) */}
+          {!(activeChatId && activeChat) && (
+            <div style={{ position: "absolute", top: 18, right: 24, zIndex: 300 }}>
+              <NotificationBell />
+            </div>
+          )}
 
           <div style={{ height: "100%", overflowY: "auto", display: activeChatId && activeChat ? "none" : "block" }}>
             <div style={{ maxWidth: 1100, margin: "0 auto", padding: "2rem 4.5rem 2rem 2.5rem" }}>
               {dashView === "calendar" ? (
                 <StudentCalendar darkMode={darkMode} />
+              ) : dashView === "notes" ? (
+                <div style={{ height: "calc(100vh - 4rem)", overflow: "hidden" }}>
+                  <NotesPage darkMode={darkMode} />
+                </div>
               ) : (
                 <DashboardPage
                   teachingMode={teachingMode}

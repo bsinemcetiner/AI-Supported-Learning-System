@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import type { Chat } from "../types";
 import { API_ORIGIN } from "../services/api";
 import { TTSButton } from "../components/TTSButton";
+import NotePanel from "../components/NotePanel";
 
 type TeachingMode = "direct" | "hint_first" | "socratic" | "quiz_me";
 type TeachingTone =
@@ -21,6 +22,7 @@ interface ChatPageProps {
   teachingTone: TeachingTone;
   onModeChange: (mode: TeachingMode) => void;
   onToneChange: (tone: TeachingTone) => void;
+  darkMode?: boolean;
 }
 
 
@@ -440,6 +442,7 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
   const [selectedImagePreviewUrl, setSelectedImagePreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [noteOpen, setNoteOpen] = useState(false);
 
 
   // Dark mode colors
@@ -560,11 +563,12 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: pageBg }}>
+    <div style={{ display: "flex", flexDirection: "row", height: "100vh", overflow: "hidden" }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", background: pageBg }}>
       {/* --- HEADER --- */}
-      <div style={{ padding: "0.75rem 1.5rem", background: headerBg, borderBottom: `1px solid ${headerBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.04)", position: "relative", zIndex: 50, flexWrap: "wrap" }}>
+      <div style={{ padding: "0.75rem 1.5rem", background: headerBg, borderBottom: `1px solid ${headerBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.04)", position: "relative", zIndex: 50 }}>
         {/* Left: back + icon + title */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flex: "0 0 auto" }}>
           <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: "50%", border: `1px solid ${inputBorder}`, background: headerBg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           </button>
@@ -579,8 +583,8 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
           </div>
         </div>
 
-        {/* Right: mode + tone dropdowns + regenerate */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginRight: 52 }}>
+        {/* Center + Right: mode + tone dropdowns + regenerate + notes */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: "1 1 auto", justifyContent: "flex-end", flexWrap: "wrap" }}>
           {/* Mode dropdown */}
           <div style={{ position: "relative" }}>
             <select
@@ -617,6 +621,26 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
               Regenerate
             </button>
           )}
+
+          {/* Notes toggle button */}
+          <button
+            onClick={() => setNoteOpen((v) => !v)}
+            title={noteOpen ? "Close notes" : "Take notes"}
+            style={{
+              padding: "7px 12px", borderRadius: 10,
+              border: `1.5px solid ${noteOpen ? "#f97316" : inputBorder}`,
+              background: noteOpen ? "rgba(249,115,22,0.1)" : headerBg,
+              color: noteOpen ? "#f97316" : selectColor,
+              fontSize: "0.82rem", fontWeight: 600, cursor: "pointer",
+              fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6,
+              transition: "all 0.15s", flexShrink: 0,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+            {noteOpen ? "Close Notes" : "Notes"}
+          </button>
         </div>
       </div>
 
@@ -1026,6 +1050,21 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
+    </div>
+
+    {noteOpen && (
+      <NotePanel
+        chatId={chatId}
+        courseId={chat.course_id}
+        lessonId={chat.lesson_id}
+        sectionIndex={chat.section_index ?? null}
+        courseName={chat.course_id ? chat.course_id.split("::")[1] ?? chat.course_id : null}
+        lessonTitle={chat.title ?? null}
+        sectionTitle={null}
+        darkMode={darkMode}
+        onClose={() => setNoteOpen(false)}
+      />
+    )}
     </div>
   );
 }

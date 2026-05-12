@@ -14,11 +14,13 @@ from api.routes.notifications import router as notifications_router
 from api.routes.tts import router as tts_router
 from api.routes.settings import router as settings_router
 from api.routes.analytics import router as analytics_router
+from api.routes.notes import router as notes_router
 
 from database import Base, engine
 from models import User, Course, Lesson, Chat, Message, Material, CourseMaterial
 from models.calendar_event import CalendarEvent
 from models.question_log import QuestionLog
+from models.student_note import StudentNote
 
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -64,5 +66,6 @@ app.include_router(events_router, prefix="/api")
 app.include_router(notifications_router, prefix="/api")
 app.include_router(tts_router, prefix="/api")
 app.include_router(analytics_router, prefix="/api")
+app.include_router(notes_router, prefix="/api")
 
 Base.metadata.create_all(bind=engine)
