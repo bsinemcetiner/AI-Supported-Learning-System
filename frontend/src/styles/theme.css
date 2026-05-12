@@ -377,3 +377,130 @@ h1, h2, h3 {
   background: var(--bg2);
   color: var(--text-mid);
 }
+
+/* ── Assistant Markdown Styling ── */
+.message-bubble.assistant {
+  white-space: normal;
+}
+
+.message-bubble.assistant h1,
+.message-bubble.assistant h2,
+.message-bubble.assistant h3 {
+  font-family: 'Fraunces', serif;
+  color: var(--orange);
+  margin-top: 1.1rem;
+  margin-bottom: 0.45rem;
+  line-height: 1.25;
+}
+
+.message-bubble.assistant h1 {
+  font-size: 1.45rem;
+}
+
+.message-bubble.assistant h2 {
+  font-size: 1.25rem;
+}
+
+.message-bubble.assistant h3 {
+  font-size: 1.08rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.message-bubble.assistant h3::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--orange), var(--orange2));
+  box-shadow: 0 0 0 4px var(--orange-gl);
+  flex-shrink: 0;
+}
+
+.message-bubble.assistant p {
+  margin: 0.45rem 0 0.8rem;
+  color: var(--text);
+  line-height: 1.75;
+}
+
+.message-bubble.assistant ul,
+.message-bubble.assistant ol {
+  margin: 0.45rem 0 0.9rem 1.35rem;
+  padding-left: 1rem;
+}
+
+.message-bubble.assistant li {
+  margin-bottom: 0.35rem;
+  line-height: 1.65;
+}
+
+.message-bubble.assistant strong {
+  color: var(--orange);
+  font-weight: 800;
+}
+
+.message-bubble.assistant blockquote {
+  margin: 0.8rem 0;
+  padding: 0.75rem 1rem;
+  background: var(--orange-lt);
+  border-left: 4px solid var(--orange);
+  border-radius: var(--r-md);
+  color: var(--text-mid);
+}
+
+.message-bubble.assistant hr {
+  border: none;
+  height: 1px;
+  background: var(--line);
+  margin: 1rem 0;
+}
+
+/* ── Chat assistant markdown headings ── */
+.chat-messages .message-bubble.assistant h1,
+.chat-messages .message-bubble.assistant h2,
+.chat-messages .message-bubble.assistant h3,
+.chat-messages .assistant h1,
+.chat-messages .assistant h2,
+.chat-messages .assistant h3,
+.chat-messages h1,
+.chat-messages h2,
+.chat-messages h3 {
+  color: var(--orange) !important;
+  font-family: 'Fraunces', serif !important;
+  font-weight: 700 !important;
+  margin-top: 1.1rem !important;
+  margin-bottom: 0.45rem !important;
+  line-height: 1.25 !important;
+}
+
+.chat-messages h1 {
+  font-size: 1.45rem !important;
+}
+
+.chat-messages h2 {
+  font-size: 1.3rem !important;
+}
+
+.chat-messages h3 {
+  font-size: 1.13rem !important;
+}
+
+.chat-messages .message-bubble.assistant p,
+.chat-messages .assistant p {
+  margin: 0.45rem 0 0.8rem !important;
+  line-height: 1.75 !important;
+}
+
+.chat-messages .message-bubble.assistant ul,
+.chat-messages .message-bubble.assistant ol,
+.chat-messages .assistant ul,
+.chat-messages .assistant ol {
+  margin: 0.45rem 0 0.9rem 1.3rem !important;
+  padding-left: 1rem !important;
+}
+
+.chat-messages .message-bubble.assistant li,
+.chat-messages .assistant li {
+  margin-bottom: 0.35rem !important;
+}

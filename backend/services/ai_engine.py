@@ -1,6 +1,7 @@
 import os
 import re
 from groq import Groq
+from typing import Optional
 
 
 def _normalize_latex(text: str) -> str:
@@ -44,6 +45,42 @@ def _get_client() -> Groq:
 def _get_model_name() -> str:
     # İstersen .env içine GROQ_MODEL de koyabilirsin
     return os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
+
+def _get_explicit_requested_language(text: str) -> Optional[str]:
+    if not text:
+        return None
+
+    lowered = text.lower()
+
+    english_requests = [
+        "ingilizce",
+        "ingilizce anlat",
+        "ingilizce açıkla",
+        "english",
+        "in english",
+        "explain in english",
+        "answer in english",
+        "write in english",
+    ]
+
+    turkish_requests = [
+        "türkçe",
+        "turkish",
+        "in turkish",
+        "türkçe anlat",
+        "türkçe açıkla",
+        "answer in turkish",
+        "explain in turkish",
+        "write in turkish",
+    ]
+
+    if any(phrase in lowered for phrase in english_requests):
+        return "English"
+
+    if any(phrase in lowered for phrase in turkish_requests):
+        return "Turkish"
+
+    return None
 
 def detect_response_language(text: str) -> str:
     """
@@ -119,21 +156,36 @@ def _resolve_response_language(
 ) -> str:
     """
     Priority:
-    1. Teacher-written feedback/custom instruction language
-    2. Latest user/student message language
-    3. English fallback
+    1. If the latest student/teacher message explicitly requests a language,
+       use that language.
+    2. If teacher feedback/custom instruction explicitly requests a language,
+       use that language.
+    3. For JSON lesson generation, teacher feedback language can decide output language.
+    4. Otherwise, answer in the latest user's detected language.
     """
+    latest_user_message = _get_latest_user_message(messages)
+
+    explicit_user_language = _get_explicit_requested_language(latest_user_message)
+    if explicit_user_language:
+        return explicit_user_language
+
     teacher_signal = _extract_teacher_language_signal(
         custom_prompt=custom_prompt,
         feedback_history=feedback_history or [],
     )
 
-    if teacher_signal:
-        detected = detect_response_language(teacher_signal)
-        if detected == "Turkish":
+    explicit_teacher_language = _get_explicit_requested_language(teacher_signal)
+    if explicit_teacher_language:
+        return explicit_teacher_language
+
+    # For teacher-side lesson/section generation, the latest user message is often
+    # an internal English prompt like "Create the lesson page...".
+    # In that case, teacher feedback should control the language.
+    if custom_prompt and teacher_signal:
+        teacher_detected_language = detect_response_language(teacher_signal)
+        if teacher_detected_language == "Turkish":
             return "Turkish"
 
-    latest_user_message = _get_latest_user_message(messages)
     return detect_response_language(latest_user_message)
 
 
@@ -306,6 +358,76 @@ STRICT RULES — never break these:
     base = mode_instructions.get(mode, mode_instructions["direct"])
     return style_mode_bridge + "\n" + base
 
+def _is_json_generation_prompt(custom_prompt: str = "") -> bool:
+    prompt = (custom_prompt or "").lower()
+
+    json_signals = [
+        "return only valid json",
+        "return a json object",
+        "pure json only",
+        '"slides"',
+        '"learning_objectives"',
+        "never output markdown",
+        "do not include markdown",
+    ]
+
+    return any(signal in prompt for signal in json_signals)
+
+
+def _get_answer_quality_instruction(mode: str, custom_prompt: str = "") -> str:
+    if _is_json_generation_prompt(custom_prompt):
+        return """
+OUTPUT QUALITY:
+- This task requires structured JSON output.
+- Keep the exact JSON structure requested by the teacher/system prompt.
+- Do not add markdown headings outside JSON.
+- Improve readability only inside human-facing JSON values such as titles, body text, highlights, summaries, points, and closing sentences.
+""".strip()
+
+    if mode in ("socratic", "hint_first", "quiz_me"):
+        return """
+ANSWER QUALITY:
+- Keep the response aligned with the selected teaching mode.
+- Do not add long headings, long examples, or long bullet lists in this mode.
+- Be clear, focused, and easy to read.
+""".strip()
+
+    return """
+ANSWER QUALITY — STRICT FOR DIRECT CHAT ANSWERS:
+For normal/direct explanations, do NOT write one flat block of text.
+
+If the answer is longer than 5 sentences, you MUST use readable formatting:
+- Use short markdown headings with ###.
+- Use markdown headings such as ### Kısa fikir, ### Örnek, ### Kod örneği, ### Özet for longer explanations.
+- Do not use raw HTML or inline CSS for colors. The frontend will style headings automatically.
+- Split ideas into short paragraphs.
+- Use bullet points or numbered steps when explaining multiple items.
+- Include at least one relevant example when it helps.
+- For programming topics, include a small code example when useful.
+- Include a short recap at the end.
+
+Preferred structure for concept explanations:
+### Kısa fikir
+Explain the main idea in 2-3 sentences.
+
+### Nasıl düşünmelisin?
+Break the concept into simple pieces.
+
+### Küçük örnek
+Give a concrete example related to the student's question.
+
+### Kod örneği
+If the topic is programming, show a short code example.
+
+### Özet
+End with 2-4 bullet points.
+
+Important:
+- Do not over-format very short answers.
+- Do not invent unrelated examples.
+- Do not ignore the course context.
+- Keep the response natural and chat-like.
+""".strip()
 
 def _get_first_turn_instruction(mode: str) -> str:
     instructions = {
@@ -374,6 +496,10 @@ def _build_system_instruction(
     style_instruction = _get_style_instruction(teaching_style)
     mode_instruction = _get_mode_instruction(mode)
     cleaned_context = _trim_text(context, 12000)
+    answer_quality_instruction = _get_answer_quality_instruction(
+        mode=mode,
+        custom_prompt=custom_prompt,
+    )
     language_instruction = _build_language_instruction(response_language)
 
     teacher_block = _build_teacher_feedback_block(
@@ -400,6 +526,8 @@ STYLE:
 
 TEACHING MODE:
 {mode_instruction}
+
+{answer_quality_instruction}
 
 {teacher_block}
 
@@ -440,6 +568,8 @@ IMPORTANT BEHAVIOR RULES:
 15. If the student has not answered yet, do not continue solving multiple steps at once.
 
 16. If the user explicitly asks for the full answer, only give it if supported by course context.
+
+17. For normal/direct answers, prefer readable formatting: short headings, clear paragraphs, useful examples, and concise bullet points when helpful.
 {context_usage_note}
 STRICT COURSE BOUNDARY:
 Your knowledge source for lesson questions is ONLY the course context below.
@@ -588,3 +718,4 @@ def stream_ai_response(
         if delta:
             full_answer += delta
             yield _normalize_latex(full_answer)
+
