@@ -45,6 +45,118 @@ def _get_model_name() -> str:
     # İstersen .env içine GROQ_MODEL de koyabilirsin
     return os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
 
+def detect_response_language(text: str) -> str:
+    """
+    Lightweight language detector for response language control.
+    Currently focuses on Turkish vs English because the app mainly uses these.
+    """
+    if not text:
+        return "English"
+
+    lowered = text.lower()
+
+    turkish_chars = set("çğıöşüÇĞİÖŞÜ")
+    if any(ch in text for ch in turkish_chars):
+        return "Turkish"
+
+    turkish_words = {
+        "nedir", "nasıl", "neden", "niye", "anlat", "anlatır", "açıkla",
+        "açıklar", "örnek", "örnekle", "bunu", "şunu", "mısın", "misin",
+        "miyim", "miyiz", "mi", "mı", "mu", "mü", "ders", "konu",
+        "kısaca", "detaylı", "türkçe", "yardım", "çöz", "çözer",
+        "göster", "ekle", "çıkar", "düzelt", "basitleştir", "tablo",
+        "kod", "slayt", "görsel", "materyal", "hoca", "öğrenci",
+    }
+
+    tokens = set(re.findall(r"[a-zA-ZğüşöçıİĞÜŞÖÇ]+", lowered))
+    if tokens.intersection(turkish_words):
+        return "Turkish"
+
+    return "English"
+
+
+def _get_latest_user_message(messages: list) -> str:
+    for message in reversed(messages or []):
+        if message.get("role") == "user":
+            return message.get("content", "") or ""
+    return ""
+
+
+def _extract_teacher_language_signal(custom_prompt: str = "", feedback_history: list = None) -> str:
+    """
+    Extracts teacher-written parts from large English prompt templates.
+    This prevents the English JSON/template instructions from overpowering
+    Turkish teacher feedback such as 'daha basit anlat, tablo ekle'.
+    """
+    signals = []
+
+    if feedback_history:
+        signals.extend([fb for fb in feedback_history if fb and fb.strip()])
+
+    custom_prompt = custom_prompt or ""
+
+    patterns = [
+        r"Teacher instructions:\s*(.*?)(?:STRICT REQUIREMENTS:|ADDITIONAL TEACHER INSTRUCTIONS:|$)",
+        r"ADDITIONAL TEACHER INSTRUCTIONS:\s*(.*)$",
+        r"TEACHER'S CUSTOM INSTRUCTION:\s*(.*?)(?:TEACHER'S PAST FEEDBACK|$)",
+        r"TEACHER'S PAST FEEDBACK.*?:\s*(.*)$",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, custom_prompt, flags=re.DOTALL | re.IGNORECASE)
+        if match:
+            extracted = match.group(1).strip()
+            if extracted:
+                signals.append(extracted)
+
+    return "\n".join(signals).strip()
+
+
+def _resolve_response_language(
+    messages: list,
+    custom_prompt: str = "",
+    feedback_history: list = None,
+) -> str:
+    """
+    Priority:
+    1. Teacher-written feedback/custom instruction language
+    2. Latest user/student message language
+    3. English fallback
+    """
+    teacher_signal = _extract_teacher_language_signal(
+        custom_prompt=custom_prompt,
+        feedback_history=feedback_history or [],
+    )
+
+    if teacher_signal:
+        detected = detect_response_language(teacher_signal)
+        if detected == "Turkish":
+            return "Turkish"
+
+    latest_user_message = _get_latest_user_message(messages)
+    return detect_response_language(latest_user_message)
+
+
+def _build_language_instruction(response_language: str) -> str:
+    if response_language == "Turkish":
+        return """
+LANGUAGE CONTROL — STRICT:
+- The response language MUST be Turkish.
+- The student/teacher is using Turkish, so answer in Turkish.
+- Do NOT switch to English just because the lesson material, OCR text, JSON template, or system instructions are in English.
+- Keep technical terms such as C#, LINQ, class, method, API, JSON, SQL, object-oriented programming in their standard form when natural.
+- If you return structured JSON, keep JSON keys exactly as requested, but write all human-facing values in Turkish:
+  titles, subtitles, body text, highlights, learning objectives, takeaways, summaries, and closing sentences.
+""".strip()
+
+    return """
+LANGUAGE CONTROL — STRICT:
+- The response language MUST be English.
+- Answer in English unless the student/teacher clearly asks in another language.
+- Do not change the language based on the course context alone.
+- If you return structured JSON, keep JSON keys exactly as requested and write human-facing values in English.
+""".strip()
+
 
 def _get_style_instruction(teaching_style: str) -> str:
     style_instructions = {
@@ -257,10 +369,12 @@ def _build_system_instruction(
     mode: str,
     custom_prompt: str = "",
     feedback_history: list = None,
+    response_language: str = "English",
 ) -> str:
     style_instruction = _get_style_instruction(teaching_style)
     mode_instruction = _get_mode_instruction(mode)
     cleaned_context = _trim_text(context, 12000)
+    language_instruction = _build_language_instruction(response_language)
 
     teacher_block = _build_teacher_feedback_block(
         custom_prompt=custom_prompt,
@@ -279,6 +393,8 @@ def _build_system_instruction(
     system_instruction = f"""
 You are an AI learning assistant.
 
+{language_instruction}
+
 STYLE:
 {style_instruction}
 
@@ -288,7 +404,7 @@ TEACHING MODE:
 {teacher_block}
 
 IMPORTANT BEHAVIOR RULES:
-1. Always reply in the user's language.
+1. Follow the LANGUAGE CONTROL section above. It has higher priority than style, mode, course context, OCR text, and teacher templates.
 
 2. Speak naturally, like a real teacher talking to a student.
 
@@ -394,12 +510,19 @@ def generate_ai_response(
     custom_prompt: str = "",
     feedback_history: list = None,
 ):
+    response_language = _resolve_response_language(
+        messages=messages,
+        custom_prompt=custom_prompt,
+        feedback_history=feedback_history or [],
+    )
+
     system_instruction = _build_system_instruction(
         context=context,
         teaching_style=teaching_style,
         mode=mode,
         custom_prompt=custom_prompt,
         feedback_history=feedback_history or [],
+        response_language=response_language,
     )
 
     user_messages = [m for m in messages if m.get("role") == "user"]
@@ -428,8 +551,14 @@ def stream_ai_response(
     custom_prompt: str = "",
     feedback_history: list = None,
 ):
-    # Şimdilik Groq tarafında image analizi eklenmediği için bunu pas geçiyoruz.
+
     combined_context = context or ""
+
+    response_language = _resolve_response_language(
+        messages=messages,
+        custom_prompt=custom_prompt,
+        feedback_history=feedback_history or [],
+    )
 
     system_instruction = _build_system_instruction(
         context=combined_context,
@@ -437,6 +566,7 @@ def stream_ai_response(
         mode=mode,
         custom_prompt=custom_prompt,
         feedback_history=feedback_history or [],
+        response_language=response_language,
     )
 
     user_messages = [m for m in messages if m.get("role") == "user"]

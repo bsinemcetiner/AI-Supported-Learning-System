@@ -368,9 +368,16 @@ def send_message(
 
     context = _get_chat_context(db, chat, body.content)
     if not context.strip():
-        blocked_reply = (
-            "This question is outside the uploaded lesson materials. "
-            "Please ask something related to the course content."
+        blocked_reply = _localized_blocked_reply(
+            body.content,
+            english=(
+                "This question is outside the uploaded lesson materials. "
+                "Please ask something related to the course content."
+            ),
+            turkish=(
+                "Bu soru yüklenen ders materyallerinin dışında görünüyor. "
+                "Lütfen ders içeriğiyle ilgili bir soru sor."
+            ),
         )
 
         if body.stream:
@@ -561,24 +568,34 @@ async def send_image_question(
         )
 
         if not is_related:
+            blocked_reply = _localized_blocked_reply(
+                clean_question,
+                english=RELEVANCE_BLOCKED_REPLY,
+                turkish=(
+                    "Bu görsel seçili ders veya kurs içeriğiyle ilişkili görünmüyor. "
+                    "Lütfen bu sohbete ait ders/kurs içeriğinden bir görsel yükle "
+                    "veya doğru ders sohbetini aç."
+                ),
+            )
+
             assistant_message = Message(
                 chat_id=chat.id,
                 sender="assistant",
-                content=RELEVANCE_BLOCKED_REPLY,
+                content=blocked_reply,
             )
             db.add(assistant_message)
             db.commit()
 
             if stream:
                 def blocked_stream():
-                    yield f"data: {json.dumps({'delta': RELEVANCE_BLOCKED_REPLY})}\n\n"
+                    yield f"data: {json.dumps({'delta': blocked_reply})}\n\n"
                     yield f"data: {json.dumps({'done': True, 'extracted_text': extracted_text})}\n\n"
 
                 return StreamingResponse(blocked_stream(), media_type="text/event-stream")
 
             return {
                 "role": "assistant",
-                "content": RELEVANCE_BLOCKED_REPLY,
+                "content": blocked_reply,
                 "extracted_text": extracted_text,
             }
 
@@ -908,3 +925,7 @@ Section content:
         return _get_materials_text_fallback(db, chat.course_id)
 
     return ""
+
+def _localized_blocked_reply(user_text: str, english: str, turkish: str) -> str:
+    language = ai_engine.detect_response_language(user_text)
+    return turkish if language == "Turkish" else english
