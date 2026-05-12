@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { Chat } from "../types";
 import { API_ORIGIN } from "../services/api";
 import { TTSButton } from "../components/TTSButton";
@@ -417,7 +418,9 @@ function RichLessonView({ content, darkMode = false }: { content: string; darkMo
   }
 
   return (
-    <ReactMarkdown components={{
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
       p: ({ children }) => <p style={{ margin: "0.35rem 0", lineHeight: 1.65 }}>{children}</p>,
       h1: ({ children }) => <h1 style={{ fontSize: "1.1rem", fontWeight: 700, margin: "0.7rem 0 0.35rem" }}>{children}</h1>,
       h2: ({ children }) => <h2 style={{ fontSize: "1rem", fontWeight: 700, margin: "0.6rem 0 0.3rem" }}>{children}</h2>,
@@ -710,6 +713,9 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
                   color: msg.role === "user" ? "#fff" : "#111827",
                   fontSize: "0.92rem",
                   lineHeight: 1.65,
+                  overflowWrap: "anywhere",
+                  wordBreak: "break-word",
+                  overflow: "hidden",
                   boxShadow: msg.role === "user" ? "0 4px 14px rgba(249,115,22,0.3)" : "0 1px 6px rgba(0,0,0,0.06)",
                   border: msg.role === "assistant" ? `1px solid ${asstBorder}` : "none",
                 }}
@@ -750,17 +756,134 @@ export default function ChatPage({ chatId, chat, streaming, animateInitialMessag
                       {formatUserDisplayContent(displayContent || "")}
                     </p>
                   ) : (
-                    <ReactMarkdown components={{
-                      p: ({ children }) => <p style={{ margin: "0.35rem 0", lineHeight: 1.65 }}>{children}</p>,
-                      h1: ({ children }) => <h1 style={{ fontSize: "1.1rem", fontWeight: 700, margin: "0.7rem 0 0.35rem", color: "#111827" }}>{children}</h1>,
-                      h2: ({ children }) => <h2 style={{ fontSize: "1rem", fontWeight: 700, margin: "0.7rem 0 0.35rem", color: "#111827" }}>{children}</h2>,
+                    <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            p: ({ children }) => (
+                              <p style={{ margin: "0.45rem 0 0.8rem", lineHeight: 1.75 }}>
+                                {children}
+                              </p>
+                            ),
+
+                            h1: ({ children }) => (
+                              <h1
+                                style={{
+                                  fontSize: "1.35rem",
+                                  fontWeight: 800,
+                                  margin: "1rem 0 0.45rem",
+                                  color: "#f97316",
+                                  lineHeight: 1.25,
+                                }}
+                              >
+                                {children}
+                              </h1>
+                            ),
+
+                            h2: ({ children }) => (
+                              <h2
+                                style={{
+                                  fontSize: "1.18rem",
+                                  fontWeight: 800,
+                                  margin: "0.9rem 0 0.4rem",
+                                  color: "#f97316",
+                                  lineHeight: 1.25,
+                                }}
+                              >
+                                {children}
+                              </h2>
+                            ),
+
+                            h3: ({ children }) => (
+                              <h3
+                                style={{
+                                  fontSize: "1.05rem",
+                                  fontWeight: 800,
+                                  margin: "0.85rem 0 0.35rem",
+                                  color: "#f97316",
+                                  lineHeight: 1.25,
+                                }}
+                              >
+                                {children}
+                              </h3>
+                            ),
                       ul: ({ children }) => <ul style={{ paddingLeft: "1.3rem", margin: "0.35rem 0" }}>{children}</ul>,
                       ol: ({ children }) => <ol style={{ paddingLeft: "1.3rem", margin: "0.35rem 0" }}>{children}</ol>,
                       li: ({ children }) => <li style={{ marginBottom: "0.2rem" }}>{children}</li>,
+                          table: ({ children }) => (
+                          <div style={{ overflowX: "auto", margin: "0.9rem 0 1rem" }}>
+                            <table
+                              style={{
+                                width: "100%",
+                                borderCollapse: "collapse",
+                                border: "1px solid #fed7aa",
+                                borderRadius: 12,
+                                overflow: "hidden",
+                                fontSize: "0.88rem",
+                              }}
+                            >
+                              {children}
+                            </table>
+                          </div>
+                        ),
+
+                        thead: ({ children }) => (
+                          <thead style={{ background: "#fff7ed" }}>
+                            {children}
+                          </thead>
+                        ),
+
+                        th: ({ children }) => (
+                          <th
+                            style={{
+                              color: "#f97316",
+                              fontWeight: 800,
+                              textAlign: "left",
+                              padding: "0.7rem 0.85rem",
+                              borderBottom: "1px solid #fed7aa",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {children}
+                          </th>
+                        ),
+
+                        td: ({ children }) => (
+                          <td
+                            style={{
+                              padding: "0.65rem 0.85rem",
+                              borderBottom: "1px solid #f3f4f6",
+                              verticalAlign: "top",
+                            }}
+                          >
+                            {children}
+                          </td>
+                        ),
+
+                        tr: ({ children }) => (
+                          <tr>
+                            {children}
+                          </tr>
+                        ),
                       code: ({ className, children, ...props }) => {
                         const isBlock = !props.node?.position || String(children).includes("\n");
                         if (isBlock) return <CopyableCodeBlock>{String(children).replace(/\n$/, "")}</CopyableCodeBlock>;
-                        return <code style={{ background: "#f3f4f6", padding: "0.12rem 0.35rem", borderRadius: 6, fontSize: "0.85rem", fontFamily: "monospace", color: "#374151" }}>{children}</code>;
+                        return (
+                          <code
+                            style={{
+                              background: "#f3f4f6",
+                              padding: "0.12rem 0.35rem",
+                              borderRadius: 6,
+                              fontSize: "0.85rem",
+                              fontFamily: "monospace",
+                              color: "#374151",
+                              whiteSpace: "normal",
+                              overflowWrap: "anywhere",
+                              wordBreak: "break-word",
+                            }}
+                          >
+                            {children}
+                          </code>
+                        );
                       },
                       pre: ({ children }) => <>{children}</>,
                       strong: ({ children }) => <strong style={{ fontWeight: 700, color: asstText }}>{children}</strong>,
