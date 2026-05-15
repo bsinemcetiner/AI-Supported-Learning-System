@@ -7,7 +7,6 @@ from typing import Optional
 import json
 from pathlib import Path
 import uuid
-import re
 
 from sqlalchemy.orm import Session, joinedload
 
@@ -226,115 +225,6 @@ ALLOWED_IMAGE_CONTENT_TYPES = {
 }
 
 MAX_IMAGE_SIZE_MB = 5
-RELEVANCE_BLOCKED_REPLY = (
-    "This image does not seem related to the selected course or lesson. "
-    "Please upload an image that belongs to this chat's course/lesson content, "
-    "or open the correct course chat."
-)
-
-RELEVANCE_STOPWORDS = {
-    # English common words
-    "the", "and", "or", "to", "of", "in", "on", "for", "with", "a", "an",
-    "is", "are", "was", "were", "be", "been", "being", "this", "that",
-    "these", "those", "it", "its", "as", "at", "by", "from", "into",
-    "about", "than", "then", "so", "if", "not", "no", "yes", "can",
-    "could", "would", "should", "must", "may", "might", "will", "shall",
-    "do", "does", "did", "done", "use", "used", "using", "only", "also",
-    "very", "more", "most", "some", "any", "each", "every", "all",
-
-    # Generic lesson/chat words
-    "student", "uploaded", "image", "screenshot", "question", "answer",
-    "lesson", "section", "course", "material", "content", "page", "pages",
-    "example", "examples", "explain", "explanation", "concept", "topic",
-
-    # Turkish common words
-    "ve", "veya", "ile", "için", "bu", "şu", "bir", "olan", "olarak",
-    "ders", "konu", "materyal", "görsel", "resim", "soru", "cevap",
-    "anlat", "anlatır", "mısın", "misin", "nedir", "ne", "nasıl",
-
-    # Too generic human/social words
-    "people", "person", "human", "humans", "being", "beings", "means",
-    "public", "private", "problem", "issue", "issues", "risk", "risks",
-    "important", "rule", "rules", "principle", "principles",
-}
-
-WEAK_RELEVANCE_TOKENS = {
-    # Programming tokens that can appear in unrelated screenshots too
-    "public", "private", "protected", "static", "class", "object", "method",
-    "function", "return", "string", "number", "value", "values", "data",
-    "type", "types", "list", "array", "true", "false", "null", "void",
-
-    # Generic academic/social tokens
-    "principle", "problem", "issue", "people", "human", "public", "only",
-    "used", "using", "means", "risk", "risks", "important", "rule",
-}
-
-
-def _extract_relevance_tokens(text: str) -> set[str]:
-    if not text:
-        return set()
-
-    text = text.lower()
-
-    tokens = re.findall(r"[a-zA-ZğüşöçıİĞÜŞÖÇ0-9#+.]{3,}", text)
-
-    cleaned_tokens = set()
-
-    for token in tokens:
-        token = token.strip(".,:;!?()[]{}\"'`")
-
-        if not token:
-            continue
-
-        if token in RELEVANCE_STOPWORDS:
-            continue
-
-        if token.isdigit():
-            continue
-
-        cleaned_tokens.add(token)
-
-    return cleaned_tokens
-
-
-def _is_image_related_to_selected_context(
-    *,
-    extracted_text: str,
-    question: str,
-    selected_context: str,
-) -> bool:
-    """
-    The uploaded image must share meaningful, domain-specific tokens with the
-    selected course/lesson context. Weak/common overlaps like 'public', 'people',
-    'principle', 'used' are ignored.
-    """
-    if not selected_context or not selected_context.strip():
-        return False
-
-    image_side_tokens = _extract_relevance_tokens(f"{question}\n{extracted_text}")
-    context_tokens = _extract_relevance_tokens(selected_context)
-
-    if not image_side_tokens or not context_tokens:
-        return False
-
-    overlap = image_side_tokens.intersection(context_tokens)
-
-    strong_overlap = {
-        token
-        for token in overlap
-        if token not in WEAK_RELEVANCE_TOKENS
-        and len(token) >= 4
-    }
-
-    # Debug için geçici açabilirsin:
-    print("IMAGE_RELEVANCE_DEBUG:", {
-        "image_tokens_sample": sorted(list(image_side_tokens))[:40],
-        "overlap": sorted(list(overlap))[:40],
-        "strong_overlap": sorted(list(strong_overlap))[:40],
-        "strong_overlap_count": len(strong_overlap),
-    })
-
-    return len(strong_overlap) >= 3
 
 @router.post("/{chat_id}/messages")
 def send_message(
@@ -366,18 +256,54 @@ def send_message(
 
     db.refresh(chat)
 
+    # ── Question tracker: section chat'te 5+ confusion sorusu → öğretmene bildirim ──
+    if chat.lesson_id and chat.section_index is not None and chat.course_id:
+        try:
+            from services.question_tracker import track_question
+            from services.lesson_manager import get_lesson_by_id
+            import json as _json, os as _os
+
+            _lesson = get_lesson_by_id(db, chat.lesson_id)
+            _lesson_title = (_lesson or {}).get("week_title", chat.lesson_id)
+
+            _section_title = f"Section {chat.section_index + 1}"
+            _safe_id = (
+                chat.lesson_id
+                .replace("::", "__")
+                .replace("/", "_")
+                .replace(" ", "_")
+                .replace(":", "_")
+            )
+            _sections_path = _os.path.join("lesson_sections", f"{_safe_id}_sections.json")
+            if _os.path.exists(_sections_path):
+                with open(_sections_path, "r", encoding="utf-8") as _f:
+                    _sections = _json.load(_f)
+                if 0 <= chat.section_index < len(_sections):
+                    _section_title = _sections[chat.section_index].get("title", _section_title)
+
+            _teacher_username = ""
+            if _lesson:
+                _course_id_parts = chat.course_id.split("::")
+                _teacher_username = _course_id_parts[0] if _course_id_parts else ""
+
+            track_question(
+                db=db,
+                lesson_id=chat.lesson_id,
+                lesson_title=_lesson_title,
+                section_index=chat.section_index,
+                section_title=_section_title,
+                course_id=chat.course_id,
+                teacher_username=_teacher_username,
+                student_question=body.content,
+            )
+        except Exception as _e:
+            print(f"[chats] track_question failed (non-fatal): {_e}")
+
     context = _get_chat_context(db, chat, body.content)
     if not context.strip():
-        blocked_reply = _localized_blocked_reply(
-            body.content,
-            english=(
-                "This question is outside the uploaded lesson materials. "
-                "Please ask something related to the course content."
-            ),
-            turkish=(
-                "Bu soru yüklenen ders materyallerinin dışında görünüyor. "
-                "Lütfen ders içeriğiyle ilgili bir soru sor."
-            ),
+        blocked_reply = (
+            "This question is outside the uploaded lesson materials. "
+            "Please ask something related to the course content."
         )
 
         if body.stream:
@@ -543,6 +469,47 @@ async def send_image_question(
 
     db.refresh(chat)
 
+    # ── Question tracker (image sorular da sayılır) ──────────────────────────
+    if chat.lesson_id and chat.section_index is not None and chat.course_id:
+        try:
+            from services.question_tracker import track_question
+            from services.lesson_manager import get_lesson_by_id
+            import json as _json, os as _os
+
+            _lesson = get_lesson_by_id(db, chat.lesson_id)
+            _lesson_title = (_lesson or {}).get("week_title", chat.lesson_id)
+
+            _section_title = f"Section {chat.section_index + 1}"
+            _safe_id = (
+                chat.lesson_id
+                .replace("::", "__")
+                .replace("/", "_")
+                .replace(" ", "_")
+                .replace(":", "_")
+            )
+            _sections_path = _os.path.join("lesson_sections", f"{_safe_id}_sections.json")
+            if _os.path.exists(_sections_path):
+                with open(_sections_path, "r", encoding="utf-8") as _f:
+                    _sections = _json.load(_f)
+                if 0 <= chat.section_index < len(_sections):
+                    _section_title = _sections[chat.section_index].get("title", _section_title)
+
+            _course_id_parts = chat.course_id.split("::")
+            _teacher_username = _course_id_parts[0] if _course_id_parts else ""
+
+            track_question(
+                db=db,
+                lesson_id=chat.lesson_id,
+                lesson_title=_lesson_title,
+                section_index=chat.section_index,
+                section_title=_section_title,
+                course_id=chat.course_id,
+                teacher_username=_teacher_username,
+                student_question=clean_question,
+            )
+        except Exception as _e:
+            print(f"[chats] track_question (image) failed (non-fatal): {_e}")
+
     chat = (
         db.query(Chat)
         .options(joinedload(Chat.messages))
@@ -551,53 +518,6 @@ async def send_image_question(
     )
 
     lesson_params = _get_lesson_ai_params(db, chat.lesson_id)
-
-    selected_context = ""
-
-    if chat.lesson_id or chat.course_id:
-        selected_context = _get_chat_context(
-            db,
-            chat,
-            f"{clean_question}\n{extracted_text}"
-        )
-
-        is_related = _is_image_related_to_selected_context(
-            extracted_text=extracted_text,
-            question=clean_question,
-            selected_context=selected_context,
-        )
-
-        if not is_related:
-            blocked_reply = _localized_blocked_reply(
-                clean_question,
-                english=RELEVANCE_BLOCKED_REPLY,
-                turkish=(
-                    "Bu görsel seçili ders veya kurs içeriğiyle ilişkili görünmüyor. "
-                    "Lütfen bu sohbete ait ders/kurs içeriğinden bir görsel yükle "
-                    "veya doğru ders sohbetini aç."
-                ),
-            )
-
-            assistant_message = Message(
-                chat_id=chat.id,
-                sender="assistant",
-                content=blocked_reply,
-            )
-            db.add(assistant_message)
-            db.commit()
-
-            if stream:
-                def blocked_stream():
-                    yield f"data: {json.dumps({'delta': blocked_reply})}\n\n"
-                    yield f"data: {json.dumps({'done': True, 'extracted_text': extracted_text})}\n\n"
-
-                return StreamingResponse(blocked_stream(), media_type="text/event-stream")
-
-            return {
-                "role": "assistant",
-                "content": blocked_reply,
-                "extracted_text": extracted_text,
-            }
 
     image_context = f"""
     The student uploaded an image/screenshot.
@@ -608,25 +528,40 @@ async def send_image_question(
     Important rules:
     - The student's question is about the uploaded image.
     - Use the OCR text above as the primary source.
-    - If this chat is connected to a course or lesson, the answer must stay within that selected course/lesson.
-    - Do not explain unrelated topics from other courses or lessons.
+    - Do NOT answer from previous chat messages, lesson materials, or course materials unless the student explicitly asks to connect the image with the lesson.
     - If the OCR text is incomplete or unclear, say that the screenshot text is partly unclear and explain only what can be read.
     """.strip()
 
-    if selected_context and selected_context.strip():
-        context = f"""
+    question_lower = clean_question.lower()
+
+    wants_course_connection = any(
+        phrase in question_lower
+        for phrase in [
+            "according to the lesson",
+            "according to course",
+            "course material",
+            "lesson material",
+            "relate to the lesson",
+            "connect to the lesson",
+            "compare with the lesson",
+        ]
+    )
+
+    if wants_course_connection:
+        lesson_context = _get_chat_context(db, chat, clean_question)
+
+        if lesson_context and lesson_context.strip():
+            context = f"""
     Uploaded image context:
     {image_context}
 
-    Selected course / lesson context:
-    {selected_context}
+    Relevant course / lesson context:
+    {lesson_context}
 
-    Rules:
-    - The uploaded image has already passed a relevance check.
-    - Use the uploaded image as the main source.
-    - Use the selected course/lesson context as the boundary.
-    - Do not explain topics outside the selected course/lesson.
+    Use the uploaded image as the main source. Use the course context only to support or connect the explanation.
     """.strip()
+        else:
+            context = image_context
     else:
         context = image_context
 
@@ -925,7 +860,3 @@ Section content:
         return _get_materials_text_fallback(db, chat.course_id)
 
     return ""
-
-def _localized_blocked_reply(user_text: str, english: str, turkish: str) -> str:
-    language = ai_engine.detect_response_language(user_text)
-    return turkish if language == "Turkish" else english
