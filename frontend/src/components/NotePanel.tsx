@@ -88,25 +88,30 @@ export default function NotePanel({
       setResolvedSectionTitle(null);
       return;
     }
-    fetch(`${API}/lessons/${lessonId}/sections`, {
+    const fallback = `Section ${sectionIndex + 1}`;
+    fetch(`${API}/lessons/${encodeURIComponent(lessonId)}/sections`, {
       headers: { Authorization: `Bearer ${token()}` },
     })
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((data) => {
         const sections = data.sections ?? [];
         const sec = sections[sectionIndex];
-        if (sec && mountedRef.current) {
-          setResolvedSectionTitle(sec.title ?? `Section ${sectionIndex + 1}`);
+        if (mountedRef.current) {
+          setResolvedSectionTitle(sec?.title ?? fallback);
         }
       })
       .catch(() => {
-        if (mountedRef.current) setResolvedSectionTitle(`Section ${sectionIndex + 1}`);
+        if (mountedRef.current) setResolvedSectionTitle(fallback);
       });
   }, [lessonId, sectionIndex]);
 
   // Step 2: load or create note — runs once after sectionTitle resolves (or immediately if no section)
   useEffect(() => {
-    // If sectionIndex is set, wait for resolvedSectionTitle to be known
+    // If sectionIndex is set and lessonId exists, wait for resolvedSectionTitle to be determined
+    // (it will be set to either a real title or a fallback — never stays null after fetch completes)
     if (sectionIndex != null && lessonId && resolvedSectionTitle === null) return;
 
     const effectiveSectionTitle = sectionIndex != null ? resolvedSectionTitle : null;
