@@ -319,18 +319,66 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (isAdmin) { setAuthLoading(false); return; }
+  let cancelled = false;
+
+  async function restoreSession() {
+    if (isAdmin) {
+      setAuthLoading(false);
+      return;
+    }
+
     const t = tokenStore.get();
-    if (!t) { setAuthLoading(false); return; }
-    settingsApi.getMe()
-      .then((me) => {
-        setUser({ username: me.username, full_name: me.full_name ?? "", role: me.role as any });
-        return chatsApi.getAll();
-      })
-      .then(setChatMap)
-      .catch(() => { tokenStore.clear(); })
-      .finally(() => setAuthLoading(false));
-  }, []);
+
+    if (!t) {
+      setAuthLoading(false);
+      return;
+    }
+
+    try {
+      const me = await settingsApi.getMe();
+
+      if (cancelled) return;
+
+      const restoredUser: User = {
+        username: me.username,
+        full_name: me.full_name ?? "",
+        role: me.role as any,
+      };
+
+      setUser(restoredUser);
+
+      // Teacher için chats endpoint'i çağırma.
+      // Çünkü teacher'da /api/chats/ 403 dönüyor ve token silinmemeli.
+      if (restoredUser.role === "student") {
+        try {
+          const chats = await chatsApi.getAll();
+          if (!cancelled) setChatMap(chats);
+        } catch (e) {
+          console.error("Could not load student chats:", e);
+          if (!cancelled) setChatMap({});
+        }
+      } else {
+        setChatMap({});
+      }
+    } catch (e) {
+      console.error("Session restore failed:", e);
+
+      if (!cancelled) {
+        tokenStore.clear();
+        setUser(null);
+        setChatMap({});
+      }
+    } finally {
+      if (!cancelled) setAuthLoading(false);
+    }
+  }
+
+  restoreSession();
+
+  return () => {
+    cancelled = true;
+  };
+}, []);
 
   useEffect(() => {
     if (!activeChatId) return;
@@ -385,7 +433,15 @@ export default function App() {
     catch (e) { console.error(e); return null; }
   }
 
-  function handleLogin(u: User) { setUser(u); loadChats(); }
+  function handleLogin(u: User) {
+  setUser(u);
+
+  if (u.role === "student") {
+    loadChats();
+  } else {
+    setChatMap({});
+  }
+}
   function handleLogout() { tokenStore.clear(); setUser(null); setChatMap({}); setActiveChatId(null); setDashboardCourseId(null); setSettingsOpen(false); localStorage.removeItem("last_chat_id"); localStorage.removeItem("last_course_id"); localStorage.removeItem("last_dash_view"); localStorage.removeItem("teacher_view"); localStorage.removeItem("teacher_home_tab"); localStorage.removeItem("teacher_course_id"); localStorage.removeItem("teacher_section_key"); localStorage.removeItem("student_lesson_id"); localStorage.removeItem("student_active_tab"); }
   function requestLogout() { setLogoutConfirmOpen(true); }
   function confirmLogout() { setLogoutConfirmOpen(false); handleLogout(); }
