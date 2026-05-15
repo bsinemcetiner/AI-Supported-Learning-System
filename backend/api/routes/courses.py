@@ -22,9 +22,21 @@ router = APIRouter(prefix="/courses", tags=["courses"])
 rag = RAGManager()
 
 def _serialize_material(m):
+    import os
+
+    pdf_path = getattr(m, "pdf_path", None)
+    file_url = None
+
+    if pdf_path:
+        normalized_pdf_path = str(pdf_path).replace("\\", "/")
+        pdf_filename = os.path.basename(normalized_pdf_path)
+        file_url = f"/course_materials_pdf/{pdf_filename}"
+
     return {
         "original_filename": m.original_filename,
         "stored_path": m.stored_path,
+        "pdf_path": pdf_path,
+        "file_url": file_url,
         "file_hash": m.file_hash,
         "uploaded_at": m.uploaded_at.isoformat() if m.uploaded_at else None,
     }
@@ -68,7 +80,7 @@ def list_all_courses(
     }
 
 
-# ── GET /courses/assigned ── öğrencinin atanmış kursları
+
 @router.get("/assigned")
 def list_assigned_courses(
     current_user=Depends(get_current_user),
@@ -109,15 +121,7 @@ def list_assigned_courses(
             "course_name": c.course_name,
             "teacher_username": c.teacher_username,
             "created_at": c.created_at.isoformat() if c.created_at else None,
-            "materials": [
-                {
-                    "original_filename": m.original_filename,
-                    "stored_path": m.stored_path,
-                    "file_hash": m.file_hash,
-                    "uploaded_at": m.uploaded_at.isoformat() if m.uploaded_at else None,
-                }
-                for m in materials
-            ],
+            "materials": [_serialize_material(m) for m in materials],
         }
     return result
 
@@ -141,7 +145,7 @@ def list_my_courses(
     }
 
 
-# ── POST /courses ── yeni kurs oluştur
+
 @router.post("/", status_code=201)
 def create_new_course(
     body: CreateCourseRequest,
@@ -154,7 +158,6 @@ def create_new_course(
     return {"course_id": message}
 
 
-# ── POST /courses/{course_id}/materials ── materyal yükle
 @router.post("/{course_id}/materials", status_code=201)
 async def upload_material(
     course_id: str,
@@ -165,7 +168,7 @@ async def upload_material(
     import hashlib, os
     content = await file.read()
 
-    # PDF'i orijinal haliyle kaydet
+
     pdf_dir = "course_materials_pdf"
     os.makedirs(pdf_dir, exist_ok=True)
     file_hash_raw = hashlib.md5(content).hexdigest()
@@ -218,14 +221,14 @@ async def upload_material(
             "skipped": True,
         }
 
-        return {
-            "filename": file.filename,
-            "chunks": rag_result["chunks"],
-            "skipped": rag_result["skipped"],
-            "notification_created": notification_created,
-        }
+    return {
+        "filename": file.filename,
+        "chunks": rag_result["chunks"],
+        "skipped": rag_result["skipped"],
+        "notification_created": notification_created,
+    }
 
-# ── GET /courses/{course_id}/materials/{file_hash}/view ── PDF görüntüle
+
 @router.get("/{course_id}/materials/{file_hash}/view")
 def view_material(
     course_id: str,
@@ -247,7 +250,6 @@ def view_material(
 
     pdf_path = material.pdf_path
     if not pdf_path or not os.path.exists(pdf_path):
-        # Eski materyaller için txt dosyasını döndür
         txt_path = material.stored_path
         if txt_path and os.path.exists(txt_path):
             return FileResponse(
@@ -266,17 +268,25 @@ def view_material(
     )
 
 
-# ── GET /courses/{course_id}/materials ── materyal listesi
 @router.get("/{course_id}/materials")
 def list_materials(
     course_id: str,
     _: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return get_course_materials(db, course_id)
+    from models import CourseMaterial
+
+    materials = (
+        db.query(CourseMaterial)
+        .filter(CourseMaterial.course_id == course_id)
+        .order_by(CourseMaterial.uploaded_at.desc())
+        .all()
+    )
+
+    return [_serialize_material(m) for m in materials]
 
 
-# ── DELETE /courses/{course_id}/materials/{file_hash} ── materyal sil
+
 @router.delete("/{course_id}/materials/{file_hash}")
 def delete_material(
     course_id: str,
@@ -295,7 +305,7 @@ def delete_material(
         )
 
     return {"message": msg}
-# ── POST /courses/{course_id}/enroll ── öğrenci kaydol
+
 @router.post("/{course_id}/enroll", status_code=201)
 def enroll_course(
     course_id: str,
@@ -327,7 +337,7 @@ def enroll_course(
     return {"message": "Kayıt başarılı", "course_id": course_id}
 
 
-# ── DELETE /courses/{course_id}/unenroll ── öğrenci ayrıl
+
 @router.delete("/{course_id}/unenroll")
 def unenroll_course(
     course_id: str,

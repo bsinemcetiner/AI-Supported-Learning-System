@@ -8,7 +8,7 @@ import {
   Send, Sparkles, TrendingUp, BookMarked, ChevronRight,
   Plus, Layers, Users, Moon, Sun, Settings, ChevronDown, GraduationCap
 } from "lucide-react";
-import { courses as coursesApi, lessons as lessonsApi } from "../services/api";
+import { courses as coursesApi, lessons as lessonsApi, API_ORIGIN } from "../services/api";
 import type { Course, Material } from "../types";
 import type { Lesson } from "../services/api";
 import { LessonSectionReview } from "./LessonSectionReview";
@@ -28,6 +28,54 @@ type FlowStep = {
   gradient: string;
   status: StepStatus;
 };
+
+function buildMaterialPreviewUrl(m: any): string {
+  const rawPath =
+    m.file_url ||
+    m.pdf_url ||
+    m.pdf_path ||
+    m.stored_pdf_path ||
+    m.url ||
+    m.public_url ||
+    "";
+
+  if (!rawPath) return "";
+
+  let cleanPath = String(rawPath).trim().replaceAll("\\", "/");
+  if (!cleanPath) return "";
+
+  if (cleanPath.startsWith("http://") || cleanPath.startsWith("https://")) {
+    return cleanPath;
+  }
+
+  const staticMatch = cleanPath.match(/(?:^|\/)(course_materials_pdf|lesson_pdfs|uploads)\/(.+)$/);
+  if (staticMatch) {
+    cleanPath = `${staticMatch[1]}/${staticMatch[2]}`;
+  }
+
+  cleanPath = cleanPath
+    .replace(/^\/?api\//, "")
+    .replace(/^\/?course_materials\//, "course_materials_pdf/")
+    .replace(/^\/?materials\//, "course_materials_pdf/");
+
+  if (!cleanPath.startsWith("/")) {
+    cleanPath = `/${cleanPath}`;
+  }
+
+  const encodedPath = cleanPath
+    .split("/")
+    .map((part) => {
+      if (!part) return "";
+      try {
+        return encodeURIComponent(decodeURIComponent(part));
+      } catch {
+        return encodeURIComponent(part);
+      }
+    })
+    .join("/");
+
+  return `${API_ORIGIN}${encodedPath}`;
+}
 
 function getStatusStyle(status: StepStatus) {
   if (status === "Done") {
@@ -968,11 +1016,10 @@ function TeacherTopHeader() {
                 {materials.map((m: Material) => {
                   const isExpanded = expandedMaterialHash === m.file_hash;
 
-                  const materialUrl =
-                    (m as any).file_url ||
-                    (m as any).url ||
-                    (m as any).public_url ||
-                    "";
+                  const materialUrl = buildMaterialPreviewUrl(m);
+
+                    console.log("MATERIAL OBJECT:", m);
+                    console.log("MATERIAL PREVIEW URL:", materialUrl);
 
                   return (
                     <div
