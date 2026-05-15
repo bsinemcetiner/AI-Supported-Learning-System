@@ -193,8 +193,63 @@ Rules:
         print(f"AI section split failed: {e}, falling back to simple split")
         return _split_pages_into_sections(pages)
 
+def _is_coding_topic(section_title: str, section_text: str = "", teacher_prompt: str = "") -> bool:
+    combined = f"{section_title}\n{section_text[:3000]}\n{teacher_prompt}".lower()
 
-def _build_section_prompt(section_title: str, preview_question: str) -> str:
+    coding_keywords = [
+        "programming", "code", "coding", "algorithm", "function", "variable",
+        "class", "object", "method", "api", "database", "sql", "html", "css",
+        "javascript", "typescript", "python", "java", "c#", "c++", "c language",
+        "react", "angular", "fastapi", "spring", "backend", "frontend",
+        "software", "debug", "syntax", "compiler", "data structure",
+        "machine learning implementation", "data science implementation"
+    ]
+
+    return any(keyword in combined for keyword in coding_keywords)
+
+def _build_section_prompt(section_title: str, preview_question: str, section_text: str = "") -> str:
+    allow_code = _is_coding_topic(section_title, section_text, preview_question)
+
+    if allow_code:
+        example_schema = """
+    {
+      "type": "example",
+      "title": "Code Example: [Specific Topic]",
+      "image_keyword": null,
+      "body": "1-2 sentences explaining what this code demonstrates.",
+      "code": "Short working code example using \\n for newlines.",
+      "code_language": "Correct syntax-highlighting language such as c, csharp, java, python, javascript, typescript, sql, html, css, or bash.",
+      "highlight": "Why this example matters"
+    },
+"""
+        code_rules = """
+CODE RULES:
+- This section is clearly coding-related, so include exactly one useful code example.
+- The code must match the language, tool, or technology discussed in the section.
+- Put code only in the "code" field.
+- Put explanation only in the "body" field.
+- Do not use markdown code fences.
+- Do not invent unrelated code.
+- Keep the code short, correct, and beginner-friendly.
+"""
+    else:
+        example_schema = """
+    {
+      "type": "example",
+      "title": "Real-World Example: [Specific Topic]",
+      "image_keyword": null,
+      "body": "A realistic student-friendly scenario, analogy, case study, or practical example related to this section.",
+      "highlight": "Why this example matters"
+    },
+"""
+        code_rules = """
+CODE RULES:
+- This section is not coding-related.
+- Do NOT include "code" or "code_language" fields anywhere in the JSON.
+- Do NOT create a slide titled "Code Example".
+- For non-programming topics such as ethics, music, history, law, communication, business, psychology, or art, examples must be real-world scenarios, analogies, case studies, or reflection questions.
+"""
+
     return f"""You are creating a rich, visual, educational lesson page for the section titled: "{section_title}".
 
 {preview_question}
@@ -217,25 +272,17 @@ Return a JSON object with this exact structure. Do NOT include markdown, no code
       "type": "concept",
       "title": "Key Concept Title",
       "image_keyword": null,
-      "body": "Rich explanation paragraph (4-6 sentences).",
+      "body": "Rich explanation paragraph, 4-6 sentences.",
       "highlight": "The single most important takeaway sentence"
     }},
     {{
       "type": "deep_dive",
       "title": "Deep Dive: [Specific Aspect]",
       "image_keyword": "REQUIRED: 3-5 word specific term",
-      "body": "Thorough explanation (5-7 sentences).",
+      "body": "Thorough explanation, 5-7 sentences.",
       "highlight": "Key insight sentence"
     }},
-    {{
-      "type": "example",
-      "title": "Code Example: [Topic]",
-      "image_keyword": null,
-      "body": "1-2 sentences explaining what this code demonstrates.",
-      "code": "// Write actual working code here using \\n for newlines\\nConsole.WriteLine(\"example\");",
-      "code_language": "c",
-      "highlight": "Why this example matters"
-    }},
+{example_schema}
     {{
       "type": "summary",
       "title": "Key Takeaways",
@@ -246,24 +293,25 @@ Return a JSON object with this exact structure. Do NOT include markdown, no code
   ]
 }}
 
-CRITICAL CODE RULES:
-- The "code" field must be a plain JSON string — use \\n for newlines, NO backticks anywhere in the code field
-- NEVER put backticks (```) inside any JSON string value
-- All code goes in the "code" field only, never in "body"
-- "body" fields must be plain text only, no code, no backticks
+{code_rules}
 
 IMAGE KEYWORD RULES:
-- ONLY "intro" and "deep_dive" slides get image_keyword values. All others must have "image_keyword": null
+- ONLY "intro" and "deep_dive" slides get image_keyword values.
+- All other slides must have "image_keyword": null.
 
 CONTENT RULES:
-- Every slide body must be a real paragraph
-- Minimum 5 slides, maximum 7 slides
-- ALWAYS include at least one "example" slide with a "code" field containing real working code
-- Return ONLY valid JSON — absolutely no text outside the JSON object
-- "slides" MUST be a JSON array, NEVER a string
+- Every slide body must be a real paragraph.
+- Minimum 5 slides, maximum 7 slides.
+- Always include at least one "example" slide.
+- Return ONLY valid JSON — absolutely no text outside the JSON object.
+- "slides" MUST be a JSON array, NEVER a string.
+- Stay grounded in the provided section text.
 
+JSON SAFETY RULES:
+- NEVER put backticks (```) inside any JSON string value.
+- Do not use markdown code fences.
+- Escape quotes and newlines properly inside JSON strings.
 """.strip()
-
 
 def _escape_newlines_inside_json_strings(raw: str) -> str:
     """
@@ -443,9 +491,12 @@ def generate_section(lesson_id: str, section_index: int, current_user: dict = De
     custom_prompt = lesson.get("custom_prompt", "")
     feedback_history = lesson.get("teacher_feedback_history", [])
 
+    base_preview_question = raw_preview_question or "Create a comprehensive, visually rich educational lesson page based on the provided content."
+
     full_prompt = _build_section_prompt(
-        section_title,
-        "Create a comprehensive, visually rich educational lesson page based on the provided content."
+        section_title=section_title,
+        preview_question=base_preview_question,
+        section_text=section_text
     )
     if raw_preview_question:
         full_prompt += f"""
@@ -462,9 +513,9 @@ Teacher instructions:
 STRICT REQUIREMENTS:
 - You MUST satisfy every teacher instruction.
 - Keep the original section topic, but modify the lesson according to the teacher instructions.
-- If the teacher asks for a code example, create a dedicated "example" slide for it.
-- If the teacher asks for a specific program, the code must solve exactly that program.
-- Do NOT replace the teacher's requested example with a generic counting example.
+- If the teacher explicitly asks for a code example AND the section is clearly programming-related, create a dedicated "example" slide with code.
+- If the section is not programming-related, do NOT generate code even if the slide type is "example".
+- For non-coding topics, use scenarios, analogies, real-world examples, case studies, reflection questions, or comparison tables instead of code.
 - Do NOT ignore teacher-added educational content.
 - Do NOT simply repeat examples from the source PDF unless the teacher asks for them.
 - Before returning the final JSON, verify that the teacher request is visibly included in the slides.
@@ -472,10 +523,7 @@ STRICT REQUIREMENTS:
 - Return ONLY valid JSON.
 - NEVER output markdown.
 - NEVER use ``` code fences.
-- Keep all code only inside the "code" field.
 - Keep "body" fields as plain explanatory text only.
-- In the "code" field, preserve normal code line breaks.
-- For C printf newline characters, write \n inside the C string, for example: printf("Hello\n");
 - Keep the response parseable JSON at all times.
 """
     if custom_prompt:
