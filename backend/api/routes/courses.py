@@ -22,21 +22,9 @@ router = APIRouter(prefix="/courses", tags=["courses"])
 rag = RAGManager()
 
 def _serialize_material(m):
-    import os
-
-    pdf_path = getattr(m, "pdf_path", None)
-    file_url = None
-
-    if pdf_path:
-        normalized_pdf_path = str(pdf_path).replace("\\", "/")
-        pdf_filename = os.path.basename(normalized_pdf_path)
-        file_url = f"/course_materials_pdf/{pdf_filename}"
-
     return {
         "original_filename": m.original_filename,
         "stored_path": m.stored_path,
-        "pdf_path": pdf_path,
-        "file_url": file_url,
         "file_hash": m.file_hash,
         "uploaded_at": m.uploaded_at.isoformat() if m.uploaded_at else None,
     }
@@ -80,7 +68,7 @@ def list_all_courses(
     }
 
 
-
+# ── GET /courses/assigned ── öğrencinin atanmış kursları
 @router.get("/assigned")
 def list_assigned_courses(
     current_user=Depends(get_current_user),
@@ -121,7 +109,15 @@ def list_assigned_courses(
             "course_name": c.course_name,
             "teacher_username": c.teacher_username,
             "created_at": c.created_at.isoformat() if c.created_at else None,
-            "materials": [_serialize_material(m) for m in materials],
+            "materials": [
+                {
+                    "original_filename": m.original_filename,
+                    "stored_path": m.stored_path,
+                    "file_hash": m.file_hash,
+                    "uploaded_at": m.uploaded_at.isoformat() if m.uploaded_at else None,
+                }
+                for m in materials
+            ],
         }
     return result
 
@@ -145,7 +141,7 @@ def list_my_courses(
     }
 
 
-
+# ── POST /courses ── yeni kurs oluştur
 @router.post("/", status_code=201)
 def create_new_course(
     body: CreateCourseRequest,
@@ -158,6 +154,7 @@ def create_new_course(
     return {"course_id": message}
 
 
+# ── POST /courses/{course_id}/materials ── materyal yükle
 @router.post("/{course_id}/materials", status_code=201)
 async def upload_material(
     course_id: str,
@@ -165,27 +162,58 @@ async def upload_material(
     current_user: dict = Depends(require_teacher),
     db: Session = Depends(get_db)
 ):
-    import hashlib, os
+    import hashlib, os, re
+
+    # ── SANİTİZATION KONTROLLERI ──────────────────────────────────────
+
+    # 1. Dosya boyutu: max 20MB — sunucuyu DoS'dan korur
+    MAX_SIZE = 20 * 1024 * 1024
     content = await file.read()
+    if len(content) > MAX_SIZE:
+        raise HTTPException(status_code=413, detail="Dosya boyutu 20MB'ı geçemez")
 
+    # 2. Magic byte: içerik gerçekten PDF mi? — uzantı sahtelenemez
+    if not content.startswith(b"%PDF"):
+        raise HTTPException(status_code=400, detail="Sadece geçerli PDF dosyaları kabul edilir")
 
+    # 3. Uzantı: .pdf olmalı
+    original_name = file.filename or "upload.pdf"
+    ext = os.path.splitext(original_name)[1].lower()
+    if ext != ".pdf":
+        raise HTTPException(status_code=400, detail="Sadece .pdf uzantılı dosyalar kabul edilir")
+
+    # 4. Content-type: tarayıcıdan gelen başlık da kontrol edilir
+    allowed_types = {"application/pdf", "application/octet-stream"}
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail=f"Geçersiz dosya tipi: {file.content_type}")
+
+    # 5. Dosya adı temizleme — path traversal önleme
+    # basename "../../etc/passwd" gibi şeyleri kesiyor
+    # re.sub sadece harf/rakam/tire/alt çizgi/nokta bırakıyor
+    safe_filename = re.sub(r"[^\w\-.]", "_", os.path.basename(original_name))
+    if not safe_filename or safe_filename.startswith("."):
+        safe_filename = "upload.pdf"
+
+    # ─────────────────────────────────────────────────────────────────
+
+    # PDF'i orijinal haliyle kaydet
     pdf_dir = "course_materials_pdf"
     os.makedirs(pdf_dir, exist_ok=True)
     file_hash_raw = hashlib.md5(content).hexdigest()
     safe_course_id = course_id.replace("::", "__").replace("/", "_")
-    pdf_filename = f"{safe_course_id}_{file_hash_raw}{os.path.splitext(file.filename)[1]}"
+    pdf_filename = f"{safe_course_id}_{file_hash_raw}{os.path.splitext(safe_filename)[1]}"
     pdf_path = os.path.join(pdf_dir, pdf_filename)
     with open(pdf_path, "wb") as f:
         f.write(content)
 
     text = ocr_service.extract_text(content, file.filename)
     if not text:
-        raise HTTPException(status_code=422, detail=f"{file.filename}: metin çıkarılamadı")
+        raise HTTPException(status_code=422, detail=f"{safe_filename}: metin çıkarılamadı")
 
     add_ok, add_msg = add_material_to_course(
         db=db,
         course_id=course_id,
-        filename=file.filename,
+        filename=safe_filename,
         text_content=text,
         pdf_path=pdf_path,
     )
@@ -199,7 +227,7 @@ async def upload_material(
             db=db,
             course_id=course_id,
             title="New material uploaded",
-            message=f"A new material has been uploaded: {file.filename}",
+            message=f"A new material has been uploaded: {safe_filename}",
             created_by=current_user["username"],
             type="material_uploaded",
         )
@@ -210,7 +238,7 @@ async def upload_material(
     try:
         rag_result = rag.add_document(
             text=text,
-            source_name=file.filename,
+            source_name=safe_filename,
             course_id=course_id,
             teacher_username=current_user["username"],
         )
@@ -222,13 +250,13 @@ async def upload_material(
         }
 
     return {
-        "filename": file.filename,
+        "filename": safe_filename,
         "chunks": rag_result["chunks"],
         "skipped": rag_result["skipped"],
         "notification_created": notification_created,
     }
 
-
+# ── GET /courses/{course_id}/materials/{file_hash}/view ── PDF görüntüle
 @router.get("/{course_id}/materials/{file_hash}/view")
 def view_material(
     course_id: str,
@@ -250,6 +278,7 @@ def view_material(
 
     pdf_path = material.pdf_path
     if not pdf_path or not os.path.exists(pdf_path):
+        # Eski materyaller için txt dosyasını döndür
         txt_path = material.stored_path
         if txt_path and os.path.exists(txt_path):
             return FileResponse(
@@ -268,25 +297,17 @@ def view_material(
     )
 
 
+# ── GET /courses/{course_id}/materials ── materyal listesi
 @router.get("/{course_id}/materials")
 def list_materials(
     course_id: str,
     _: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    from models import CourseMaterial
-
-    materials = (
-        db.query(CourseMaterial)
-        .filter(CourseMaterial.course_id == course_id)
-        .order_by(CourseMaterial.uploaded_at.desc())
-        .all()
-    )
-
-    return [_serialize_material(m) for m in materials]
+    return get_course_materials(db, course_id)
 
 
-
+# ── DELETE /courses/{course_id}/materials/{file_hash} ── materyal sil
 @router.delete("/{course_id}/materials/{file_hash}")
 def delete_material(
     course_id: str,
@@ -305,7 +326,7 @@ def delete_material(
         )
 
     return {"message": msg}
-
+# ── POST /courses/{course_id}/enroll ── öğrenci kaydol
 @router.post("/{course_id}/enroll", status_code=201)
 def enroll_course(
     course_id: str,
@@ -337,7 +358,7 @@ def enroll_course(
     return {"message": "Kayıt başarılı", "course_id": course_id}
 
 
-
+# ── DELETE /courses/{course_id}/unenroll ── öğrenci ayrıl
 @router.delete("/{course_id}/unenroll")
 def unenroll_course(
     course_id: str,
