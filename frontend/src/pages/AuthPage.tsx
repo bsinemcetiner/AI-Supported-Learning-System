@@ -233,7 +233,7 @@ export default function AuthPage({ onLogin, onAdminLogin }: AuthPageProps) {
                           </div>
                           <div>
                             <div style={{ fontSize: "0.95rem", fontWeight: 700, color: sel ? (r === "student" ? "#f97316" : "#2563eb") : "#374151" }}>{r === "student" ? "Student" : "Teacher"}</div>
-                            <div style={{ fontSize: "0.73rem", color: "#9ca3af" }}>{r === "student" ? "@std.ieu.edu.tr" : "@ieu.edu.tr"}</div>
+                            <div style={{ fontSize: "0.73rem", color: "#9ca3af" }}>{r === "student" ? "@std.ieu / @std.iyte" : "@ieu.edu.tr / @iyte.edu.tr"}</div>
                           </div>
                           {sel && <div style={{ position: "absolute", top: 7, right: 7, width: 18, height: 18, borderRadius: "50%", background: r === "student" ? "#f97316" : "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>}
                         </button>
@@ -246,7 +246,7 @@ export default function AuthPage({ onLogin, onAdminLogin }: AuthPageProps) {
                   <input style={inputCss} type="email" placeholder={selectedRole === "student" ? "ada@std.ieu.edu.tr" : "ada@ieu.edu.tr"} value={email} onChange={(e) => setEmail(e.target.value)} required
                     onFocus={(e) => { e.target.style.borderColor = "#f97316"; e.target.style.background = "#fff"; }}
                     onBlur={(e) => { e.target.style.borderColor = "#e5e7eb"; e.target.style.background = "#f9fafb"; }} />
-                  <p style={{ fontSize: "0.76rem", color: "#9ca3af", marginTop: 6 }}>Students @std.ieu.edu.tr · Teachers @ieu.edu.tr</p>
+                  <p style={{ fontSize: "0.76rem", color: "#9ca3af", marginTop: 6 }}>Students @std.ieu.edu.tr / @std.iyte.edu.tr · Teachers @ieu.edu.tr / @iyte.edu.tr</p>
                 </div>
                 <button type="submit" disabled={loading} style={gradBtn(loading)}>
                   {loading ? "Sending…" : "Send Verification Code →"}

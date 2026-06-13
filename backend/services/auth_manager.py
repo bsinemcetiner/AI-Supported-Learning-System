@@ -23,9 +23,9 @@ def hash_password(password: str) -> str:
 
 def get_role_from_email(email: str):
     email = email.lower().strip()
-    if email.endswith("@std.ieu.edu.tr"):
+    if email.endswith("@std.ieu.edu.tr") or email.endswith("@std.iyte.edu.tr"):
         return "student"
-    if email.endswith("@ieu.edu.tr"):
+    if email.endswith("@ieu.edu.tr") or email.endswith("@iyte.edu.tr"):
         return "teacher"
     return None
 
@@ -61,13 +61,14 @@ def send_otp_email(to_email: str, otp: str):
         server.sendmail(user, to_email, msg.as_string())
 
 
+
 def request_otp(email: str):
     """Send OTP to email. Returns (success, message, role)."""
     email = email.lower().strip()
     _verified_emails.discard(email)
     role = get_role_from_email(email)
     if not role:
-        return False, "Invalid email. Students must use @std.ieu.edu.tr, teachers must use @ieu.edu.tr.", None
+        return False, "Invalid email. Use your institutional email (@std.ieu.edu.tr, @std.iyte.edu.tr for students / @ieu.edu.tr, @iyte.edu.tr for teachers).", None
 
     db: Session = SessionLocal()
     try:
