@@ -169,8 +169,8 @@ export default function StudentInsightsWidget({ darkMode }: { darkMode: boolean 
             gap: 8,
           }}
         >
-          <span>✅</span>
-          No struggle alerts in the last 24 hours — students are doing well!
+          <span></span>
+          No struggle alerts in the last 24 hours - students are doing well!
         </div>
       </div>
     );

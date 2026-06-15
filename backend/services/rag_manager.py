@@ -44,9 +44,6 @@ class RAGManager:
             self._encoder = SentenceTransformer("all-MiniLM-L6-v2")
         return self._encoder
 
-    # ─────────────────────────────────────────────
-    # Internal helpers
-    # ─────────────────────────────────────────────
 
     def _ensure_collection(self):
         existing = {c.name for c in self._client.get_collections().collections}

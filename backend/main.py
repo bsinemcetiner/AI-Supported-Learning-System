@@ -32,6 +32,14 @@ LESSON_PDFS_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/lesson_pdfs", StaticFiles(directory=str(LESSON_PDFS_DIR)), name="lesson_pdfs")
 UPLOADS_DIR = Path("uploads")
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+COURSE_MATERIALS_PDF_DIR = Path("course_materials_pdf")
+COURSE_MATERIALS_PDF_DIR.mkdir(parents=True, exist_ok=True)
+
+app.mount(
+    "/course_materials_pdf",
+    StaticFiles(directory=str(COURSE_MATERIALS_PDF_DIR)),
+    name="course_materials_pdf"
+)
 
 COURSE_MATERIALS_PDF_DIR = Path("course_materials_pdf")
 COURSE_MATERIALS_PDF_DIR.mkdir(parents=True, exist_ok=True)

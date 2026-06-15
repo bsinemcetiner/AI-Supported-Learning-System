@@ -1,11 +1,11 @@
 """
 services/question_tracker.py
 
-Mimari:
+Architecture:
   course → lesson → section → questions
 
-Threshold: DB bazlı sayım — restart'tan etkilenmez, gerçek 24h pencere.
-AI: SADECE optional keyword insight için.
+Threshold: DB-based counting — not affected by restarts, real 24h window.
+AI: ONLY for optional keyword insight.
 
 key = f"{lesson_id}::{section_index}"
 """
@@ -18,12 +18,9 @@ from sqlalchemy.orm import Session
 QUESTION_THRESHOLD = 5
 WINDOW_HOURS = 24
 
-# Sadece spam önleme için in-memory
-# { key: datetime }
 _notified_at: dict = {}
 
 
-# ── 1. Hybrid confusion filtresi (regex önce, AI fallback) ───────────────────
 def _is_confusion_question(message: str) -> bool:
     if not message:
         return False
@@ -34,7 +31,7 @@ def _is_confusion_question(message: str) -> bool:
     if len(text) < 15:
         return False
 
-    # Kesin ignore listesi
+    # Strict ignore list
     ignore_phrases = [
         "thank you", "thanks", "thx", "got it", "okay", "ok", "alright",
         "makes sense", "i understand", "understood", "nice", "cool",
@@ -48,7 +45,7 @@ def _is_confusion_question(message: str) -> bool:
     if any(phrase in text for phrase in ignore_phrases):
         return False
 
-    # Regex ile açık confusion keyword'ler — True dönerse AI çağırma (token tasarrufu)
+    # Explicit confusion keywords with regex — if True, do not call AI to save tokens
     confusion_patterns = [
         r"\bwhy\b", r"\bhow\b",
         r"\bwhat is\b", r"\bwhat does\b", r"\bwhat are\b",
@@ -79,18 +76,16 @@ def _is_confusion_question(message: str) -> bool:
     if any(re.search(pattern, text) for pattern in confusion_patterns):
         return True
 
-    # ? ile bitiyorsa kesin say
     if text.endswith("?") and len(text) >= 20:
         return True
 
-    # Belirsiz mesaj → AI'ya sor (token sadece burada harcanır)
     return _ai_is_confusion(message)
 
 
 def _ai_is_confusion(message: str) -> bool:
     """
-    Regex'in yakalayamadığı belirsiz mesajlar için AI kullan.
-    Hata alırsa False döner — threshold etkilenmez.
+    Use AI for ambiguous messages that regex could not detect.
+    If an error occurs, return False — threshold is not affected.
     """
     try:
         api_key = os.getenv("GROQ_API_KEY")
@@ -163,16 +158,14 @@ def _get_recent_questions(db: Session, lesson_id: str, section_index: int) -> li
     return [r.student_question for r in rows if r.student_question]
 
 
-# ── 3. Optional AI keyword insight (token hatası olsa da sistem çalışır) ──────
 def _get_keyword_insights(questions: list, section_title: str) -> str:
     """
-    Son soruların en sık geçen kelimelerini basit frequency ile bul.
-    Groq çağrısı YAPAR ama hata alırsa sessizce atlar — threshold etkilenmez.
+    Find the most frequent words in recent questions using simple frequency counting.
+    Makes a Groq call, but silently skips it if an error occurs — threshold is not affected.
     """
     if not questions:
         return ""
 
-    # ── 3a. Basit keyword frequency (AI olmadan) ─────────────────────────────
     stopwords = {
         "the", "a", "an", "is", "it", "in", "of", "to", "and", "or", "for",
         "what", "how", "why", "when", "does", "do", "can", "i", "you", "we",
@@ -191,7 +184,6 @@ def _get_keyword_insights(questions: list, section_title: str) -> str:
     if not top_keywords:
         return ""
 
-    # ── 3b. Opsiyonel Groq insight ─────────────────────────────────────────
     groq_insight = ""
     try:
         api_key = os.getenv("GROQ_API_KEY")
@@ -219,13 +211,12 @@ def _get_keyword_insights(questions: list, section_title: str) -> str:
             raw = resp.choices[0].message.content.strip()
             start, end = raw.find("["), raw.rfind("]")
             if start != -1 and end != -1:
-                topics = _json.loads(raw[start:end+1])
+                topics = _json.loads(raw[start:end + 1])
                 if topics:
                     groq_insight = "\n".join(f"  • {t}" for t in topics[:3])
     except Exception as e:
         print(f"[QuestionTracker] Optional AI insight failed (non-fatal): {e}")
 
-    # Groq başarılıysa onu kullan, değilse keyword frequency'yi göster
     if groq_insight:
         return f"\n\nMost confusing concepts:\n{groq_insight}"
     else:
@@ -233,19 +224,18 @@ def _get_keyword_insights(questions: list, section_title: str) -> str:
         return f"\n\nTop confusion keywords:\n{kw_lines}"
 
 
-# ── 4. Ana tracker fonksiyonu ─────────────────────────────────────────────────
 def track_question(
-    db: Session,
-    lesson_id: str,
-    lesson_title: str,
-    section_index: int,
-    section_title: str,
-    course_id: str,
-    teacher_username: str,
-    student_question: str,
+        db: Session,
+        lesson_id: str,
+        lesson_title: str,
+        section_index: int,
+        section_title: str,
+        course_id: str,
+        teacher_username: str,
+        student_question: str,
 ):
     """
-    Deterministik threshold — AI bağımsız.
+    Deterministic threshold — independent from AI.
     key = lesson_id::section_index
     """
     if not _is_confusion_question(student_question):
@@ -255,21 +245,18 @@ def track_question(
     key = f"{lesson_id}::{section_index}"
     now = datetime.utcnow()
 
-    # DB'ye kaydet
     try:
         _log_to_db(db, lesson_id, section_index, course_id, student_question)
     except Exception as e:
         print(f"[QuestionTracker] DB log failed: {e}")
         return
 
-    # DB'den say (gerçek 24h pencere)
     count = _count_from_db(db, lesson_id, section_index)
     print(f"[QuestionTracker] key={key} section='{section_title}' count={count}/{QUESTION_THRESHOLD}")
 
     if count < QUESTION_THRESHOLD:
         return
 
-    # Spam önleme — 24 saat içinde tekrar bildirim gitmesin
     last = _notified_at.get(key)
     if last and (now - last) < timedelta(hours=WINDOW_HOURS):
         print(f"[QuestionTracker] Already notified for {key}, skipping.")
@@ -277,7 +264,6 @@ def track_question(
 
     _notified_at[key] = now
 
-    # Son soruları DB'den çek (AI insight için)
     recent_questions = _get_recent_questions(db, lesson_id, section_index)
     insight = _get_keyword_insights(recent_questions, section_title)
 

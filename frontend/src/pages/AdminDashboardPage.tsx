@@ -116,7 +116,7 @@ export default function AdminDashboardPage({ onLogout }: Props) {
   const isAssigned = (courseId: string) =>
     assignedCourses.some((c) => c.id === courseId);
 
-  // Teacher'ın kursları
+
   const teacherCourses = selectedTeacher
     ? allCourses.filter((c) => c.teacher === selectedTeacher.username)
     : [];
@@ -152,7 +152,7 @@ export default function AdminDashboardPage({ onLogout }: Props) {
                 setMessage("");
               }}
             >
-              🏫 Teachers ({teachers.length})
+              🏫 Instructors ({teachers.length})
             </button>
           </div>
 
@@ -177,7 +177,7 @@ export default function AdminDashboardPage({ onLogout }: Props) {
 
           {activeTab === "teachers" && (
             <>
-              {teachers.length === 0 && <p style={styles.empty}>No teachers found</p>}
+              {teachers.length === 0 && <p style={styles.empty}>No instructor found</p>}
               {teachers.map((t) => (
                 <div
                   key={t.id}
@@ -200,7 +200,7 @@ export default function AdminDashboardPage({ onLogout }: Props) {
           {activeTab === "teachers" ? (
             !selectedTeacher ? (
               <div style={styles.placeholder}>
-                <p>← Select a teacher to view their courses</p>
+                <p>← Select a instructor to view their courses</p>
               </div>
             ) : (
               <>
@@ -208,7 +208,7 @@ export default function AdminDashboardPage({ onLogout }: Props) {
                   🏫 {selectedTeacher.username} — Courses
                 </h3>
                 {teacherCourses.length === 0 ? (
-                  <p style={styles.empty}>This teacher has no courses yet</p>
+                  <p style={styles.empty}>This instructor has no courses yet</p>
                 ) : (
                   teacherCourses.map((course) => (
                     <div key={course.id} style={styles.courseRow}>

@@ -158,7 +158,7 @@ export default function StudentCalendar({ darkMode = false }: { darkMode?: boole
           <h1 style={{ fontSize: "2rem", fontWeight: 800, margin: "0 0 4px", letterSpacing: "-0.02em" }}>
             <span style={{ background: "linear-gradient(135deg, #f97316, #ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>My Calendar</span>
           </h1>
-          <p style={{ fontSize: "0.85rem", color: ts, margin: 0 }}>Your personal events + events shared by teachers.</p>
+          <p style={{ fontSize: "0.85rem", color: ts, margin: 0 }}>Your personal events + events shared by instructors.</p>
         </div>
         <button onClick={() => openCreateForm()}
           style={{ padding: "9px 18px", borderRadius: 12, background: "linear-gradient(135deg, #f97316, #ec4899)", color: "#fff", border: "none", cursor: "pointer", fontSize: "0.88rem", fontWeight: 700, fontFamily: "inherit", boxShadow: "0 4px 14px rgba(249,115,22,0.3)" }}>

@@ -109,7 +109,7 @@ export default function AdminLoginPage() {
             textAlign: "center",
           }}
         >
-          Learning Assistant System for Izmir Economics
+          Learning Assistant System for Integrated Education
         </p>
 
         {/* Card */}

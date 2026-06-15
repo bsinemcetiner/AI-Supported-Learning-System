@@ -22,9 +22,21 @@ router = APIRouter(prefix="/courses", tags=["courses"])
 rag = RAGManager()
 
 def _serialize_material(m):
+    import os
+
+    pdf_path = getattr(m, "pdf_path", None)
+    file_url = None
+
+    if pdf_path:
+        normalized_pdf_path = str(pdf_path).replace("\\", "/")
+        pdf_filename = os.path.basename(normalized_pdf_path)
+        file_url = f"/course_materials_pdf/{pdf_filename}"
+
     return {
         "original_filename": m.original_filename,
         "stored_path": m.stored_path,
+        "pdf_path": pdf_path,
+        "file_url": file_url,
         "file_hash": m.file_hash,
         "uploaded_at": m.uploaded_at.isoformat() if m.uploaded_at else None,
     }
@@ -68,7 +80,7 @@ def list_all_courses(
     }
 
 
-# ── GET /courses/assigned ── öğrencinin atanmış kursları
+
 @router.get("/assigned")
 def list_assigned_courses(
     current_user=Depends(get_current_user),
@@ -109,15 +121,7 @@ def list_assigned_courses(
             "course_name": c.course_name,
             "teacher_username": c.teacher_username,
             "created_at": c.created_at.isoformat() if c.created_at else None,
-            "materials": [
-                {
-                    "original_filename": m.original_filename,
-                    "stored_path": m.stored_path,
-                    "file_hash": m.file_hash,
-                    "uploaded_at": m.uploaded_at.isoformat() if m.uploaded_at else None,
-                }
-                for m in materials
-            ],
+            "materials": [_serialize_material(m) for m in materials],
         }
     return result
 
@@ -141,7 +145,7 @@ def list_my_courses(
     }
 
 
-# ── POST /courses ── yeni kurs oluştur
+
 @router.post("/", status_code=201)
 def create_new_course(
     body: CreateCourseRequest,
@@ -154,7 +158,7 @@ def create_new_course(
     return {"course_id": message}
 
 
-# ── POST /courses/{course_id}/materials ── materyal yükle
+
 @router.post("/{course_id}/materials", status_code=201)
 async def upload_material(
     course_id: str,
@@ -164,39 +168,37 @@ async def upload_material(
 ):
     import hashlib, os, re
 
-    # ── SANİTİZATION KONTROLLERI ──────────────────────────────────────
 
-    # 1. Dosya boyutu: max 20MB — sunucuyu DoS'dan korur
+
+
     MAX_SIZE = 20 * 1024 * 1024
     content = await file.read()
     if len(content) > MAX_SIZE:
-        raise HTTPException(status_code=413, detail="Dosya boyutu 20MB'ı geçemez")
+        raise HTTPException(status_code=413, detail="File size cannot exceed 20MB")
 
-    # 2. Magic byte: içerik gerçekten PDF mi? — uzantı sahtelenemez
+
     if not content.startswith(b"%PDF"):
-        raise HTTPException(status_code=400, detail="Sadece geçerli PDF dosyaları kabul edilir")
+        raise HTTPException(status_code=400, detail="Only valid PDF files are accepted")
 
-    # 3. Uzantı: .pdf olmalı
+
     original_name = file.filename or "upload.pdf"
     ext = os.path.splitext(original_name)[1].lower()
     if ext != ".pdf":
-        raise HTTPException(status_code=400, detail="Sadece .pdf uzantılı dosyalar kabul edilir")
+        raise HTTPException(status_code=400, detail="Only files with the .pdf extension are accepted")
 
-    # 4. Content-type: tarayıcıdan gelen başlık da kontrol edilir
+
     allowed_types = {"application/pdf", "application/octet-stream"}
     if file.content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail=f"Geçersiz dosya tipi: {file.content_type}")
+        raise HTTPException(status_code=400, detail=f"Invalid file type: {file.content_type}")
 
-    # 5. Dosya adı temizleme — path traversal önleme
-    # basename "../../etc/passwd" gibi şeyleri kesiyor
-    # re.sub sadece harf/rakam/tire/alt çizgi/nokta bırakıyor
+
     safe_filename = re.sub(r"[^\w\-.]", "_", os.path.basename(original_name))
     if not safe_filename or safe_filename.startswith("."):
         safe_filename = "upload.pdf"
 
     # ─────────────────────────────────────────────────────────────────
 
-    # PDF'i orijinal haliyle kaydet
+
     pdf_dir = "course_materials_pdf"
     os.makedirs(pdf_dir, exist_ok=True)
     file_hash_raw = hashlib.md5(content).hexdigest()
@@ -208,7 +210,7 @@ async def upload_material(
 
     text = ocr_service.extract_text(content, file.filename)
     if not text:
-        raise HTTPException(status_code=422, detail=f"{safe_filename}: metin çıkarılamadı")
+        raise HTTPException(status_code=422, detail=f"{safe_filename}: text could not be extracted")
 
     add_ok, add_msg = add_material_to_course(
         db=db,
@@ -250,13 +252,13 @@ async def upload_material(
         }
 
     return {
-        "filename": safe_filename,
+        "filename": file.filename,
         "chunks": rag_result["chunks"],
         "skipped": rag_result["skipped"],
         "notification_created": notification_created,
     }
 
-# ── GET /courses/{course_id}/materials/{file_hash}/view ── PDF görüntüle
+# ── GET /courses/{course_id}/materials/{file_hash}/view
 @router.get("/{course_id}/materials/{file_hash}/view")
 def view_material(
     course_id: str,
@@ -278,7 +280,7 @@ def view_material(
 
     pdf_path = material.pdf_path
     if not pdf_path or not os.path.exists(pdf_path):
-        # Eski materyaller için txt dosyasını döndür
+
         txt_path = material.stored_path
         if txt_path and os.path.exists(txt_path):
             return FileResponse(
@@ -297,17 +299,27 @@ def view_material(
     )
 
 
-# ── GET /courses/{course_id}/materials ── materyal listesi
+# ── GET /courses/{course_id}/materials
 @router.get("/{course_id}/materials")
 def list_materials(
     course_id: str,
     _: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return get_course_materials(db, course_id)
+    from models import CourseMaterial
+
+    materials = (
+        db.query(CourseMaterial)
+        .filter(CourseMaterial.course_id == course_id)
+        .order_by(CourseMaterial.uploaded_at.desc())
+        .all()
+    )
+
+    return [_serialize_material(m) for m in materials]
 
 
-# ── DELETE /courses/{course_id}/materials/{file_hash} ── materyal sil
+
+# ── DELETE /courses/{course_id}/materials/{file_hash}
 @router.delete("/{course_id}/materials/{file_hash}")
 def delete_material(
     course_id: str,
@@ -326,7 +338,7 @@ def delete_material(
         )
 
     return {"message": msg}
-# ── POST /courses/{course_id}/enroll ── öğrenci kaydol
+# ── POST /courses/{course_id}/enroll
 @router.post("/{course_id}/enroll", status_code=201)
 def enroll_course(
     course_id: str,
@@ -340,25 +352,25 @@ def enroll_course(
     role = current_user["role"] if isinstance(current_user, dict) else current_user.role
 
     if role != "student":
-        raise HTTPException(status_code=403, detail="Sadece öğrenciler kayıt olabilir")
+        raise HTTPException(status_code=403, detail="Only students can enroll")
 
     user = db.query(User).filter(User.username == username).first()
     if not user:
-        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+        raise HTTPException(status_code=404, detail="User not found")
 
     existing = db.query(StudentCourseAssignment).filter_by(
         student_id=user.id, course_id=course_id
     ).first()
     if existing:
-        raise HTTPException(status_code=409, detail="Zaten kayıtlısın")
+        raise HTTPException(status_code=409, detail="You are already enrolled")
 
     assignment = StudentCourseAssignment(student_id=user.id, course_id=course_id)
     db.add(assignment)
     db.commit()
-    return {"message": "Kayıt başarılı", "course_id": course_id}
+    return {"message": "Enrollment successful", "course_id": course_id}
 
 
-# ── DELETE /courses/{course_id}/unenroll ── öğrenci ayrıl
+# ── DELETE /courses/{course_id}/unenroll ── student unenroll
 @router.delete("/{course_id}/unenroll")
 def unenroll_course(
     course_id: str,
@@ -372,17 +384,17 @@ def unenroll_course(
 
     user = db.query(User).filter(User.username == username).first()
     if not user:
-        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+        raise HTTPException(status_code=404, detail="User not found")
 
     assignment = db.query(StudentCourseAssignment).filter_by(
         student_id=user.id, course_id=course_id
     ).first()
     if not assignment:
-        raise HTTPException(status_code=404, detail="Kayıt bulunamadı")
+        raise HTTPException(status_code=404, detail="Enrollment not found")
 
     db.delete(assignment)
     db.commit()
-    return {"message": "Kayıt silindi", "course_id": course_id}
+    return {"message": "Enrollment removed", "course_id": course_id}
 
 @router.delete("/{course_id}")
 def delete_course_endpoint(

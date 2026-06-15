@@ -3,15 +3,14 @@ import tempfile
 from pathlib import Path
 from functools import lru_cache
 
-
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 
 @lru_cache(maxsize=1)
 def get_easyocr_reader():
     """
-    EasyOCR reader modelini sadece bir kere yükler.
-    Böylece her image upload edildiğinde model baştan yüklenmez.
+    Loads the EasyOCR reader model only once.
+    This prevents the model from being reloaded every time an image is uploaded.
     """
     import easyocr
 
@@ -64,10 +63,10 @@ class OCRService:
 
     def _extract_text_from_image(self, file_bytes: bytes) -> str:
         """
-        Image dosyasından text çıkarmak için:
-        1. Dosyayı OpenCV image formatına çevirir.
-        2. Görseli OCR için temizler.
-        3. EasyOCR ile yazıyı okur.
+        To extract text from an image file:
+        1. Converts the file into OpenCV image format.
+        2. Cleans the image for OCR.
+        3. Reads the text using EasyOCR.
         """
 
         import cv2
@@ -98,16 +97,13 @@ class OCRService:
 
     def _preprocess_image_for_ocr(self, image):
         """
-        OpenCV ile görseli OCR için daha okunabilir hale getirir.
+        Makes the image more readable for OCR using OpenCV.
         """
 
         import cv2
 
-        # 1. Renkli görseli gri tona çeviriyoruz.
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-        # 2. Görsel çok küçükse büyütüyoruz.
-        # Küçük yazıları OCR daha zor okur.
         height, width = gray.shape
 
         if width < 1000:
@@ -121,7 +117,6 @@ class OCRService:
                 interpolation=cv2.INTER_CUBIC
             )
 
-        # 3. Hafif gürültü temizleme.
         denoised = cv2.fastNlMeansDenoising(
             gray,
             None,
@@ -130,7 +125,6 @@ class OCRService:
             21
         )
 
-        # 4. Yazı ile arka planı ayırma.
         _, thresholded = cv2.threshold(
             denoised,
             0,

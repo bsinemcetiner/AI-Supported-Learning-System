@@ -163,7 +163,7 @@ export default function AuthPage({ onLogin, onAdminLogin }: AuthPageProps) {
           LASSIE
         </h1>
         <p style={{ fontSize: "1.05rem", fontWeight: 600, color: "#374151", margin: "0 0 0.5rem", textAlign: "center" }}>
-          Learning Assistant System for Izmir Economics
+          Learning Assistant System for Integrated Education
         </p>
         <p style={{ fontSize: "0.88rem", color: "#6b7280", margin: "0 0 2rem", textAlign: "center", lineHeight: 1.65, maxWidth: 420 }}>
           An AI-powered learning platform where instructors upload course materials and shape personalized teaching models by guiding LLMs with their own feedback and expertise.
@@ -189,7 +189,7 @@ export default function AuthPage({ onLogin, onAdminLogin }: AuthPageProps) {
             {tab === "login" && (
               <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <div>
-                  <p style={{ fontSize: "1.35rem", fontWeight: 700, color: "#111827", margin: "0 0 4px" }}>Welcome back 👋</p>
+                  <p style={{ fontSize: "1.35rem", fontWeight: 700, color: "#111827", margin: "0 0 4px" }}>Welcome back!</p>
                   <p style={{ fontSize: "0.9rem", color: "#6b7280", margin: 0 }}>Enter your credentials to continue.</p>
                 </div>
                 <div>
@@ -232,7 +232,7 @@ export default function AuthPage({ onLogin, onAdminLogin }: AuthPageProps) {
                             }
                           </div>
                           <div>
-                            <div style={{ fontSize: "0.95rem", fontWeight: 700, color: sel ? (r === "student" ? "#f97316" : "#2563eb") : "#374151" }}>{r === "student" ? "Student" : "Teacher"}</div>
+                            <div style={{ fontSize: "0.95rem", fontWeight: 700, color: sel ? (r === "student" ? "#f97316" : "#2563eb") : "#374151" }}>{r === "student" ? "Student" : "Instructor"}</div>
                             <div style={{ fontSize: "0.73rem", color: "#9ca3af" }}>{r === "student" ? "@std.ieu / @std.iyte" : "@ieu.edu.tr / @iyte.edu.tr"}</div>
                           </div>
                           {sel && <div style={{ position: "absolute", top: 7, right: 7, width: 18, height: 18, borderRadius: "50%", background: r === "student" ? "#f97316" : "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>}
@@ -243,7 +243,7 @@ export default function AuthPage({ onLogin, onAdminLogin }: AuthPageProps) {
                 </div>
                 <div>
                   <label style={labelCss}>Institutional Email</label>
-                  <input style={inputCss} type="email" placeholder={selectedRole === "student" ? "ada@std.ieu.edu.tr" : "ada@ieu.edu.tr"} value={email} onChange={(e) => setEmail(e.target.value)} required
+                  <input style={inputCss} type="email" placeholder={selectedRole === "student" ? "example@std.ieu.edu.tr" : "example@ieu.edu.tr"} value={email} onChange={(e) => setEmail(e.target.value)} required
                     onFocus={(e) => { e.target.style.borderColor = "#f97316"; e.target.style.background = "#fff"; }}
                     onBlur={(e) => { e.target.style.borderColor = "#e5e7eb"; e.target.style.background = "#f9fafb"; }} />
                   <p style={{ fontSize: "0.76rem", color: "#9ca3af", marginTop: 6 }}>Students @std.ieu.edu.tr / @std.iyte.edu.tr · Teachers @ieu.edu.tr / @iyte.edu.tr</p>

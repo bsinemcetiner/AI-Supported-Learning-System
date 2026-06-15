@@ -249,7 +249,7 @@ async function startLessonChat(lesson: Lesson) {
           <div style={{ textAlign: "center", padding: "3rem", background: "#fff", borderRadius: 20, border: "1px solid #e2e8f0", color: "#94a3b8" }}>
             <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>📭</div>
             <p style={{ fontWeight: 600, color: "#374151" }}>No sections published yet</p>
-            <p style={{ fontSize: "0.85rem" }}>Your teacher hasn't published this lesson's sections yet.</p>
+            <p style={{ fontSize: "0.85rem" }}>Your instructor hasn't published this lesson's sections yet.</p>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

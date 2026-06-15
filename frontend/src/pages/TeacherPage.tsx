@@ -853,7 +853,7 @@ function TeacherTopHeader() {
               letterSpacing: "-0.02em",
             }}
           >
-            Teacher Dashboard
+            Instructor Dashboard
           </h1>
           <p style={{ fontSize: "0.85rem", color: textSecondary, margin: 0 }}>
             Learning Assistant
@@ -1498,7 +1498,7 @@ function TeacherTopHeader() {
               boxShadow: "0 4px 12px rgba(59,130,246,0.25)",
             }}
           >
-            <Sparkles size={18} color="#fff" />
+            <GraduationCap size={18} color="#fff" />
           </div>
 
           <div>

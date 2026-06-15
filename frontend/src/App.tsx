@@ -347,8 +347,7 @@ export default function App() {
 
       setUser(restoredUser);
 
-      // Teacher için chats endpoint'i çağırma.
-      // Çünkü teacher'da /api/chats/ 403 dönüyor ve token silinmemeli.
+
       if (restoredUser.role === "student") {
         try {
           const chats = await chatsApi.getAll();
@@ -388,7 +387,7 @@ export default function App() {
     if (c.tone) setTeachingTone(c.tone);
   }, [activeChatId, chatMap]);
 
-  // ── Inactivity timer (15 min) ─────────────────────────────────────
+  // ── Inactivity timer (15 min)
   useEffect(() => {
     if (!user) return;
     const TIMEOUT = 15 * 60 * 1000; // 15 minutes
@@ -424,7 +423,7 @@ export default function App() {
       events.forEach((e) => window.removeEventListener(e, resetTimer));
     };
   }, [user]);
-  // ────────────────────────────────────────────────────────────────────
+
 
   if (isAdmin) return <AdminDashboardPage onLogout={() => setIsAdmin(false)} />;
 
@@ -528,8 +527,6 @@ export default function App() {
   } finally {
     setStreaming(false);
 
-    // Image preview frontend'de blob URL olarak durduğu için
-    // hemen loadChats yaparsak preview siliniyor ve kırık image çıkıyor.
     if (!image) {
       await loadChats();
     }
